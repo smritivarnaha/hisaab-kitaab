@@ -120,7 +120,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
       </div>
 
       {/* Messages Feed Container (Centered max-w-3xl like ChatGPT/Claude) */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-36 md:pb-32 no-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-52 md:pb-44 no-scrollbar">
         <div className="max-w-3xl mx-auto w-full">
           {chatMessages.map(msg => (
             <ChatMessageItem key={msg.id} message={msg} />
@@ -131,27 +131,6 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
             <div className="flex items-center gap-2 text-xs text-gray-600 font-semibold my-3 max-w-2xl mx-auto px-2 animate-pulse">
               <Sparkles className="w-4 h-4 text-[#0D2E14]" />
               <span>AI Accountant is processing...</span>
-            </div>
-          )}
-
-          {/* Live Speech Transcript Box */}
-          {isListening && (
-            <div className="my-3 p-3.5 bg-[#93E044]/30 border-2 border-[#0D2E14] rounded-2xl animate-pulse text-xs text-[#0D2E14] font-semibold shadow-md max-w-2xl mx-auto">
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-extrabold flex items-center gap-1.5">
-                  <Mic className="w-3.5 h-3.5 text-[#0D2E14] animate-bounce" />
-                  Listening to your voice...
-                </span>
-                <button
-                  onClick={handleToggleVoice}
-                  className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#0D2E14] text-white font-bold"
-                >
-                  Stop & Send
-                </button>
-              </div>
-              <p className="text-xs text-[#0D2E14] italic font-normal">
-                {liveTranscript || 'Speak naturally e.g. "Aaj petrol 2200 UPI"...'}
-              </p>
             </div>
           )}
 
@@ -167,10 +146,10 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
       </div>
 
       {/* Floating Centered Input Control Bar (ChatGPT / Claude Desktop Style) */}
-      <div className="fixed md:absolute bottom-14 md:bottom-3 inset-x-0 z-30 px-3 sm:px-4">
-        <div className="max-w-3xl mx-auto bg-white border border-[#E2E8E0] rounded-3xl p-3 shadow-xl backdrop-blur-xl">
+      <div className="fixed md:absolute bottom-16 md:bottom-3 inset-x-0 z-30 px-3 sm:px-4">
+        <div className="max-w-3xl mx-auto bg-white border border-[#E2E8E0] rounded-3xl p-3 shadow-xl backdrop-blur-xl space-y-2">
           {/* Quick Suggestion Pills */}
-          <div className="mb-2 pb-1 overflow-x-auto no-scrollbar flex items-center gap-1.5">
+          <div className="pb-1 overflow-x-auto no-scrollbar flex items-center gap-1.5">
             <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider whitespace-nowrap">Try:</span>
             {sampleSuggestions.map((sug, i) => (
               <button
@@ -183,7 +162,29 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
             ))}
           </div>
 
-          <div className="flex justify-center mb-1">
+          {/* Live Speech Transcript Box (Pinned inside floating bar for 100% mobile visibility) */}
+          {isListening && (
+            <div className="p-3 bg-[#F0F7EE] border-2 border-[#0D2E14] rounded-2xl text-xs text-[#0D2E14] font-semibold shadow-inner space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold flex items-center gap-1.5 text-xs text-[#0D2E14]">
+                  <Mic className="w-3.5 h-3.5 text-red-500 animate-bounce" />
+                  Listening to your voice...
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleVoice}
+                  className="text-[10px] px-3 py-1 rounded-full bg-[#0D2E14] text-white font-extrabold active:scale-95 shadow-xs"
+                >
+                  Done / Send
+                </button>
+              </div>
+              <p className="text-xs text-[#0D2E14] italic font-semibold bg-white p-2 rounded-xl border border-[#C8E0C4] min-h-[32px] flex items-center">
+                {liveTranscript || 'Speak naturally e.g. "Aaj petrol 2200 UPI"...'}
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-center">
             <VoiceWaveform isListening={isListening} audioLevel={audioLevel} />
           </div>
 
@@ -219,7 +220,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
                 type="text"
                 value={inputText}
                 onChange={e => setInputText(e.target.value)}
-                placeholder={isListening ? "Listening..." : "Or type finance entry..."}
+                placeholder={isListening ? "Listening live..." : "Or type finance entry..."}
                 className="w-full bg-[#F3F5F1] border border-[#E2E8E0] rounded-full py-2.5 pl-4 pr-10 text-xs sm:text-sm text-[#0D2E14] placeholder-gray-400 font-semibold outline-none focus:border-[#0D2E14] focus:bg-white transition-all font-outfit"
               />
             </div>
