@@ -160,4 +160,24 @@ export class VoiceRecognitionService {
   }
 }
 
+export const speakText = (text: string, lang = 'en-IN') => {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+      const cleanText = text
+        .replace(/[*_#•]/g, '')
+        .replace(/Rs\./gi, 'Rupees')
+        .replace(/₹/g, 'Rupees ');
+      
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = lang;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Text to speech failed:', e);
+    }
+  }
+};
+
 export const speechService = new VoiceRecognitionService();

@@ -144,7 +144,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
                 </span>
                 <button
                   onClick={handleToggleVoice}
-                  className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#0D2E14] text-[#93E044] font-bold"
+                  className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#0D2E14] text-white font-bold"
                 >
                   Stop & Send
                 </button>
@@ -203,14 +203,14 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
               type="button"
               onClick={handleToggleVoice}
               title={isListening ? "Stop listening" : "Tap to Speak"}
-              className={`px-4 py-2.5 rounded-full font-black text-xs transition-all shadow-xs flex items-center gap-1.5 active:scale-95 flex-shrink-0 ${
+              className={`px-4 py-2.5 rounded-full font-extrabold text-xs transition-all shadow-xs flex items-center gap-1.5 active:scale-95 flex-shrink-0 ${
                 isListening
                   ? 'bg-red-500 text-white qor-mic-pulse'
-                  : 'bg-[#0D2E14] hover:bg-black text-[#93E044]'
+                  : 'bg-[#0D2E14] hover:bg-black text-white'
               }`}
             >
-              <Mic className={`w-4 h-4 ${isListening ? 'animate-bounce' : ''}`} />
-              <span>{isListening ? 'Stop' : 'Speak'}</span>
+              <Mic className={`w-4 h-4 text-white ${isListening ? 'animate-bounce' : ''}`} />
+              <span className="text-white">{isListening ? 'Stop' : 'Speak'}</span>
             </button>
 
             {/* Input Box */}
@@ -228,9 +228,9 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
             {inputText.trim() && (
               <button
                 type="submit"
-                className="p-2.5 rounded-full bg-[#0D2E14] hover:bg-black text-[#93E044] font-bold shadow-sm active:scale-95 transition-all flex-shrink-0"
+                className="p-2.5 rounded-full bg-[#0D2E14] hover:bg-black text-white font-bold shadow-sm active:scale-95 transition-all flex-shrink-0"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-4 h-4 text-white" />
               </button>
             )}
           </form>
