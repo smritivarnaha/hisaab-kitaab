@@ -10,6 +10,7 @@ export interface VoiceRecognitionConfig {
 export class VoiceRecognitionService {
   private recognition: any = null;
   public isListening = false;
+  private useRawRecording = false;
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private currentTranscript = '';
@@ -91,9 +92,6 @@ export class VoiceRecognitionService {
     this.currentTranscript = '';
     this.audioChunks = [];
 
-    // Start raw recording concurrently for Gemini Multimodal Audio fallback
-    this.startRecordingRaw();
-
     if (!this.recognition) {
       // Re-try initialization just in case window properties loaded late
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -106,12 +104,15 @@ export class VoiceRecognitionService {
     }
 
     if (!this.recognition) {
-      // If native SpeechRecognition is missing (e.g. Firefox/Brave), we still return true so raw audio recording runs!
-      this.isListening = true;
+      // If native SpeechRecognition is missing (e.g. Firefox/Brave), we run raw audio recording!
+      this.useRawRecording = true;
+      this.startRecordingRaw();
       this.startAudioVisualizer(onAudioLevel);
       return true;
     }
 
+    // Native Speech Recognition exists -> Use it exclusively (no concurrent MediaRecorder to prevent mic lock conflicts)
+    this.useRawRecording = false;
     this.recognition.lang = config.language || 'en-IN';
 
     this.recognition.onresult = (event: any) => {
@@ -139,7 +140,7 @@ export class VoiceRecognitionService {
       console.warn('Speech recognition error:', event.error);
       this.stopAudioVisualizer(); // Ensure mic visualizer is stopped
       if (event.error === 'no-speech') {
-        // Gracefully end session on no-speech timeout without throwing scary error banner!
+        // Gracefully end session on no-speech timeout
         return;
       } else if (event.error === 'network') {
         config.onError('Speech recognition network error. Please check internet connection.');
@@ -183,15 +184,18 @@ export class VoiceRecognitionService {
   }
 
   public stop(): void {
-    if (this.recognition && this.isListening) {
-      try {
-        this.recognition.stop();
-      } catch (e) {}
-    }
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      try {
-        this.mediaRecorder.stop();
-      } catch (e) {}
+    if (this.useRawRecording) {
+      if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+        try {
+          this.mediaRecorder.stop();
+        } catch (e) {}
+      }
+    } else {
+      if (this.recognition && this.isListening) {
+        try {
+          this.recognition.stop();
+        } catch (e) {}
+      }
     }
     this.isListening = false;
     this.stopAudioVisualizer();
