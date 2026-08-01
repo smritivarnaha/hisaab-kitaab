@@ -104,25 +104,23 @@ export class VoiceRecognitionService {
     // Native Speech Recognition exists -> Use it exclusively (no concurrent MediaRecorder to prevent mic lock conflicts)
     this.useRawRecording = false;
     this.recognition.lang = config.language || 'en-IN';
-
     this.recognition.onresult = (event: any) => {
-      let fullTranscript = '';
+      let interimTranscript = '';
       let hasFinal = false;
 
-      for (let i = 0; i < event.results.length; ++i) {
-        const item = event.results[i];
-        if (item && item[0]) {
-          fullTranscript += item[0].transcript + ' ';
-          if (item.isFinal) {
-            hasFinal = true;
-          }
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          this.currentTranscript += (this.currentTranscript ? ' ' : '') + transcript.trim();
+          hasFinal = true;
+        } else {
+          interimTranscript += (interimTranscript ? ' ' : '') + transcript.trim();
         }
       }
 
-      const trimmed = fullTranscript.trim();
-      if (trimmed) {
-        this.currentTranscript = trimmed;
-        config.onResult(trimmed, hasFinal);
+      const displayTranscript = (this.currentTranscript + (interimTranscript ? ' ' + interimTranscript : '')).trim();
+      if (displayTranscript) {
+        config.onResult(displayTranscript, hasFinal);
       }
     };
 

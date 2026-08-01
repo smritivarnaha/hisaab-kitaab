@@ -25,14 +25,18 @@ export const DashboardOverview: React.FC = () => {
   const finalizedTransactions = transactions.filter(t => !t.isPending);
 
   const totalExpense = finalizedTransactions
-    .filter(t => t.type === 'expense' || t.type === 'lent')
+    .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalIncome = finalizedTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const currentBalance = totalIncome - totalExpense;
+  const totalLent = finalizedTransactions
+    .filter(t => t.type === 'lent')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const currentBalance = totalIncome - totalExpense - totalLent;
 
   const filteredTransactions = finalizedTransactions.filter(t => {
     const isDebit = t.type === 'expense' || t.type === 'lent';
@@ -113,7 +117,7 @@ export const DashboardOverview: React.FC = () => {
 
           {/* Refined Numbers Sub-Boxes */}
           <div className="pt-2 sm:pt-3 border-t border-gray-800/80">
-            <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs space-y-2 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:divide-x divide-gray-200">
+            <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs space-y-2 sm:space-y-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:divide-x divide-gray-200">
               {/* 1. Income (Credit) Row */}
               <div className="flex items-center justify-between sm:justify-start sm:flex-col sm:items-start text-xs px-1 sm:px-2">
                 <span className="text-gray-500 font-bold text-[11px] sm:text-xs">Income (Credit)</span>
@@ -126,7 +130,13 @@ export const DashboardOverview: React.FC = () => {
                 <span className="font-bold text-[#D93025] text-xs sm:text-sm sm:mt-1">-₹{totalExpense.toLocaleString('en-IN')}</span>
               </div>
 
-              {/* 3. Current Balance Row */}
+              {/* 3. Lent Out Row */}
+              <div className="flex items-center justify-between sm:justify-start sm:flex-col sm:items-start text-xs pt-1.5 sm:pt-0 border-t sm:border-t-0 border-gray-100 px-1 sm:px-2">
+                <span className="text-gray-500 font-bold text-[11px] sm:text-xs">Lent Out</span>
+                <span className="font-bold text-amber-700 text-xs sm:text-sm sm:mt-1">₹{totalLent.toLocaleString('en-IN')}</span>
+              </div>
+
+              {/* 4. Current Balance Row */}
               <div className="flex items-center justify-between sm:justify-start sm:flex-col sm:items-start text-xs pt-1.5 sm:pt-0 border-t sm:border-t-0 border-gray-100 px-1 sm:px-2">
                 <span className="text-gray-500 font-bold text-[11px] sm:text-xs">Current Balance</span>
                 <span className="font-bold text-[#0D2E14] text-xs sm:text-sm sm:mt-1">₹{currentBalance.toLocaleString('en-IN')}</span>

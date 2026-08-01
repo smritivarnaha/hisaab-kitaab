@@ -51,6 +51,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   theme: 'light',
   voiceLanguage: 'en-IN',
   autoTTS: false,
+  apiKey: 'AQ.Ab8RN6Ie0wYTm7AqZrmWDg0LJfeu3IP-k9IKFAC8PPlgl7Yv5A-',
 };
 
 const INITIAL_DEMO_TRANSACTIONS: Transaction[] = [
@@ -205,7 +206,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [settings, setSettings] = useState<UserSettings>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      return stored ? JSON.parse(stored) : DEFAULT_SETTINGS;
+      const parsed = stored ? JSON.parse(stored) : {};
+      return { ...DEFAULT_SETTINGS, ...parsed };
     } catch (e) {
       return DEFAULT_SETTINGS;
     }
@@ -354,7 +356,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // 1. Try Gemini 1.5 Flash LLM Agent (Real AI reasoning & tool execution)
     try {
-      const geminiRes = await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey, audioBlob);
+      const updatedMessages = [...chatMessages, userMsg];
+      const geminiRes = await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey, audioBlob, updatedMessages);
       if (geminiRes) {
         if (geminiRes.action === 'DELETE_TRANSACTION' && geminiRes.transactionIdToDelete) {
           deleteTransaction(geminiRes.transactionIdToDelete);

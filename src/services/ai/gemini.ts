@@ -1,4 +1,4 @@
-import { Transaction, AIMemoryMap } from '../../types/finance';
+import { Transaction, AIMemoryMap, ChatMessage } from '../../types/finance';
 
 export interface GeminiAgentResponse {
   action: 'CREATE_TRANSACTIONS' | 'DELETE_TRANSACTION' | 'UPDATE_TRANSACTION' | 'GENERAL_RESPONSE';
@@ -38,7 +38,8 @@ export async function processWithGeminiAgent(
   transactions: Transaction[],
   memory: AIMemoryMap,
   apiKey?: string,
-  audioBlob?: Blob
+  audioBlob?: Blob,
+  chatMessages: ChatMessage[] = []
 ): Promise<GeminiAgentResponse | null> {
   const activeKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || 'AQ.Ab8RN6Ie0wYTm7AqZrmWDg0LJfeu3IP-k9IKFAC8PPlgl7Yv5A-';
   if (!activeKey || !activeKey.trim()) return null;
@@ -67,6 +68,9 @@ ${JSON.stringify(recentTransactionsSummary, null, 2)}
 
 USER'S LEARNED MEMORY & PREFERENCES:
 ${JSON.stringify(memory, null, 2)}
+
+CONVERSATION HISTORY (recent messages for context):
+${chatMessages.slice(-10).map(m => `${m.sender === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n')}
 
 USER MESSAGE TEXT (IF ANY): "${userInput}"
 
