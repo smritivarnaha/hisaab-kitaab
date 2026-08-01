@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Transaction } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
 import { speechService } from '../../services/voice/speechRecognition';
@@ -102,6 +102,11 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
     setBatchVoiceText('');
   };
 
+  const liveTranscriptRef = useRef(liveTranscript);
+  useEffect(() => {
+    liveTranscriptRef.current = liveTranscript;
+  }, [liveTranscript]);
+
   const [micError, setMicError] = useState<string | null>(null);
 
   const handleToggleBatchVoice = () => {
@@ -118,14 +123,8 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
       const started = speechService.start(
         {
           language: 'en-IN',
-          onResult: (transcript, isFinal) => {
+          onResult: (transcript) => {
             setLiveTranscript(transcript);
-            if (isFinal) {
-              speechService.stop();
-              setIsListening(false);
-              processBatchScript(transcript);
-              setLiveTranscript('');
-            }
           },
           onError: (err) => {
             console.warn('Voice error:', err);
@@ -136,7 +135,13 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
               setMicError(`Voice error: ${err}`);
             }
           },
-          onEnd: () => setIsListening(false)
+          onEnd: () => {
+            setIsListening(false);
+            if (liveTranscriptRef.current.trim()) {
+              processBatchScript(liveTranscriptRef.current);
+              setLiveTranscript('');
+            }
+          }
         }
       );
       if (started) {

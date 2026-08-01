@@ -54,19 +54,23 @@ export class VoiceRecognitionService {
     this.recognition.lang = config.language || 'en-IN';
 
     this.recognition.onresult = (event: any) => {
-      let interimTranscript = '';
-      let finalTranscript = '';
+      let fullTranscript = '';
+      let hasFinal = false;
 
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
+      for (let i = 0; i < event.results.length; ++i) {
+        const item = event.results[i];
+        if (item && item[0]) {
+          fullTranscript += item[0].transcript + ' ';
+          if (item.isFinal) {
+            hasFinal = true;
+          }
         }
       }
 
-      const combined = (finalTranscript + ' ' + interimTranscript).trim();
-      config.onResult(combined, finalTranscript.length > 0);
+      const trimmed = fullTranscript.trim();
+      if (trimmed) {
+        config.onResult(trimmed, hasFinal);
+      }
     };
 
     this.recognition.onerror = (event: any) => {

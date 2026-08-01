@@ -49,6 +49,11 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
     setInputText('');
   };
 
+  const liveTranscriptRef = useRef(liveTranscript);
+  useEffect(() => {
+    liveTranscriptRef.current = liveTranscript;
+  }, [liveTranscript]);
+
   const handleToggleVoice = () => {
     setMicPermissionError(null);
 
@@ -64,14 +69,8 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
       const started = speechService.start(
         {
           language: 'en-IN',
-          onResult: (transcript, isFinal) => {
+          onResult: (transcript) => {
             setLiveTranscript(transcript);
-            if (isFinal) {
-              speechService.stop();
-              setIsListening(false);
-              processUserInputText(transcript, true);
-              setLiveTranscript('');
-            }
           },
           onError: (err) => {
             console.warn('Voice error:', err);
@@ -84,6 +83,10 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
           },
           onEnd: () => {
             setIsListening(false);
+            if (liveTranscriptRef.current.trim()) {
+              processUserInputText(liveTranscriptRef.current, true);
+              setLiveTranscript('');
+            }
           }
         },
         (level) => setAudioLevel(level)

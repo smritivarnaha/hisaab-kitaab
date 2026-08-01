@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Transaction, Category, CATEGORIES_LIST } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
 import { speechService } from '../../services/voice/speechRecognition';
@@ -47,6 +47,11 @@ export const AIReviewModal: React.FC<Props> = ({ items, onClose }) => {
     onClose();
   };
 
+  const liveTranscriptRef = useRef(liveTranscript);
+  useEffect(() => {
+    liveTranscriptRef.current = liveTranscript;
+  }, [liveTranscript]);
+
   const handleToggleVoice = () => {
     if (isListening) {
       speechService.stop();
@@ -60,17 +65,17 @@ export const AIReviewModal: React.FC<Props> = ({ items, onClose }) => {
       const started = speechService.start(
         {
           language: 'en-IN',
-          onResult: (transcript, isFinal) => {
+          onResult: (transcript) => {
             setLiveTranscript(transcript);
-            if (isFinal) {
-              speechService.stop();
-              setIsListening(false);
-              processVoiceResolution(transcript);
-              setLiveTranscript('');
-            }
           },
           onError: () => setIsListening(false),
-          onEnd: () => setIsListening(false)
+          onEnd: () => {
+            setIsListening(false);
+            if (liveTranscriptRef.current.trim()) {
+              processVoiceResolution(liveTranscriptRef.current);
+              setLiveTranscript('');
+            }
+          }
         }
       );
       if (started) setIsListening(true);
