@@ -96,7 +96,10 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
     setBatchVoiceText('');
   };
 
+  const [micError, setMicError] = useState<string | null>(null);
+
   const handleToggleBatchVoice = () => {
+    setMicError(null);
     if (isListening) {
       speechService.stop();
       setIsListening(false);
@@ -118,11 +121,23 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
               setLiveTranscript('');
             }
           },
-          onError: () => setIsListening(false),
+          onError: (err) => {
+            console.warn('Voice error:', err);
+            setIsListening(false);
+            if (err === 'not-allowed' || err === 'service-not-allowed') {
+              setMicError('Microphone permission blocked in browser settings.');
+            } else {
+              setMicError(`Voice error: ${err}`);
+            }
+          },
           onEnd: () => setIsListening(false)
         }
       );
-      if (started) setIsListening(true);
+      if (started) {
+        setIsListening(true);
+      } else {
+        setIsListening(false);
+      }
     }
   };
 
@@ -189,6 +204,12 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
         {isListening && (
           <p className="text-[10px] text-emerald-800 font-bold italic animate-pulse pl-2">
             Script Transcript: {liveTranscript || 'Narrate all pending reasons in one sentence...'}
+          </p>
+        )}
+
+        {micError && (
+          <p className="text-[10px] text-red-600 font-bold pl-2 pt-1">
+            ⚠️ {micError}
           </p>
         )}
       </div>

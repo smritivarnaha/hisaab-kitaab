@@ -34,46 +34,63 @@ export class VoiceRecognitionService {
   ): boolean {
     if (this.isListening) return true;
 
-    if (this.recognition) {
-      this.recognition.lang = config.language || 'en-IN';
-
-      this.recognition.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-
-        const combined = (finalTranscript + ' ' + interimTranscript).trim();
-        config.onResult(combined, finalTranscript.length > 0);
-      };
-
-      this.recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event.error);
-        if (event.error !== 'no-speech') {
-          config.onError(event.error);
-        }
-      };
-
-      this.recognition.onend = () => {
-        this.isListening = false;
-        config.onEnd();
-      };
-
-      try {
-        this.recognition.start();
-        this.isListening = true;
-      } catch (err) {
-        console.error('Failed to start speech recognition:', err);
+    if (!this.recognition) {
+      // Re-try initialization just in case window properties loaded late
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        this.recognition = new SpeechRecognition();
+        this.recognition.continuous = true;
+        this.recognition.interimResults = true;
       }
     }
 
-    // Start Audio Visualizer analyser if microhpone access works
+    if (!this.recognition) {
+      setTimeout(() => {
+        config.onError('Speech Recognition (Web Speech API) is not supported in this browser. Please use Chrome/Edge or ensure HTTPS connection.');
+      }, 200);
+      return false;
+    }
+
+    this.recognition.lang = config.language || 'en-IN';
+
+    this.recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
+      const combined = (finalTranscript + ' ' + interimTranscript).trim();
+      config.onResult(combined, finalTranscript.length > 0);
+    };
+
+    this.recognition.onerror = (event: any) => {
+      console.warn('Speech recognition error:', event.error);
+      if (event.error !== 'no-speech') {
+        config.onError(event.error);
+      }
+    };
+
+    this.recognition.onend = () => {
+      this.isListening = false;
+      config.onEnd();
+    };
+
+    try {
+      this.recognition.start();
+      this.isListening = true;
+    } catch (err: any) {
+      console.error('Failed to start speech recognition:', err);
+      config.onError(err.message || 'Failed to start speech recognition');
+      return false;
+    }
+
+    // Start Audio Visualizer analyser if microphone access works
     this.startAudioVisualizer(onAudioLevel);
 
     return true;
