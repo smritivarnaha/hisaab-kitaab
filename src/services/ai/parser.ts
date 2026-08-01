@@ -181,6 +181,11 @@ export function autocorrectTitleSpelling(title: string): string {
     'toothbrush softbrush': 'Toothbrush',
     'softbrush': 'Toothbrush',
     'tooth brush': 'Toothbrush',
+    'toothbrsh': 'Toothbrush',
+    'toothbrush': 'Toothbrush',
+    'toothpste': 'Toothpaste',
+    'toothpast': 'Toothpaste',
+    'toothpaste': 'Toothpaste',
     'doodh': 'Milk',
     'dudh': 'Milk',
     'sabzi': 'Vegetables',
@@ -215,8 +220,40 @@ export function autocorrectTitleSpelling(title: string): string {
   // Also handle minor pattern replacements
   let cleaned = title;
   if (/toothbrush\s+softbrush/i.test(cleaned)) return 'Toothbrush';
+  if (/toothpste|toothpast/i.test(cleaned)) return 'Toothpaste';
   
   return cleaned;
+}
+
+export function normalizeInputText(text: string): string {
+  const words = text.split(/\s+/);
+  const corrections: Record<string, string> = {
+    'toothpste': 'toothpaste',
+    'toothpast': 'toothpaste',
+    'toothpate': 'toothpaste',
+    'toothbrsh': 'toothbrush',
+    'chooran': 'churan',
+    'petrl': 'petrol',
+    'grocry': 'grocery',
+    'groceri': 'grocery',
+    'doodh': 'milk',
+    'dudh': 'milk',
+    'sabzi': 'vegetables',
+    'sabji': 'vegetables',
+    'dawa': 'medicine',
+    'dawai': 'medicine',
+    'salry': 'salary'
+  };
+
+  const normalized = words.map(w => {
+    const clean = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (corrections[clean]) {
+      return corrections[clean];
+    }
+    return w;
+  });
+
+  return normalized.join(' ');
 }
 
 function parsePaymentMethod(text: string): { method: PaymentMethod; explicit: boolean } {
@@ -292,7 +329,7 @@ export function parseSingleInput(input: string, memory: AIMemoryMap = DEFAULT_ME
   const smsResult = parseBankSMS(input);
   if (smsResult) return smsResult;
 
-  const cleaned = input.trim();
+  const cleaned = normalizeInputText(input.trim());
   const { amount } = parseAmount(cleaned);
   const { date, relativeText } = parseDate(cleaned);
   const { category, confidenceBoost: catBoost } = parseCategory(cleaned, memory);
