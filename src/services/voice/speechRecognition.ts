@@ -39,14 +39,20 @@ export class VoiceRecognitionService {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         this.recognition = new SpeechRecognition();
-        this.recognition.continuous = true;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.recognition.continuous = !isMobile; // Mobile speech engines freeze if continuous is true!
         this.recognition.interimResults = true;
       }
     }
 
     if (!this.recognition) {
       setTimeout(() => {
-        config.onError('Speech Recognition (Web Speech API) is not supported in this browser. Please use Chrome/Edge or ensure HTTPS connection.');
+        const isHttpNotLocal = window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        if (isHttpNotLocal) {
+          config.onError('Mobile browsers block Microphone/Speech API on HTTP! Please deploy to Vercel (HTTPS) to use Mobile Voice.');
+        } else {
+          config.onError('Speech Recognition is not supported in this browser. Please use Chrome or Edge.');
+        }
       }, 200);
       return false;
     }
