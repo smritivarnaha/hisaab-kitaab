@@ -170,90 +170,13 @@ function parseCategory(text: string, memory: AIMemoryMap = DEFAULT_MEMORY): { ca
   return { category: 'Others', confidenceBoost: 0 };
 }
 
-// Autocorrects common Hinglish, Hindi, or misspelled words into neat English/proper names
+// Autocorrects common Hinglish, Hindi, or misspelled words into neat English/proper names (Disabled: delegated to Gemini LLM)
 export function autocorrectTitleSpelling(title: string): string {
-  const lower = title.toLowerCase().trim();
-  
-  const corrections: Record<string, string> = {
-    'chooran': 'Churan',
-    'churan': 'Churan',
-    'hajmola': 'Hajmola',
-    'toothbrush softbrush': 'Toothbrush',
-    'softbrush': 'Toothbrush',
-    'tooth brush': 'Toothbrush',
-    'toothbrsh': 'Toothbrush',
-    'toothbrush': 'Toothbrush',
-    'toothpste': 'Toothpaste',
-    'toothpast': 'Toothpaste',
-    'toothpaste': 'Toothpaste',
-    'doodh': 'Milk',
-    'dudh': 'Milk',
-    'sabzi': 'Vegetables',
-    'sabji': 'Vegetables',
-    'dawa': 'Medicine',
-    'dawai': 'Medicine',
-    'anda': 'Eggs',
-    'ande': 'Eggs',
-    'chawal': 'Rice',
-    'atta': 'Flour',
-    'aata': 'Flour',
-    'macchi': 'Fish',
-    'machli': 'Fish',
-    'nashta': 'Breakfast',
-    'nasta': 'Breakfast',
-    'chai': 'Tea',
-    'daru': 'Alcohol',
-    'daaru': 'Alcohol',
-    'kirana': 'Grocery',
-    'kapda': 'Clothes',
-    'kapde': 'Clothes',
-    'gadi': 'Vehicle',
-    'gaadi': 'Vehicle',
-    'room rent': 'Rent',
-    'bijli': 'Electricity'
-  };
-
-  if (corrections[lower]) {
-    return corrections[lower];
-  }
-
-  // Also handle minor pattern replacements
-  let cleaned = title;
-  if (/toothbrush\s+softbrush/i.test(cleaned)) return 'Toothbrush';
-  if (/toothpste|toothpast/i.test(cleaned)) return 'Toothpaste';
-  
-  return cleaned;
+  return title;
 }
 
 export function normalizeInputText(text: string): string {
-  const words = text.split(/\s+/);
-  const corrections: Record<string, string> = {
-    'toothpste': 'toothpaste',
-    'toothpast': 'toothpaste',
-    'toothpate': 'toothpaste',
-    'toothbrsh': 'toothbrush',
-    'chooran': 'churan',
-    'petrl': 'petrol',
-    'grocry': 'grocery',
-    'groceri': 'grocery',
-    'doodh': 'milk',
-    'dudh': 'milk',
-    'sabzi': 'vegetables',
-    'sabji': 'vegetables',
-    'dawa': 'medicine',
-    'dawai': 'medicine',
-    'salry': 'salary'
-  };
-
-  const normalized = words.map(w => {
-    const clean = w.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (corrections[clean]) {
-      return corrections[clean];
-    }
-    return w;
-  });
-
-  return normalized.join(' ');
+  return text;
 }
 
 function parsePaymentMethod(text: string): { method: PaymentMethod; explicit: boolean } {

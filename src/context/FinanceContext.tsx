@@ -362,25 +362,28 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (geminiRes.action === 'DELETE_TRANSACTION' && geminiRes.transactionIdToDelete) {
           deleteTransaction(geminiRes.transactionIdToDelete);
         } else if (geminiRes.action === 'CREATE_TRANSACTIONS' && geminiRes.transactionsToCreate?.length) {
-          const newTxList: Transaction[] = geminiRes.transactionsToCreate.map(item => ({
-            id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            amount: Number(item.amount) || 0,
-            currency: '₹',
-            type: item.type || 'expense',
-            category: (item.category as Category) || 'Others',
-            title: item.title || 'Expense',
-            paymentMethod: (item.paymentMethod as PaymentMethod) || 'UPI',
-            person: item.person,
-            merchant: item.merchant,
-            date: item.date || new Date().toISOString().split('T')[0],
-            relativeDateText: 'Today',
-            timestamp: Date.now(),
-            confidenceScore: 99,
-            rawInput: text,
-            shortDisplayTitle: item.title,
-            isPending: false
-          }));
-          addTransactionsBatch(newTxList);
+          const validItems = geminiRes.transactionsToCreate.filter(item => (Number(item.amount) || 0) > 0);
+          if (validItems.length > 0) {
+            const newTxList: Transaction[] = validItems.map(item => ({
+              id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+              amount: Number(item.amount) || 0,
+              currency: '₹',
+              type: item.type || 'expense',
+              category: (item.category as Category) || 'Others',
+              title: item.title || 'Expense',
+              paymentMethod: (item.paymentMethod as PaymentMethod) || 'UPI',
+              person: item.person,
+              merchant: item.merchant,
+              date: item.date || new Date().toISOString().split('T')[0],
+              relativeDateText: 'Today',
+              timestamp: Date.now(),
+              confidenceScore: 99,
+              rawInput: text,
+              shortDisplayTitle: item.title,
+              isPending: false
+            }));
+            addTransactionsBatch(newTxList);
+          }
         }
 
         const aiMsg: ChatMessage = {
