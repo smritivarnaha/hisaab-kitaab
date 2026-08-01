@@ -447,7 +447,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setChatMessages(prev => [...prev, aiMsg]);
         setIsProcessingAI(false);
 
-        if (isVoice || settings.autoTTS) {
+        if (settings.autoTTS) {
           speakText(agentRes.speechText || agentRes.responseText, settings.voiceLanguage);
         }
         return;
@@ -471,7 +471,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           };
           setChatMessages(prev => [...prev, aiMsg]);
           setIsProcessingAI(false);
-          if (isVoice || settings.autoTTS) speakText(responseText, settings.voiceLanguage);
+          if (settings.autoTTS) speakText(responseText, settings.voiceLanguage);
           return;
         }
 
@@ -488,7 +488,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
         setChatMessages(prev => [...prev, aiMsg]);
         setIsProcessingAI(false);
-        if (isVoice || settings.autoTTS) speakText(responseText, settings.voiceLanguage);
+        if (settings.autoTTS) speakText(responseText, settings.voiceLanguage);
         return;
       }
 
@@ -511,7 +511,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setChatMessages(prev => [...prev, aiMsg]);
         setIsProcessingAI(false);
 
-        if (isVoice || settings.autoTTS) {
+        if (settings.autoTTS) {
           speakText(responseText, settings.voiceLanguage);
         }
         return;
@@ -530,7 +530,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setChatMessages(prev => [...prev, aiMsg]);
         setIsProcessingAI(false);
 
-        if (isVoice || settings.autoTTS) {
+        if (settings.autoTTS) {
           speakText(responseText, settings.voiceLanguage);
         }
         return;
@@ -560,7 +560,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setChatMessages(prev => [...prev, aiMsg]);
         setIsProcessingAI(false);
 
-        if (isVoice || settings.autoTTS) {
+        if (settings.autoTTS) {
           speakText(responseText, settings.voiceLanguage);
         }
         return;
@@ -582,7 +582,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setChatMessages(prev => [...prev, aiMsg]);
       setIsProcessingAI(false);
 
-      if (isVoice || settings.autoTTS) {
+      if (settings.autoTTS) {
         speakText(responseText, settings.voiceLanguage);
       }
 

@@ -58,44 +58,73 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
   const handleToggleVoice = async () => {
     setMicPermissionError(null);
 
+    const useOpenAI = (settings as any).aiProvider === 'openai' && !!(settings as any).openaiApiKey?.trim();
+
     if (isListening) {
+      // Stop listening
       setIsListening(false);
-      const audioBlob = await speechService.stopRecordingRaw();
-      speechService.stop();
-      const textToSubmit = liveTranscript.trim();
-      processUserInputText(textToSubmit, true, audioBlob || undefined);
+      setAudioLevel(0);
+
+      if (useOpenAI) {
+        // OpenAI mode: stop WAV recorder, send blob to Whisper via processUserInputText
+        const audioBlob = await speechService.stopRecordingRaw();
+        speechService.stop();
+        const textFallback = liveTranscript.trim();
+        processUserInputText(textFallback, true, audioBlob || undefined);
+      } else {
+        // Gemini / native mode: speech recognition already captured text via onEnd
+        speechService.stop();
+      }
       setLiveTranscript('');
     } else {
-      const hasApiKey = !!settings.apiKey?.trim();
-      const started = await speechService.start(
-        {
-          language: 'en-IN',
-          onResult: (transcript) => {
-            setLiveTranscript(transcript);
-          },
-          onError: (err) => {
-            console.warn('Voice error:', err);
-            setIsListening(false);
-            if (err === 'not-allowed' || err === 'service-not-allowed') {
-              setMicPermissionError('Microphone permission blocked in browser settings.');
-            } else {
-              setMicPermissionError(`Voice error: ${err}`);
+      // Start listening
+      if (useOpenAI) {
+        // OpenAI Whisper mode: record raw WAV audio
+        const started = await speechService.startRecordingRaw((level) => setAudioLevel(level));
+        if (started) {
+          setIsListening(true);
+          setLiveTranscript('🎙️ Recording... tap Stop when done');
+        } else {
+          setMicPermissionError('Microphone permission blocked. Please allow mic access in browser settings.');
+        }
+      } else {
+        // Gemini / native browser Web Speech API mode
+        const lang = (settings.voiceLanguage === 'hi-IN') ? 'hi-IN' : 'en-IN';
+        const started = await speechService.start(
+          {
+            language: lang,
+            onResult: (transcript) => {
+              setLiveTranscript(transcript);
+            },
+            onError: (err) => {
+              console.warn('Voice error:', err);
+              setIsListening(false);
+              setAudioLevel(0);
+              if (err.includes('not-allowed') || err.includes('permission')) {
+                setMicPermissionError('Microphone permission blocked. Please allow mic in browser settings.');
+              } else if (!err.includes('no-speech')) {
+                setMicPermissionError(`Voice error: ${err}`);
+              }
+            },
+            onEnd: (finalCapturedText) => {
+              setIsListening(false);
+              setAudioLevel(0);
+              const textToSubmit = (finalCapturedText || liveTranscriptRef.current).trim();
+              if (textToSubmit) {
+                processUserInputText(textToSubmit, true);
+              }
+              setLiveTranscript('');
             }
           },
-          onEnd: async (finalCapturedText) => {
-            setIsListening(false);
-            const audioBlob = await speechService.stopRecordingRaw();
-            const textToSubmit = (finalCapturedText || liveTranscriptRef.current).trim();
-            processUserInputText(textToSubmit, true, audioBlob || undefined);
-            setLiveTranscript('');
-          }
-        },
-        (level) => setAudioLevel(level),
-        hasApiKey
-      );
+          (level) => setAudioLevel(level),
+          false // Never force raw recording in Gemini mode — use native Web Speech API
+        );
 
-      if (started) {
-        setIsListening(true);
+        if (started) {
+          setIsListening(true);
+        } else {
+          setMicPermissionError('Could not start speech recognition. Try Chrome or Edge browser.');
+        }
       }
     }
   };
@@ -198,7 +227,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
                 type="text"
                 value={inputText}
                 onChange={e => setInputText(e.target.value)}
-                placeholder={isListening ? (settings.apiKey?.trim() ? "Recording voice note..." : "Listening live...") : "Or type finance entry..."}
+                placeholder={isListening ? ((settings as any).aiProvider === 'openai' ? "🎙️ Recording WAV for Whisper..." : "🎙️ Listening... speak now") : "Type or speak your finance entry..."}
                 className="w-full bg-[#F3F5F1] border border-[#E2E8E0] rounded-full py-2.5 pl-4 pr-10 text-xs sm:text-sm text-[#0D2E14] placeholder-gray-400 font-semibold outline-none focus:border-[#0D2E14] focus:bg-white transition-all font-outfit"
               />
             </div>
