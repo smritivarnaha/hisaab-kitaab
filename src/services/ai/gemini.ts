@@ -91,7 +91,9 @@ Return ONLY a valid JSON object matching this schema (do NOT include markdown co
 }
 
 CRITICAL RULES:
-1. If the user describes spending, income, or lending, set action="CREATE_TRANSACTIONS" and extract amount, title, person. NEVER create 0 amount transactions.
+1. LOGGING vs QUERYING (CRITICAL):
+   - Set action='CREATE_TRANSACTIONS' ONLY when the user is reporting a NEW transaction that just happened (e.g., "Spent 300 on petrol", "Paid 300 to shop", "Lunch 300").
+   - If the user asks a question about past spending, requests to find/locate transactions, requests summaries, or asks about balances/history (e.g., "where did I spend 300 rupees?", "show transactions of 300", "did I pay Rohan?", "how much is spent?"), this is a QUERY. Set action='GENERAL_RESPONSE' and search through the provided USER'S CURRENT LEDGER TRANSACTIONS list to give a helpful answer. NEVER create a new transaction for a question, inquiry, search, or query!
 2. TITLE AUTOCORRECTION: Autocorrect the spellings and names of transaction titles/merchants (in Hindi, Hinglish, or English) to a clean, professional, capitalized representation. Only correct the spelling and format it (e.g. "chooran" -> "Churan", "doodh" -> "Milk", "toothbrush softbrush" -> "Toothbrush"). Never append extra descriptive words like "Candy", "Item", or "Shop" to corrected titles.
 3. CATEGORIZATION RULES:
    - Map traditional Indian snacks, street food, digestives, candy, and Hinglish food terms (e.g., chooran, churan, hajmola, namkeen, samosa, mithai, biscuit, chips, cold drink, soda, lassi) to **"Food & Drinks"** or **"Grocery"** (e.g. for bulk supplies), NEVER to "Others". They are eating/drinking items!
