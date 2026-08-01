@@ -82,8 +82,12 @@ export class VoiceRecognitionService {
     this.recognition.onerror = (event: any) => {
       console.warn('Speech recognition error:', event.error);
       this.stopAudioVisualizer(); // Ensure mic is closed on error!
-      if (event.error !== 'no-speech') {
-        config.onError(event.error);
+      if (event.error === 'no-speech') {
+        config.onError('No voice detected. Please speak clearly into your microphone!');
+      } else if (event.error === 'network') {
+        config.onError('Speech recognition network error. Please check internet connection.');
+      } else if (event.error !== 'aborted') {
+        config.onError(`Voice recognition error: ${event.error}`);
       }
     };
 
@@ -97,8 +101,20 @@ export class VoiceRecognitionService {
       this.recognition.start();
       this.isListening = true;
     } catch (err: any) {
-      console.error('Failed to start speech recognition:', err);
-      config.onError(err.message || 'Failed to start speech recognition');
+      console.warn('Speech recognition start failed, attempting reset:', err);
+      try {
+        this.recognition.abort();
+        setTimeout(() => {
+          try {
+            this.recognition.start();
+            this.isListening = true;
+          } catch (retryErr) {
+            config.onError('Speech Recognition failed to start. Please check microphone settings.');
+          }
+        }, 150);
+      } catch (e) {
+        config.onError(err.message || 'Failed to start speech recognition');
+      }
       return false;
     }
 
