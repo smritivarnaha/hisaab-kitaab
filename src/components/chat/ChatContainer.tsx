@@ -163,31 +163,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
             ))}
           </div>
 
-          {/* Live Speech Transcript Box (Pinned inside floating bar for 100% mobile visibility) */}
-          {isListening && (
-            <div className="p-3 bg-[#F0F7EE] border-2 border-[#0D2E14] rounded-2xl text-xs text-[#0D2E14] font-semibold shadow-inner space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="font-extrabold flex items-center gap-1.5 text-xs text-[#0D2E14]">
-                  <Mic className="w-3.5 h-3.5 text-red-500 animate-bounce" />
-                  Listening to your voice...
-                </span>
-                <button
-                  type="button"
-                  onClick={handleToggleVoice}
-                  className="text-[10px] px-3 py-1 rounded-full bg-[#0D2E14] text-white font-extrabold active:scale-95 shadow-xs"
-                >
-                  Done / Send
-                </button>
-              </div>
-              <p className="text-xs text-[#0D2E14] italic font-semibold bg-white p-2 rounded-xl border border-[#C8E0C4] min-h-[32px] flex items-center">
-                {liveTranscript || 'Speak naturally e.g. "Aaj petrol 2200 UPI"...'}
-              </p>
-            </div>
-          )}
-
-          <div className="flex justify-center">
-            <VoiceWaveform isListening={isListening} audioLevel={audioLevel} />
-          </div>
+          <VoiceWaveform isListening={isListening} audioLevel={audioLevel} liveTranscript={liveTranscript} />
 
           <form onSubmit={handleSubmit} className="flex items-center gap-2">
             {/* Attachment Actions */}
