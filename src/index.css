@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #F3F5F1;
+    --bg-surface: #ffffff;
+    --border-color: #E2E8E0;
+    --text-primary: #0D2E14;
+    --text-secondary: #576558;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Wise Signature Brand Cards */
+.wise-hero-card {
+  background-color: #0D2E14;
+  color: #ffffff;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 20px rgba(13, 46, 20, 0.2);
+}
+
+.wise-lime-btn {
+  background-color: #93E044;
+  color: #0D2E14;
+  font-weight: 800;
+  border-radius: 9999px;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.wise-lime-btn:hover {
+  background-color: #84D137;
+  transform: translateY(-1px);
+}
+
+.wise-active-pill {
+  background-color: #E4ECE2;
+  color: #0D2E14;
+  font-weight: 800;
+  border-radius: 9999px;
+}
+
+.wise-yellow-card {
+  background-color: #FFE855;
+  color: #0D2E14;
+  border-radius: 1.5rem;
+}
+
+.qor-card-lime {
+  background-color: #93E044;
+  color: #0D2E14;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 15px rgba(147, 224, 68, 0.3);
+}
+
+.qor-card-white {
+  background-color: #ffffff;
+  border: 1px solid #E2E8E0;
+  border-radius: 1.5rem;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.02);
+}
+
+.qor-badge-lime {
+  background-color: #E4ECE2;
+  color: #0D2E14;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 0.25rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.qor-badge-red {
+  background-color: #FCE8E6;
+  color: #D93025;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 0.25rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+/* Custom Hide Scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Mic Active Pulse Ring */
+.qor-mic-pulse {
+  box-shadow: 0 0 0 0 rgba(147, 224, 68, 0.7);
+  animation: qor-pulse 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes qor-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(147, 224, 68, 0.8), 0 0 20px rgba(147, 224, 68, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 18px rgba(147, 224, 68, 0), 0 0 35px rgba(147, 224, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(147, 224, 68, 0), 0 0 0 rgba(147, 224, 68, 0);
+  }
+}

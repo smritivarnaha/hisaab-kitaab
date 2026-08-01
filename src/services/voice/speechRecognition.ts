@@ -1,0 +1,140 @@
+// Wrapper for Web Speech API with fallback simulation and live transcript support
+
+export interface VoiceRecognitionConfig {
+  language: string;
+  onResult: (transcript: string, isFinal: boolean) => void;
+  onError: (error: string) => void;
+  onEnd: () => void;
+}
+
+export class VoiceRecognitionService {
+  private recognition: any = null;
+  private isListening = false;
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private mediaStream: MediaStream | null = null;
+  private animFrameId: number | null = null;
+
+  constructor() {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      this.recognition = new SpeechRecognition();
+      this.recognition.continuous = true;
+      this.recognition.interimResults = true;
+    }
+  }
+
+  public isSupported(): boolean {
+    return !!this.recognition || !!(window as any).navigator?.mediaDevices;
+  }
+
+  public start(
+    config: VoiceRecognitionConfig,
+    onAudioLevel?: (level: number) => void
+  ): boolean {
+    if (this.isListening) return true;
+
+    if (this.recognition) {
+      this.recognition.lang = config.language || 'en-IN';
+
+      this.recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+
+        const combined = (finalTranscript + ' ' + interimTranscript).trim();
+        config.onResult(combined, finalTranscript.length > 0);
+      };
+
+      this.recognition.onerror = (event: any) => {
+        console.warn('Speech recognition error:', event.error);
+        if (event.error !== 'no-speech') {
+          config.onError(event.error);
+        }
+      };
+
+      this.recognition.onend = () => {
+        this.isListening = false;
+        config.onEnd();
+      };
+
+      try {
+        this.recognition.start();
+        this.isListening = true;
+      } catch (err) {
+        console.error('Failed to start speech recognition:', err);
+      }
+    }
+
+    // Start Audio Visualizer analyser if microhpone access works
+    this.startAudioVisualizer(onAudioLevel);
+
+    return true;
+  }
+
+  public stop(): void {
+    if (this.recognition && this.isListening) {
+      try {
+        this.recognition.stop();
+      } catch (e) {}
+    }
+    this.isListening = false;
+    this.stopAudioVisualizer();
+  }
+
+  private async startAudioVisualizer(onAudioLevel?: (level: number) => void) {
+    if (!onAudioLevel) return;
+
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const source = this.audioContext.createMediaStreamSource(this.mediaStream);
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 64;
+        source.connect(this.analyser);
+
+        const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        const checkVolume = () => {
+          if (!this.analyser) return;
+          this.analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / dataArray.length;
+          const normalized = Math.min(100, Math.round((average / 128) * 100));
+          onAudioLevel(normalized);
+          this.animFrameId = requestAnimationFrame(checkVolume);
+        };
+        checkVolume();
+      }
+    } catch (e) {
+      console.warn('Audio visualization fallback enabled:', e);
+    }
+  }
+
+  private stopAudioVisualizer() {
+    if (this.animFrameId) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = null;
+    }
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach(track => track.stop());
+      this.mediaStream = null;
+    }
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+  }
+}
+
+export const speechService = new VoiceRecognitionService();
