@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Transaction } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
 import { speechService } from '../../services/voice/speechRecognition';
@@ -14,6 +14,12 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
   const [rowInputs, setRowInputs] = useState<Record<string, string>>({});
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
+
+  useEffect(() => {
+    return () => {
+      speechService.stop();
+    };
+  }, []);
 
   // Find ALL pending transactions missing specific reasons/notes
   const pendingItems = transactions.filter(t => {

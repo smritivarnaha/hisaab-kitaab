@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Transaction, Category, CATEGORIES_LIST } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
 import { speechService } from '../../services/voice/speechRecognition';
@@ -15,6 +15,12 @@ export const AIReviewModal: React.FC<Props> = ({ items, onClose }) => {
   const [voiceText, setVoiceText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
+
+  useEffect(() => {
+    return () => {
+      speechService.stop();
+    };
+  }, []);
 
   const handleUpdateItem = (id: string, updates: Partial<Transaction>) => {
     setReviewItems(prev =>

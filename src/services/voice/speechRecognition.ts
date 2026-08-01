@@ -71,6 +71,7 @@ export class VoiceRecognitionService {
 
     this.recognition.onerror = (event: any) => {
       console.warn('Speech recognition error:', event.error);
+      this.stopAudioVisualizer(); // Ensure mic is closed on error!
       if (event.error !== 'no-speech') {
         config.onError(event.error);
       }
@@ -78,6 +79,7 @@ export class VoiceRecognitionService {
 
     this.recognition.onend = () => {
       this.isListening = false;
+      this.stopAudioVisualizer(); // Ensure mic is closed on timeout/end!
       config.onEnd();
     };
 

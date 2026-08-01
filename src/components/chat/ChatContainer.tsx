@@ -36,6 +36,12 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
     scrollToBottom();
   }, [chatMessages, isProcessingAI, liveTranscript]);
 
+  useEffect(() => {
+    return () => {
+      speechService.stop();
+    };
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
