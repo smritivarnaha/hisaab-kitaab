@@ -4,12 +4,13 @@ export interface VoiceRecognitionConfig {
   language: string;
   onResult: (transcript: string, isFinal: boolean) => void;
   onError: (error: string) => void;
-  onEnd: () => void;
+  onEnd: (finalCapturedText: string) => void;
 }
 
 export class VoiceRecognitionService {
   private recognition: any = null;
   private isListening = false;
+  private currentTranscript = '';
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private mediaStream: MediaStream | null = null;
@@ -33,6 +34,7 @@ export class VoiceRecognitionService {
     onAudioLevel?: (level: number) => void
   ): boolean {
     if (this.isListening) return true;
+    this.currentTranscript = '';
 
     if (!this.recognition) {
       // Re-try initialization just in case window properties loaded late
@@ -75,15 +77,17 @@ export class VoiceRecognitionService {
 
       const trimmed = fullTranscript.trim();
       if (trimmed) {
+        this.currentTranscript = trimmed;
         config.onResult(trimmed, hasFinal);
       }
     };
 
     this.recognition.onerror = (event: any) => {
       console.warn('Speech recognition error:', event.error);
-      this.stopAudioVisualizer(); // Ensure mic is closed on error!
+      this.stopAudioVisualizer(); // Ensure mic visualizer is stopped
       if (event.error === 'no-speech') {
-        config.onError('No voice detected. Please speak clearly into your microphone!');
+        // Gracefully end session on no-speech timeout without throwing scary error banner!
+        return;
       } else if (event.error === 'network') {
         config.onError('Speech recognition network error. Please check internet connection.');
       } else if (event.error !== 'aborted') {
@@ -92,9 +96,10 @@ export class VoiceRecognitionService {
     };
 
     this.recognition.onend = () => {
+      const textToDeliver = this.currentTranscript;
       this.isListening = false;
-      this.stopAudioVisualizer(); // Ensure mic is closed on timeout/end!
-      config.onEnd();
+      this.stopAudioVisualizer();
+      config.onEnd(textToDeliver);
     };
 
     try {
@@ -118,7 +123,7 @@ export class VoiceRecognitionService {
       return false;
     }
 
-    // Start Audio Visualizer analyser if microphone access works
+    // Start clean simulated visualizer ticker without opening competing getUserMedia stream!
     this.startAudioVisualizer(onAudioLevel);
 
     return true;
@@ -134,36 +139,17 @@ export class VoiceRecognitionService {
     this.stopAudioVisualizer();
   }
 
-  private async startAudioVisualizer(onAudioLevel?: (level: number) => void) {
+  private startAudioVisualizer(onAudioLevel?: (level: number) => void) {
     if (!onAudioLevel) return;
 
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const source = this.audioContext.createMediaStreamSource(this.mediaStream);
-        this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 64;
-        source.connect(this.analyser);
-
-        const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-        const checkVolume = () => {
-          if (!this.analyser) return;
-          this.analyser.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-          }
-          const average = sum / dataArray.length;
-          const normalized = Math.min(100, Math.round((average / 128) * 100));
-          onAudioLevel(normalized);
-          this.animFrameId = requestAnimationFrame(checkVolume);
-        };
-        checkVolume();
-      }
-    } catch (e) {
-      console.warn('Audio visualization fallback enabled:', e);
-    }
+    // Use dynamic simulated level updates while listening to prevent hardware mic locking conflicts
+    const updateSimulatedLevel = () => {
+      if (!this.isListening) return;
+      const randomLevel = Math.floor(Math.random() * 60) + 30; // 30% - 90% dynamic level
+      onAudioLevel(randomLevel);
+      this.animFrameId = requestAnimationFrame(updateSimulatedLevel);
+    };
+    updateSimulatedLevel();
   }
 
   private stopAudioVisualizer() {

@@ -73,20 +73,32 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
             </select>
           </div>
 
-          {/* Custom OpenAI / Gemini API Key (Optional) */}
-          <div className="p-4 bg-white border border-[#dadce0] rounded-2xl shadow-2xs space-y-1.5">
-            <label className="text-xs font-semibold text-[#202124] flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5 text-google-blue" />
-              Cloud AI API Key (Optional)
-            </label>
+          {/* Google Gemini AI API Key */}
+          <div className="p-4 bg-white border border-[#dadce0] rounded-2xl shadow-2xs space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-[#202124] flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5 text-emerald-700" />
+                Google Gemini API Key (LLM Brain)
+              </label>
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[10px] text-emerald-700 hover:underline font-bold"
+              >
+                Get Free Key ↗
+              </a>
+            </div>
             <input
               type="password"
               value={settings.apiKey || ''}
               onChange={e => updateSettings({ apiKey: e.target.value })}
-              placeholder="sk-... or Gemini Key"
-              className="w-full bg-[#f8f9fa] border border-[#dadce0] text-xs text-[#202124] rounded-xl py-2 px-3 outline-none focus:border-google-blue placeholder-[#5f6368] font-mono"
+              placeholder="AIzaSy..."
+              className="w-full bg-[#f8f9fa] border border-[#dadce0] text-xs text-[#202124] rounded-xl py-2 px-3 outline-none focus:border-emerald-700 placeholder-[#5f6368] font-mono"
             />
-            <p className="text-[10px] text-[#5f6368]">If left blank, Hisaab Kitab uses local offline AI parsing 100%!</p>
+            <p className="text-[10px] text-[#5f6368]">
+              {settings.apiKey?.trim() ? '🟢 Gemini 1.5 Flash LLM Brain is ACTIVE!' : 'Paste your free Google Gemini API key to enable 100% full LLM reasoning, voice agent tools, and contextual memory!'}
+            </p>
           </div>
 
           {/* Reset All Data */}

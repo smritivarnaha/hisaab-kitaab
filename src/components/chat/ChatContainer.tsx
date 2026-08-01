@@ -81,10 +81,11 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
               setMicPermissionError(`Voice error: ${err}`);
             }
           },
-          onEnd: () => {
+          onEnd: (finalCapturedText) => {
             setIsListening(false);
-            if (liveTranscriptRef.current.trim()) {
-              processUserInputText(liveTranscriptRef.current, true);
+            const textToSubmit = (finalCapturedText || liveTranscriptRef.current).trim();
+            if (textToSubmit) {
+              processUserInputText(textToSubmit, true);
               setLiveTranscript('');
             }
           }

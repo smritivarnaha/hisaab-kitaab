@@ -11,6 +11,7 @@ import {
 import { parseMultiInput, buildClarification, applySelfCorrection } from '../services/ai/parser';
 import { getAIMemory, learnMerchantCategory, learnPaymentPreference } from '../services/ai/memory';
 import { speakText } from '../services/voice/speechRecognition';
+import { processWithGeminiAgent } from '../services/ai/gemini';
 
 interface FinanceContextType {
   transactions: Transaction[];
@@ -337,7 +338,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     transactions.forEach(tx => deleteTransactionFromDb(tx.id));
   };
 
-  const processUserInputText = (text: string, isVoice = false) => {
+  const processUserInputText = async (text: string, isVoice = false) => {
     if (!text.trim()) return;
 
     const userMsgId = `msg_u_${Date.now()}`;
@@ -350,6 +351,52 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setChatMessages(prev => [...prev, userMsg]);
     setIsProcessingAI(true);
+
+    // 1. Try Gemini 1.5 Flash LLM Agent (Real AI reasoning & tool execution)
+    try {
+      const geminiRes = await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey);
+      if (geminiRes) {
+        if (geminiRes.action === 'DELETE_TRANSACTION' && geminiRes.transactionIdToDelete) {
+          deleteTransaction(geminiRes.transactionIdToDelete);
+        } else if (geminiRes.action === 'CREATE_TRANSACTIONS' && geminiRes.transactionsToCreate?.length) {
+          const newTxList: Transaction[] = geminiRes.transactionsToCreate.map(item => ({
+            id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            amount: Number(item.amount) || 0,
+            currency: '₹',
+            type: item.type || 'expense',
+            category: (item.category as Category) || 'Others',
+            title: item.title || 'Expense',
+            paymentMethod: (item.paymentMethod as PaymentMethod) || 'UPI',
+            person: item.person,
+            merchant: item.merchant,
+            date: item.date || new Date().toISOString().split('T')[0],
+            relativeDateText: 'Today',
+            timestamp: Date.now(),
+            confidenceScore: 99,
+            rawInput: text,
+            shortDisplayTitle: item.title,
+            isPending: false
+          }));
+          addTransactionsBatch(newTxList);
+        }
+
+        const aiMsg: ChatMessage = {
+          id: `msg_ai_${Date.now()}`,
+          sender: 'assistant',
+          text: geminiRes.responseText,
+          timestamp: Date.now()
+        };
+        setChatMessages(prev => [...prev, aiMsg]);
+        setIsProcessingAI(false);
+
+        if (isVoice || settings.autoTTS) {
+          speakText(geminiRes.speechText || geminiRes.responseText, settings.voiceLanguage);
+        }
+        return;
+      }
+    } catch (e) {
+      console.warn('Gemini LLM Agent fallback to local AI engine:', e);
+    }
 
     setTimeout(() => {
       const lower = text.toLowerCase();
