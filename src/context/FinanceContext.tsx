@@ -512,7 +512,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const singleTx = readyItems[0];
       const typeLabel = singleTx.type === 'income' ? 'Income 📈' : singleTx.type === 'lent' ? 'Lent Money 🤝' : 'Expense 💳';
-      const responseText = `Saved **Rs. ${singleTx.amount.toLocaleString('en-IN')}** for **${singleTx.title}** (${singleTx.category}) as ${typeLabel}. Added to Passbook!`;
+      const responseText = `Saved **Rs. ${singleTx.amount.toLocaleString('en-IN')}** for **${singleTx.title}** as ${typeLabel}. Added to Passbook!`;
 
       const aiMsg: ChatMessage = {
         id: `msg_ai_${Date.now()}`,
@@ -551,7 +551,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Remove from pendingReviewItems if present
     setPendingReviewItems(prev => prev.filter(p => p.id !== draft.id));
 
-    const responseText = `Saved **Rs. ${draft.amount.toLocaleString('en-IN')}** for **${draft.title}** (${draft.category}) to Passbook!`;
+    const responseText = `Saved **Rs. ${draft.amount.toLocaleString('en-IN')}** for **${draft.title}** to Passbook!`;
     const aiMsg: ChatMessage = {
       id: `msg_ai_${Date.now()}`,
       sender: 'assistant',

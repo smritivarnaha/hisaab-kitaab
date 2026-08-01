@@ -78,8 +78,8 @@ CRITICAL RULES:
    - Map traditional Indian snacks, street food, digestives, candy, and Hinglish food terms (e.g., chooran, churan, hajmola, namkeen, samosa, mithai, biscuit, chips, cold drink, soda, lassi) to **"Food & Drinks"** or **"Grocery"** (e.g. for bulk supplies), NEVER to "Others". They are eating/drinking items!
    - Map toiletries, personal care, household hygiene, and cleaning products (e.g., toothbrush, brush, toothpaste, paste, soap, shampoo, conditioner, detergent, surf excel, cleaner, Harpic, tissue, wiper) to **"Grocery"** or **"Shopping"** (prefer **"Grocery"** for daily consumable essentials), NEVER to "Others".
    - Default to "Others" only if a category is completely unrecognizable or miscellaneous.
-4. REMOVE PAYMENT METHOD IN CONFIRMATIONS: Do NOT include "via UPI", "via Cash", or "via [method]" in the responseText or speechText. Keep the response text and speech text clean and elegant.
-   - Example responseText: "Saved **Rs. 144** for **Toothbrush** (Grocery) as Expense. Added to Passbook!"
+4. REMOVE PAYMENT METHOD & CATEGORY IN CONFIRMATIONS: Do NOT include "via UPI", "via Cash", or "via [method]" in the responseText or speechText. Also, NEVER output the category label (e.g. "(Grocery)", "(Others)") in the confirmation message. Keep the response text and speech text clean and elegant.
+   - Example responseText: "Saved **Rs. 144** for **Toothbrush** as Expense. Added to Passbook!"
 5. If the user asks to delete, undo, or cancel (e.g. "delete last transaction", "can yo delete last trasction"), set action="DELETE_TRANSACTION" and set transactionIdToDelete="${transactions[0]?.id || ''}".
 6. If the user asks a financial question, requests a summary, or asks for advice, set action="GENERAL_RESPONSE" and answer with clean, organized markdown tables or bullet points.
 7. If the user sends random gibberish or invalid text (e.g. "adshfadjf"), set action="GENERAL_RESPONSE" and respond: "I couldn't detect a valid amount or financial entry in your message. Try saying e.g. 'Petrol 2200' or 'Spent 23 for Nandini'!"
