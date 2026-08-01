@@ -9,9 +9,10 @@ import {
   PaymentMethod
 } from '../types/finance';
 import { parseMultiInput, buildClarification, applySelfCorrection } from '../services/ai/parser';
-import { getAIMemory, learnMerchantCategory, learnPaymentPreference } from '../services/ai/memory';
+import { getAIMemory, learnMerchantCategory, learnPaymentPreference, saveUserFact, saveGoal, saveMonthlyBudget } from '../services/ai/memory';
 import { speakText } from '../services/voice/speechRecognition';
 import { processWithGeminiAgent } from '../services/ai/gemini';
+import { processWithOpenAIAgent } from '../services/ai/openai';
 
 interface FinanceContextType {
   transactions: Transaction[];
@@ -52,6 +53,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   voiceLanguage: 'en-IN',
   autoTTS: false,
   apiKey: 'AQ.Ab8RN6Ie0wYTm7AqZrmWDg0LJfeu3IP-k9IKFAC8PPlgl7Yv5A-',
+  openaiApiKey: '',
+  aiProvider: 'gemini',
 };
 
 const INITIAL_DEMO_TRANSACTIONS: Transaction[] = [
@@ -354,54 +357,103 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setChatMessages(prev => [...prev, userMsg]);
     setIsProcessingAI(true);
 
-    // 1. Try Gemini 1.5 Flash LLM Agent (Real AI reasoning & tool execution)
+    // Helper: apply all tool actions from any LLM response
+    const applyAgentToolAction = (agentRes: NonNullable<Awaited<ReturnType<typeof processWithGeminiAgent>>>) => {
+      if (agentRes.action === 'DELETE_TRANSACTION' && agentRes.transactionIdToDelete) {
+        deleteTransaction(agentRes.transactionIdToDelete);
+      } else if (agentRes.action === 'CREATE_TRANSACTIONS' && agentRes.transactionsToCreate?.length) {
+        const validItems = agentRes.transactionsToCreate.filter(item => (Number(item.amount) || 0) > 0);
+        if (validItems.length > 0) {
+          const newTxList: Transaction[] = validItems.map(item => ({
+            id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            amount: Number(item.amount) || 0,
+            currency: '₹',
+            type: item.type || 'expense',
+            category: (item.category as Category) || 'Others',
+            title: item.title || 'Expense',
+            paymentMethod: (item.paymentMethod as PaymentMethod) || 'UPI',
+            person: item.person,
+            merchant: item.merchant,
+            date: item.date || new Date().toISOString().split('T')[0],
+            relativeDateText: 'Today',
+            timestamp: Date.now(),
+            confidenceScore: 99,
+            rawInput: text,
+            shortDisplayTitle: item.title,
+            isPending: false
+          }));
+          addTransactionsBatch(newTxList);
+        }
+      } else if (agentRes.action === 'UPDATE_TRANSACTION' && agentRes.transactionToUpdate?.id) {
+        const { id, category, paymentMethod, ...rest } = agentRes.transactionToUpdate;
+        updateTransaction(id, {
+          ...rest,
+          ...(category ? { category: category as Category } : {}),
+          ...(paymentMethod ? { paymentMethod: paymentMethod as PaymentMethod } : {})
+        });
+      } else if (agentRes.action === 'SETTLE_DEBT' && agentRes.settleDebtPerson && agentRes.settleDebtAmount) {
+        // Log as income/settlement transaction and mark debt reduced
+        const settleTx: Transaction = {
+          id: `tx_${Date.now()}_settle`,
+          amount: agentRes.settleDebtAmount,
+          currency: '₹',
+          type: 'income',
+          category: 'Others',
+          title: `${agentRes.settleDebtPerson} Returned`,
+          paymentMethod: 'Cash',
+          person: agentRes.settleDebtPerson,
+          date: new Date().toISOString().split('T')[0],
+          relativeDateText: 'Today',
+          timestamp: Date.now(),
+          confidenceScore: 99,
+          rawInput: text,
+          shortDisplayTitle: `${agentRes.settleDebtPerson} Returned`,
+          isPending: false
+        };
+        addTransactionsBatch([settleTx]);
+      } else if (agentRes.action === 'SAVE_MEMORY' && agentRes.memoryToSave?.key) {
+        // Decide fact vs goal by keyword heuristic
+        const val = agentRes.memoryToSave.value || '';
+        const isGoal = /save|target|goal|lakh|crore|budget/i.test(agentRes.memoryToSave.key + ' ' + val);
+        if (isGoal) {
+          saveGoal(agentRes.memoryToSave.key, val);
+        } else {
+          saveUserFact(agentRes.memoryToSave.key, val);
+        }
+        setAiMemory(getAIMemory());
+      } else if (agentRes.action === 'UPDATE_BUDGET' && agentRes.budgetToUpdate?.category) {
+        saveMonthlyBudget(agentRes.budgetToUpdate.category, agentRes.budgetToUpdate.amount);
+        setAiMemory(getAIMemory());
+      }
+    };
+
+    // 1. Try configured LLM Agent (Gemini or OpenAI)
     try {
       const updatedMessages = [...chatMessages, userMsg];
-      const geminiRes = await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey, audioBlob, updatedMessages);
-      if (geminiRes) {
-        if (geminiRes.action === 'DELETE_TRANSACTION' && geminiRes.transactionIdToDelete) {
-          deleteTransaction(geminiRes.transactionIdToDelete);
-        } else if (geminiRes.action === 'CREATE_TRANSACTIONS' && geminiRes.transactionsToCreate?.length) {
-          const validItems = geminiRes.transactionsToCreate.filter(item => (Number(item.amount) || 0) > 0);
-          if (validItems.length > 0) {
-            const newTxList: Transaction[] = validItems.map(item => ({
-              id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-              amount: Number(item.amount) || 0,
-              currency: '₹',
-              type: item.type || 'expense',
-              category: (item.category as Category) || 'Others',
-              title: item.title || 'Expense',
-              paymentMethod: (item.paymentMethod as PaymentMethod) || 'UPI',
-              person: item.person,
-              merchant: item.merchant,
-              date: item.date || new Date().toISOString().split('T')[0],
-              relativeDateText: 'Today',
-              timestamp: Date.now(),
-              confidenceScore: 99,
-              rawInput: text,
-              shortDisplayTitle: item.title,
-              isPending: false
-            }));
-            addTransactionsBatch(newTxList);
-          }
-        }
+      const useOpenAI = settings.aiProvider === 'openai' && !!settings.openaiApiKey?.trim();
+      const agentRes = useOpenAI
+        ? await processWithOpenAIAgent(text, transactions, aiMemory, settings.openaiApiKey, audioBlob, updatedMessages)
+        : await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey, audioBlob, updatedMessages);
+
+      if (agentRes) {
+        applyAgentToolAction(agentRes);
 
         const aiMsg: ChatMessage = {
           id: `msg_ai_${Date.now()}`,
           sender: 'assistant',
-          text: geminiRes.responseText,
+          text: agentRes.responseText,
           timestamp: Date.now()
         };
         setChatMessages(prev => [...prev, aiMsg]);
         setIsProcessingAI(false);
 
         if (isVoice || settings.autoTTS) {
-          speakText(geminiRes.speechText || geminiRes.responseText, settings.voiceLanguage);
+          speakText(agentRes.speechText || agentRes.responseText, settings.voiceLanguage);
         }
         return;
       }
     } catch (e) {
-      console.warn('Gemini LLM Agent fallback to local AI engine:', e);
+      console.warn('LLM Agent fallback to local AI engine:', e);
     }
 
     setTimeout(() => {

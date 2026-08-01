@@ -1,7 +1,7 @@
 import { Transaction, AIMemoryMap, ChatMessage } from '../../types/finance';
 
 export interface GeminiAgentResponse {
-  action: 'CREATE_TRANSACTIONS' | 'DELETE_TRANSACTION' | 'UPDATE_TRANSACTION' | 'GENERAL_RESPONSE';
+  action: 'CREATE_TRANSACTIONS' | 'DELETE_TRANSACTION' | 'UPDATE_TRANSACTION' | 'SETTLE_DEBT' | 'UPDATE_BUDGET' | 'SAVE_MEMORY' | 'GENERAL_RESPONSE';
   responseText: string;
   speechText?: string;
   transactionsToCreate?: Array<{
@@ -15,6 +15,23 @@ export interface GeminiAgentResponse {
     date?: string;
   }>;
   transactionIdToDelete?: string;
+  transactionToUpdate?: {
+    id: string;
+    amount?: number;
+    title?: string;
+    category?: string;
+    paymentMethod?: string;
+  };
+  settleDebtPerson?: string;
+  settleDebtAmount?: number;
+  memoryToSave?: {
+    key: string;
+    value: string;
+  };
+  budgetToUpdate?: {
+    category: string;
+    amount: number;
+  };
 }
 
 function blobToBase64(blob: Blob): Promise<string> {
@@ -78,7 +95,7 @@ YOUR TASK:
 Analyze the user's audio or text message and determine the exact action to perform.
 Return ONLY a valid JSON object matching this schema (do NOT include markdown codeblocks or surrounding text):
 {
-  "action": "CREATE_TRANSACTIONS" | "DELETE_TRANSACTION" | "UPDATE_TRANSACTION" | "GENERAL_RESPONSE",
+  "action": "CREATE_TRANSACTIONS" | "DELETE_TRANSACTION" | "UPDATE_TRANSACTION" | "SETTLE_DEBT" | "UPDATE_BUDGET" | "SAVE_MEMORY" | "GENERAL_RESPONSE",
   "responseText": "Markdown formatted AI answer for the user interface",
   "speechText": "Concise natural text to speak aloud via text-to-speech",
   "transactionsToCreate": [
@@ -91,12 +108,25 @@ Return ONLY a valid JSON object matching this schema (do NOT include markdown co
       "person": "Nandini"
     }
   ],
-  "transactionIdToDelete": "${transactions[0]?.id || ''}"
+  "transactionIdToDelete": "${transactions[0]?.id || ''}",
+  "transactionToUpdate": {
+    "id": "${transactions[0]?.id || ''}",
+    "amount": 2500
+  },
+  "settleDebtPerson": "Rahul",
+  "settleDebtAmount": 500,
+  "memoryToSave": {
+    "key": "Wife Birthday",
+    "value": "12th July"
+  }
 }
 
 CRITICAL RULES:
-1. LOGGING vs QUERYING (CRITICAL):
+1. LOGGING vs QUERYING vs ACTIONS:
    - Set action='CREATE_TRANSACTIONS' ONLY when the user is reporting a NEW transaction that just happened (e.g., "Spent 300 on petrol", "Paid 300 to shop", "Lunch 300").
+   - Set action='SETTLE_DEBT' when a friend returns money or a loan is paid (e.g., "Rahul returned 500", "Sarthak paid 800"). Specify settleDebtPerson and settleDebtAmount.
+   - Set action='UPDATE_TRANSACTION' when the user corrects a previous entry (e.g., "I accidentally entered 250 instead of 2500", "Actually it was 2500"). Look up the matching transaction ID in USER'S CURRENT LEDGER TRANSACTIONS.
+   - Set action='SAVE_MEMORY' when the user shares a personal fact, habit, date, or target (e.g., "My wife's birthday is on 12th July", "I want to save 3 lakh this year"). Specify memoryToSave key and value.
    - If the user asks a question about past spending, requests to find/locate transactions, requests summaries, or asks about balances/history (e.g., "where did I spend 300 rupees?", "show transactions of 300", "did I pay Rohan?", "how much is spent?"), this is a QUERY. Set action='GENERAL_RESPONSE' and search through the provided USER'S CURRENT LEDGER TRANSACTIONS list to give a helpful answer. NEVER create a new transaction for a question, inquiry, search, or query!
 2. TITLE AUTOCORRECTION: Autocorrect the spellings and names of transaction titles/merchants (in Hindi, Hinglish, or English) to a clean, professional, capitalized representation. Only correct the spelling and format it (e.g. "chooran" -> "Churan", "doodh" -> "Milk", "toothbrush softbrush" -> "Toothbrush"). Never append extra descriptive words like "Candy", "Item", or "Shop" to corrected titles.
 3. CATEGORIZATION RULES:

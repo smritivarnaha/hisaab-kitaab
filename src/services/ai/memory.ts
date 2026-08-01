@@ -73,3 +73,27 @@ export function learnPaymentPreference(categoryOrItem: string, method: PaymentMe
   }
   return memory;
 }
+
+export function saveUserFact(key: string, value: string): AIMemoryMap {
+  const memory = getAIMemory();
+  if (!memory.userFacts) memory.userFacts = {};
+  memory.userFacts[key] = value;
+  saveAIMemory(memory);
+  return memory;
+}
+
+export function saveGoal(key: string, value: string): AIMemoryMap {
+  const memory = getAIMemory();
+  if (!memory.goals) memory.goals = {};
+  memory.goals[key] = value;
+  saveAIMemory(memory);
+  return memory;
+}
+
+export function saveMonthlyBudget(category: string, amount: number): AIMemoryMap {
+  const memory = getAIMemory();
+  if (!memory.monthlyBudgets) memory.monthlyBudgets = {};
+  memory.monthlyBudgets[category] = amount;
+  saveAIMemory(memory);
+  return memory;
+}

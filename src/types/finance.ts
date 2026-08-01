@@ -72,6 +72,9 @@ export interface AIMemoryMap {
   merchants: Record<string, Category>;
   contacts: Record<string, string>;
   paymentPreferences: Record<string, PaymentMethod>;
+  userFacts?: Record<string, string>;
+  goals?: Record<string, string>;
+  monthlyBudgets?: Record<string, number>;
 }
 
 export interface ReceiptItem {
@@ -108,6 +111,8 @@ export interface UserSettings {
   defaultPaymentMethod: PaymentMethod;
   theme: 'dark' | 'light';
   apiKey?: string;
+  openaiApiKey?: string;
+  aiProvider?: 'gemini' | 'openai';
   voiceLanguage: 'en-IN' | 'hi-IN' | 'hinglish';
   autoTTS: boolean;
 }

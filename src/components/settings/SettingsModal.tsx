@@ -73,32 +73,64 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
             </select>
           </div>
 
-          {/* Google Gemini AI API Key */}
-          <div className="p-4 bg-white border border-[#dadce0] rounded-2xl shadow-2xs space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-[#202124] flex items-center gap-1.5">
-                <Key className="w-3.5 h-3.5 text-emerald-700" />
-                Google Gemini API Key (LLM Brain)
-              </label>
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noreferrer"
-                className="text-[10px] text-emerald-700 hover:underline font-bold"
+          {/* AI Provider Selection */}
+          <div className="p-4 bg-white border border-[#dadce0] rounded-2xl shadow-2xs space-y-3">
+            <label className="text-xs font-bold text-[#202124] flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5 text-emerald-700" />
+              AI Provider & API Keys
+            </label>
+
+            {/* Provider Toggle */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => updateSettings({ aiProvider: 'gemini' })}
+                className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${(settings as any).aiProvider === 'openai' ? 'border-[#dadce0] text-[#5f6368] bg-[#f8f9fa]' : 'border-emerald-600 text-emerald-700 bg-emerald-50'}`}
               >
-                Get Free Key ↗
-              </a>
+                🟢 Google Gemini
+              </button>
+              <button
+                onClick={() => updateSettings({ aiProvider: 'openai' })}
+                className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${(settings as any).aiProvider === 'openai' ? 'border-blue-500 text-blue-700 bg-blue-50' : 'border-[#dadce0] text-[#5f6368] bg-[#f8f9fa]'}`}
+              >
+                🔵 OpenAI (GPT-4o)
+              </button>
             </div>
-            <input
-              type="password"
-              value={settings.apiKey || ''}
-              onChange={e => updateSettings({ apiKey: e.target.value })}
-              placeholder="AIzaSy..."
-              className="w-full bg-[#f8f9fa] border border-[#dadce0] text-xs text-[#202124] rounded-xl py-2 px-3 outline-none focus:border-emerald-700 placeholder-[#5f6368] font-mono"
-            />
-            <p className="text-[10px] text-[#5f6368]">
-              {settings.apiKey?.trim() ? '🟢 Gemini 1.5 Flash LLM Brain is ACTIVE!' : 'Paste your free Google Gemini API key to enable 100% full LLM reasoning, voice agent tools, and contextual memory!'}
-            </p>
+
+            {/* Gemini Key */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[#202124]">Google Gemini API Key</span>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[10px] text-emerald-700 hover:underline font-bold">Get Free Key ↗</a>
+              </div>
+              <input
+                type="password"
+                value={settings.apiKey || ''}
+                onChange={e => updateSettings({ apiKey: e.target.value })}
+                placeholder="AIzaSy..."
+                className="w-full bg-[#f8f9fa] border border-[#dadce0] text-xs text-[#202124] rounded-xl py-2 px-3 outline-none focus:border-emerald-700 placeholder-[#5f6368] font-mono"
+              />
+              <p className="text-[10px] text-[#5f6368]">
+                {settings.apiKey?.trim() ? '🟢 Gemini 1.5 Flash LLM is ACTIVE' : 'Uses Gemini for both text + voice audio analysis'}
+              </p>
+            </div>
+
+            {/* OpenAI Key */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[#202124]">OpenAI API Key</span>
+                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 hover:underline font-bold">Get Key ↗</a>
+              </div>
+              <input
+                type="password"
+                value={(settings as any).openaiApiKey || ''}
+                onChange={e => updateSettings({ openaiApiKey: e.target.value } as any)}
+                placeholder="sk-..."
+                className="w-full bg-[#f8f9fa] border border-[#dadce0] text-xs text-[#202124] rounded-xl py-2 px-3 outline-none focus:border-blue-500 placeholder-[#5f6368] font-mono"
+              />
+              <p className="text-[10px] text-[#5f6368]">
+                {(settings as any).openaiApiKey?.trim() ? '🔵 GPT-4o + Whisper voice transcription is ACTIVE' : 'Uses GPT-4o for text + OpenAI Whisper for best-in-class voice accuracy'}
+              </p>
+            </div>
           </div>
 
           {/* Reset All Data */}
