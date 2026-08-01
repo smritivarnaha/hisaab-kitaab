@@ -342,7 +342,7 @@ export function parseMultiInput(input: string, memory: AIMemoryMap = DEFAULT_MEM
   for (const line of lines) {
     if (!line) continue;
     const tx = parseSingleInput(line, memory);
-    if (tx.amount > 0 || lines.length === 1) {
+    if (tx.amount > 0) {
       results.push(tx);
     }
   }
