@@ -17,7 +17,8 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
     processUserInputText, 
     isProcessingAI, 
     pendingReviewItems, 
-    clearPendingReview 
+    clearPendingReview,
+    settings
   } = useFinance();
 
   const [inputText, setInputText] = useState('');
@@ -65,7 +66,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
       processUserInputText(textToSubmit, true, audioBlob || undefined);
       setLiveTranscript('');
     } else {
-      setLiveTranscript('');
+      const hasApiKey = !!settings.apiKey?.trim();
       const started = speechService.start(
         {
           language: 'en-IN',
@@ -89,7 +90,8 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
             setLiveTranscript('');
           }
         },
-        (level) => setAudioLevel(level)
+        (level) => setAudioLevel(level),
+        hasApiKey
       );
 
       if (started) {
@@ -196,7 +198,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
                 type="text"
                 value={inputText}
                 onChange={e => setInputText(e.target.value)}
-                placeholder={isListening ? "Listening live..." : "Or type finance entry..."}
+                placeholder={isListening ? (settings.apiKey?.trim() ? "Recording voice note..." : "Listening live...") : "Or type finance entry..."}
                 className="w-full bg-[#F3F5F1] border border-[#E2E8E0] rounded-full py-2.5 pl-4 pr-10 text-xs sm:text-sm text-[#0D2E14] placeholder-gray-400 font-semibold outline-none focus:border-[#0D2E14] focus:bg-white transition-all font-outfit"
               />
             </div>

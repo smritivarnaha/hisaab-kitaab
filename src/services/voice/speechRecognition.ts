@@ -86,25 +86,15 @@ export class VoiceRecognitionService {
 
   public start(
     config: VoiceRecognitionConfig,
-    onAudioLevel?: (level: number) => void
+    onAudioLevel?: (level: number) => void,
+    forceRawRecording = false
   ): boolean {
     if (this.isListening) return true;
     this.currentTranscript = '';
     this.audioChunks = [];
 
-    if (!this.recognition) {
-      // Re-try initialization just in case window properties loaded late
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        this.recognition = new SpeechRecognition();
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        this.recognition.continuous = !isMobile; // Mobile speech engines freeze if continuous is true!
-        this.recognition.interimResults = true;
-      }
-    }
-
-    if (!this.recognition) {
-      // If native SpeechRecognition is missing (e.g. Firefox/Brave), we run raw audio recording!
+    if (forceRawRecording || !this.recognition) {
+      // If native SpeechRecognition is missing (e.g. Firefox/Brave) or forced (Gemini API key is active), we run raw audio recording!
       this.useRawRecording = true;
       this.startRecordingRaw();
       this.startAudioVisualizer(onAudioLevel);
