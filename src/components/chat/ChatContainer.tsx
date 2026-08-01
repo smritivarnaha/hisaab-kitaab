@@ -67,7 +67,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
       setLiveTranscript('');
     } else {
       const hasApiKey = !!settings.apiKey?.trim();
-      const started = speechService.start(
+      const started = await speechService.start(
         {
           language: 'en-IN',
           onResult: (transcript) => {

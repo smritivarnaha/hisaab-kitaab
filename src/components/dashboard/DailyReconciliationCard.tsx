@@ -109,7 +109,7 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
 
   const [micError, setMicError] = useState<string | null>(null);
 
-  const handleToggleBatchVoice = () => {
+  const handleToggleBatchVoice = async () => {
     setMicError(null);
     if (isListening) {
       speechService.stop();
@@ -120,7 +120,7 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
       }
     } else {
       setLiveTranscript('');
-      const started = speechService.start(
+      const started = await speechService.start(
         {
           language: 'en-IN',
           onResult: (transcript) => {

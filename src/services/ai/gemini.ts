@@ -70,7 +70,7 @@ USER'S LEARNED MEMORY & PREFERENCES:
 ${JSON.stringify(memory, null, 2)}
 
 CONVERSATION HISTORY (recent messages for context):
-${chatMessages.slice(-10).map(m => `${m.sender === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n')}
+${chatMessages.slice(-20).map(m => `${m.sender === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n')}
 
 USER MESSAGE TEXT (IF ANY): "${userInput}"
 

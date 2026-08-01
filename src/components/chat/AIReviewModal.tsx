@@ -52,7 +52,7 @@ export const AIReviewModal: React.FC<Props> = ({ items, onClose }) => {
     liveTranscriptRef.current = liveTranscript;
   }, [liveTranscript]);
 
-  const handleToggleVoice = () => {
+  const handleToggleVoice = async () => {
     if (isListening) {
       speechService.stop();
       setIsListening(false);
@@ -62,7 +62,7 @@ export const AIReviewModal: React.FC<Props> = ({ items, onClose }) => {
       }
     } else {
       setLiveTranscript('');
-      const started = speechService.start(
+      const started = await speechService.start(
         {
           language: 'en-IN',
           onResult: (transcript) => {

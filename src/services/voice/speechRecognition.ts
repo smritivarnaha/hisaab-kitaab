@@ -84,11 +84,11 @@ export class VoiceRecognitionService {
     });
   }
 
-  public start(
+  public async start(
     config: VoiceRecognitionConfig,
     onAudioLevel?: (level: number) => void,
     forceRawRecording = false
-  ): boolean {
+  ): Promise<boolean> {
     if (this.isListening) return true;
     this.currentTranscript = '';
     this.audioChunks = [];
@@ -96,13 +96,40 @@ export class VoiceRecognitionService {
     if (forceRawRecording || !this.recognition) {
       // If native SpeechRecognition is missing (e.g. Firefox/Brave) or forced (Gemini API key is active), we run raw audio recording!
       this.useRawRecording = true;
-      this.startRecordingRaw();
-      this.startAudioVisualizer(onAudioLevel);
-      return true;
+      const ok = await this.startRecordingRaw();
+      if (!ok) {
+        if (this.recognition) {
+          console.warn('Raw recording failed (likely HTTP block on mobile), falling back to native SpeechRecognition');
+          this.useRawRecording = false;
+        } else {
+          config.onError('Microphone permission blocked or unavailable.');
+          return false;
+        }
+      } else {
+        this.startAudioVisualizer(onAudioLevel);
+        return true;
+      }
     }
 
     // Native Speech Recognition exists -> Use it exclusively (no concurrent MediaRecorder to prevent mic lock conflicts)
     this.useRawRecording = false;
+    
+    if (!this.recognition) {
+      // Re-try initialization just in case window properties loaded late
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        this.recognition = new SpeechRecognition();
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.recognition.continuous = !isMobile;
+        this.recognition.interimResults = true;
+      }
+    }
+
+    if (!this.recognition) {
+      config.onError('Speech Recognition not supported on this browser.');
+      return false;
+    }
+
     this.recognition.lang = config.language || 'en-IN';
     this.recognition.onresult = (event: any) => {
       let interimTranscript = '';
