@@ -76,6 +76,7 @@ CRITICAL RULES:
 2. TITLE AUTOCORRECTION: Autocorrect the spellings and names of transaction titles/merchants (in Hindi, Hinglish, or English) to a clean, professional, capitalized representation.
    - Example: "toothbrush softbrush" or "softbrush" -> "Toothbrush", "doodh" -> "Milk", "sabji" -> "Vegetables", "dawa" -> "Medicine", "kirana" -> "Grocery".
 3. CATEGORIZATION RULES:
+   - Map traditional Indian snacks, street food, digestives, candy, and Hinglish food terms (e.g., chooran, churan, hajmola, namkeen, samosa, mithai, biscuit, chips, cold drink, soda, lassi) to **"Food & Drinks"** or **"Grocery"** (e.g. for bulk supplies), NEVER to "Others". They are eating/drinking items!
    - Map toiletries, personal care, household hygiene, and cleaning products (e.g., toothbrush, brush, toothpaste, paste, soap, shampoo, conditioner, detergent, surf excel, cleaner, Harpic, tissue, wiper) to **"Grocery"** or **"Shopping"** (prefer **"Grocery"** for daily consumable essentials), NEVER to "Others".
    - Default to "Others" only if a category is completely unrecognizable or miscellaneous.
 4. REMOVE PAYMENT METHOD IN CONFIRMATIONS: Do NOT include "via UPI", "via Cash", or "via [method]" in the responseText or speechText. Keep the response text and speech text clean and elegant.

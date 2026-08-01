@@ -138,10 +138,10 @@ function parseCategory(text: string, memory: AIMemoryMap = DEFAULT_MEMORY): { ca
   if (/petrol|diesel|fuel|cng|gasoline|engine oil|vehicle fuel/i.test(lower)) {
     return { category: 'Fuel', confidenceBoost: 25 };
   }
-  if (/chai|tea|coffee|ccd|starbucks|food|lunch|dinner|breakfast|biryani|swiggy|zomato|restaurant|burger|pizza|samosa|momos|snack|khana|piya/i.test(lower)) {
+  if (/chai|tea|coffee|ccd|starbucks|food|lunch|dinner|breakfast|biryani|swiggy|zomato|restaurant|burger|pizza|samosa|momos|snack|khana|piya|churan|chooran|hajmola|candy|sweet|mithai|dosa|idli|paneer|chicken|mutton|roti|sabji|curry|thali|coke|pepsi|juice|lassi|soda|peena/i.test(lower)) {
     return { category: 'Food & Drinks', confidenceBoost: 25 };
   }
-  if (/grocery|milk|doodh|sabzi|vegetables|fruit|kirana|ration|blinkit|zepto|instamart|bread|eggs|toothbrush|brush|toothpaste|paste|soap|shampoo|conditioner|detergent|harpic|tissue|wiper|cleaner|personal care|toiletries/i.test(lower)) {
+  if (/grocery|milk|doodh|sabzi|vegetables|fruit|kirana|ration|blinkit|zepto|instamart|bread|eggs|toothbrush|brush|toothpaste|paste|soap|shampoo|conditioner|detergent|harpic|tissue|wiper|cleaner|personal care|toiletries|atta|chawal|dal|rice|oil|masala|spices|namkeen|biscuit|kurkure|lays|chips/i.test(lower)) {
     return { category: 'Grocery', confidenceBoost: 25 };
   }
   if (/electricity|bijli|recharge|wifi|broadband|rent|kiraya|water bill|gas bill|mobile bill|maintenance/i.test(lower)) {
@@ -175,6 +175,9 @@ export function autocorrectTitleSpelling(title: string): string {
   const lower = title.toLowerCase().trim();
   
   const corrections: Record<string, string> = {
+    'chooran': 'Churan Candy',
+    'churan': 'Churan Candy',
+    'hajmola': 'Hajmola Candy',
     'toothbrush softbrush': 'Toothbrush',
     'softbrush': 'Toothbrush',
     'tooth brush': 'Toothbrush',
