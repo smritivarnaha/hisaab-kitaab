@@ -5,10 +5,13 @@ import { InsightsCard } from './InsightsCard';
 import { DailyReconciliationCard } from './DailyReconciliationCard';
 import { CategoryIcon } from '../common/CategoryIcon';
 import { PaymentMethodIcon } from '../common/PaymentMethodIcon';
+import { AnalyticsPanel } from './AnalyticsPanel';
 import { 
   Search, 
   ArrowUpRight,
-  FileText
+  FileText,
+  BarChart3,
+  History
 } from 'lucide-react';
 
 export const DashboardOverview: React.FC = () => {
@@ -16,6 +19,7 @@ export const DashboardOverview: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [txTypeFilter, setTxTypeFilter] = useState<'all' | 'debit' | 'credit'>('all');
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
+  const [activeSubTab, setActiveSubTab] = useState<'passbook' | 'analytics'>('passbook');
 
   // Only show finalized (non-pending) transactions in Passbook History
   const finalizedTransactions = transactions.filter(t => !t.isPending);
@@ -139,130 +143,160 @@ export const DashboardOverview: React.FC = () => {
 
       {/* 3. Financial Mobile App Passbook Feed */}
       <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-        {/* Left 2-Column: Passbook */}
+        {/* Left 2-Column: Passbook & Analytics Toggle */}
         <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-          <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-[#E2E8E0] shadow-2xs">
-            {/* Header: Title + Filter Pills */}
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <h3 className="font-bold text-[#0D2E14] text-sm sm:text-base font-outfit whitespace-nowrap">
-                Passbook History
-              </h3>
+          {/* Subtab Navigation Pills */}
+          <div className="flex items-center gap-1.5 p-1 bg-white border border-[#E2E8E0] rounded-2xl max-w-xs shadow-2xs">
+            <button
+              onClick={() => setActiveSubTab('passbook')}
+              className={`flex-1 py-1.5 px-3.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
+                activeSubTab === 'passbook'
+                  ? 'bg-[#0D2E14] text-white shadow-sm'
+                  : 'text-gray-500 hover:text-[#0D2E14]'
+              }`}
+            >
+              <History className="w-3.5 h-3.5" />
+              Passbook
+            </button>
+            <button
+              onClick={() => setActiveSubTab('analytics')}
+              className={`flex-1 py-1.5 px-3.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all ${
+                activeSubTab === 'analytics'
+                  ? 'bg-[#0D2E14] text-white shadow-sm'
+                  : 'text-gray-500 hover:text-[#0D2E14]'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Analytics & Stats
+            </button>
+          </div>
 
-              {/* Filter Pills */}
-              <div className="flex items-center gap-0.5 p-0.5 bg-[#F3F5F1] rounded-full border border-[#E2E8E0] text-[10px] font-bold">
-                <button
-                  onClick={() => setTxTypeFilter('all')}
-                  className={`px-2.5 py-0.5 rounded-full transition-all ${
-                    txTypeFilter === 'all' ? 'bg-[#0D2E14] text-white shadow-xs' : 'text-gray-600'
-                  }`}
-                >
-                  All ({finalizedTransactions.length})
-                </button>
-                <button
-                  onClick={() => setTxTypeFilter('debit')}
-                  className={`px-2 py-0.5 rounded-full transition-all ${
-                    txTypeFilter === 'debit' ? 'bg-[#D93025] text-white shadow-xs' : 'text-red-600'
-                  }`}
-                >
-                  Debit
-                </button>
-                <button
-                  onClick={() => setTxTypeFilter('credit')}
-                  className={`px-2 py-0.5 rounded-full transition-all ${
-                    txTypeFilter === 'credit' ? 'bg-green-700 text-white shadow-xs' : 'text-green-700'
-                  }`}
-                >
-                  Credit
-                </button>
-              </div>
-            </div>
+          {activeSubTab === 'passbook' ? (
+            <div className="bg-white rounded-3xl p-3.5 sm:p-4 border border-[#E2E8E0] shadow-2xs">
+              {/* Header: Title + Filter Pills */}
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h3 className="font-bold text-[#0D2E14] text-sm sm:text-base font-outfit whitespace-nowrap">
+                  Passbook History
+                </h3>
 
-            {/* Compact Search Bar */}
-            <div className="relative mb-3">
-              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Search transactions..."
-                className="w-full bg-[#F3F5F1] border border-[#E2E8E0] rounded-full py-1.5 pl-8 pr-3 text-xs font-semibold text-[#0D2E14] placeholder-gray-400 outline-none focus:border-[#0D2E14] font-outfit"
-              />
-            </div>
-
-            {/* Passbook Item Rows */}
-            <div className="space-y-2">
-              {filteredTransactions.map(tx => {
-                const isCredit = tx.type === 'income';
-                const hasSpecialNotes = !!tx.notes && tx.notes !== tx.title;
-                const isExpanded = !!expandedNotes[tx.id];
-                const displayDate = formatDateDisplay(tx.date, tx.relativeDateText);
-
-                return (
-                  <div 
-                    key={tx.id} 
-                    className="p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] bg-[#FAFCF9] hover:bg-white transition-all shadow-2xs"
+                {/* Filter Pills */}
+                <div className="flex items-center gap-0.5 p-0.5 bg-[#F3F5F1] rounded-full border border-[#E2E8E0] text-[10px] font-bold">
+                  <button
+                    onClick={() => setTxTypeFilter('all')}
+                    className={`px-2.5 py-0.5 rounded-full transition-all ${
+                      txTypeFilter === 'all' ? 'bg-[#0D2E14] text-white shadow-xs' : 'text-gray-600'
+                    }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      {/* Left: Category Icon + Title + Plain Text Date & Method */}
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <CategoryIcon category={tx.category} size="sm" />
+                    All ({finalizedTransactions.length})
+                  </button>
+                  <button
+                    onClick={() => setTxTypeFilter('debit')}
+                    className={`px-2 py-0.5 rounded-full transition-all ${
+                      txTypeFilter === 'debit' ? 'bg-[#D93025] text-white shadow-xs' : 'text-red-600'
+                    }`}
+                  >
+                    Debit
+                  </button>
+                  <button
+                    onClick={() => setTxTypeFilter('credit')}
+                    className={`px-2 py-0.5 rounded-full transition-all ${
+                      txTypeFilter === 'credit' ? 'bg-green-700 text-white shadow-xs' : 'text-green-700'
+                    }`}
+                  >
+                    Credit
+                  </button>
+                </div>
+              </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1">
-                            <h4 className="text-xs font-bold text-[#0D2E14] font-outfit leading-tight truncate">
-                              {tx.title || tx.category} {tx.person ? `(${tx.person})` : ''}
-                            </h4>
-                            {hasSpecialNotes && (
-                              <button
-                                onClick={() => toggleNoteExpand(tx.id)}
-                                className="text-blue-600 hover:text-blue-800 p-0.5"
-                                title={isExpanded ? "Hide note" : "View note"}
-                              >
-                                <FileText className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
+              {/* Compact Search Bar */}
+              <div className="relative mb-3">
+                <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  placeholder="Search transactions..."
+                  className="w-full bg-[#F3F5F1] border border-[#E2E8E0] rounded-full py-1.5 pl-8 pr-3 text-xs font-semibold text-[#0D2E14] placeholder-gray-400 outline-none focus:border-[#0D2E14] font-outfit"
+                />
+              </div>
 
-                          <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-500 font-medium truncate">
-                            <span className="font-bold text-gray-700">{tx.category}</span>
-                            <span>•</span>
-                            <span>{tx.paymentMethod}</span>
-                            <span>•</span>
-                            <span className="font-medium text-gray-600">{displayDate}</span>
+              {/* Passbook Item Rows */}
+              <div className="space-y-2">
+                {filteredTransactions.map(tx => {
+                  const isCredit = tx.type === 'income';
+                  const hasSpecialNotes = !!tx.notes && tx.notes !== tx.title;
+                  const isExpanded = !!expandedNotes[tx.id];
+                  const displayDate = formatDateDisplay(tx.date, tx.relativeDateText);
+
+                  return (
+                    <div 
+                      key={tx.id} 
+                      className="p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] bg-[#FAFCF9] hover:bg-white transition-all shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        {/* Left: Category Icon + Title + Plain Text Date & Method */}
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <CategoryIcon category={tx.category} size="sm" />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1">
+                              <h4 className="text-xs font-bold text-[#0D2E14] font-outfit leading-tight truncate">
+                                {tx.title || tx.category} {tx.person ? `(${tx.person})` : ''}
+                              </h4>
+                              {hasSpecialNotes && (
+                                <button
+                                  onClick={() => toggleNoteExpand(tx.id)}
+                                  className="text-blue-600 hover:text-blue-800 p-0.5"
+                                  title={isExpanded ? "Hide note" : "View note"}
+                                >
+                                  <FileText className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-500 font-medium truncate">
+                              <span className="font-bold text-gray-700">{tx.category}</span>
+                              <span>•</span>
+                              <span>{tx.paymentMethod}</span>
+                              <span>•</span>
+                              <span className="font-medium text-gray-600">{displayDate}</span>
+                            </div>
                           </div>
+                        </div>
+
+                        {/* Right: Amount */}
+                        <div className="text-right flex-shrink-0">
+                          <span
+                            className={`text-xs sm:text-sm font-bold font-outfit block ${
+                              isCredit ? 'text-green-700' : 'text-[#D93025]'
+                            }`}
+                          >
+                            {isCredit ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Right: Amount */}
-                      <div className="text-right flex-shrink-0">
-                        <span
-                          className={`text-xs sm:text-sm font-bold font-outfit block ${
-                            isCredit ? 'text-green-700' : 'text-[#D93025]'
-                          }`}
-                        >
-                          {isCredit ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
-                        </span>
-                      </div>
+                      {/* Special Note Drawer */}
+                      {hasSpecialNotes && isExpanded && (
+                        <div className="mt-2 p-2 bg-blue-50/90 border border-blue-200 rounded-xl text-[10px] text-gray-800 italic">
+                          <span className="font-bold text-blue-700 not-italic block mb-0.5">Special Note:</span>
+                          {tx.notes}
+                        </div>
+                      )}
                     </div>
+                  );
+                })}
 
-                    {/* Special Note Drawer */}
-                    {hasSpecialNotes && isExpanded && (
-                      <div className="mt-2 p-2 bg-blue-50/90 border border-blue-200 rounded-xl text-[10px] text-gray-800 italic">
-                        <span className="font-bold text-blue-700 not-italic block mb-0.5">Special Note:</span>
-                        {tx.notes}
-                      </div>
-                    )}
+                {filteredTransactions.length === 0 && (
+                  <div className="p-6 text-center text-xs text-gray-500 font-semibold">
+                    No transactions match your search filter.
                   </div>
-                );
-              })}
-
-              {filteredTransactions.length === 0 && (
-                <div className="p-6 text-center text-xs text-gray-500 font-semibold">
-                  No transactions match your search filter.
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <AnalyticsPanel transactions={transactions} />
+          )}
         </div>
 
         {/* Right 1-Column */}
