@@ -141,7 +141,7 @@ function parseCategory(text: string, memory: AIMemoryMap = DEFAULT_MEMORY): { ca
   if (/chai|tea|coffee|ccd|starbucks|food|lunch|dinner|breakfast|biryani|swiggy|zomato|restaurant|burger|pizza|samosa|momos|snack|khana|piya/i.test(lower)) {
     return { category: 'Food & Drinks', confidenceBoost: 25 };
   }
-  if (/grocery|milk|doodh|sabzi|vegetables|fruit|kirana|ration|blinkit|zepto|instamart|bread|eggs/i.test(lower)) {
+  if (/grocery|milk|doodh|sabzi|vegetables|fruit|kirana|ration|blinkit|zepto|instamart|bread|eggs|toothbrush|brush|toothpaste|paste|soap|shampoo|conditioner|detergent|harpic|tissue|wiper|cleaner|personal care|toiletries/i.test(lower)) {
     return { category: 'Grocery', confidenceBoost: 25 };
   }
   if (/electricity|bijli|recharge|wifi|broadband|rent|kiraya|water bill|gas bill|mobile bill|maintenance/i.test(lower)) {
@@ -168,6 +168,52 @@ function parseCategory(text: string, memory: AIMemoryMap = DEFAULT_MEMORY): { ca
 
   // If AI is confused, automatically assign Miscellaneous ('Others')
   return { category: 'Others', confidenceBoost: 0 };
+}
+
+// Autocorrects common Hinglish, Hindi, or misspelled words into neat English/proper names
+export function autocorrectTitleSpelling(title: string): string {
+  const lower = title.toLowerCase().trim();
+  
+  const corrections: Record<string, string> = {
+    'toothbrush softbrush': 'Toothbrush',
+    'softbrush': 'Toothbrush',
+    'tooth brush': 'Toothbrush',
+    'doodh': 'Milk',
+    'dudh': 'Milk',
+    'sabzi': 'Vegetables',
+    'sabji': 'Vegetables',
+    'dawa': 'Medicine',
+    'dawai': 'Medicine',
+    'anda': 'Eggs',
+    'ande': 'Eggs',
+    'chawal': 'Rice',
+    'atta': 'Flour',
+    'aata': 'Flour',
+    'macchi': 'Fish',
+    'machli': 'Fish',
+    'nashta': 'Breakfast',
+    'nasta': 'Breakfast',
+    'chai': 'Tea',
+    'daru': 'Alcohol',
+    'daaru': 'Alcohol',
+    'kirana': 'Grocery',
+    'kapda': 'Clothes',
+    'kapde': 'Clothes',
+    'gadi': 'Vehicle',
+    'gaadi': 'Vehicle',
+    'room rent': 'Rent',
+    'bijli': 'Electricity'
+  };
+
+  if (corrections[lower]) {
+    return corrections[lower];
+  }
+
+  // Also handle minor pattern replacements
+  let cleaned = title;
+  if (/toothbrush\s+softbrush/i.test(cleaned)) return 'Toothbrush';
+  
+  return cleaned;
 }
 
 function parsePaymentMethod(text: string): { method: PaymentMethod; explicit: boolean } {
@@ -302,7 +348,7 @@ export function parseSingleInput(input: string, memory: AIMemoryMap = DEFAULT_ME
     isPending = true; // Only mark pending if reason/name is missing!
   }
 
-  // NEVER mark pending due to category — AI auto-assigns 'Others' if confused!
+  title = autocorrectTitleSpelling(title);
 
   return {
     id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
