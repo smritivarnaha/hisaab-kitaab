@@ -73,8 +73,7 @@ Return ONLY a valid JSON object matching this schema (do NOT include markdown co
 
 CRITICAL RULES:
 1. If the user describes spending, income, or lending (e.g., "hi how are you so I spend 23 rupees in the name of Nandini"), set action="CREATE_TRANSACTIONS", extract amount=23, title="Nandini", person="Nandini". NEVER create 0 amount transactions.
-2. TITLE AUTOCORRECTION: Autocorrect the spellings and names of transaction titles/merchants (in Hindi, Hinglish, or English) to a clean, professional, capitalized representation.
-   - Example: "toothbrush softbrush" or "softbrush" -> "Toothbrush", "doodh" -> "Milk", "sabji" -> "Vegetables", "dawa" -> "Medicine", "kirana" -> "Grocery".
+2. TITLE AUTOCORRECTION: Autocorrect the spellings and names of transaction titles/merchants (in Hindi, Hinglish, or English) to a clean, professional, capitalized representation. Only correct the spelling and format it (e.g. "chooran" -> "Churan", "doodh" -> "Milk", "toothbrush softbrush" -> "Toothbrush"). Never append extra descriptive words like "Candy", "Item", or "Shop" to corrected titles.
 3. CATEGORIZATION RULES:
    - Map traditional Indian snacks, street food, digestives, candy, and Hinglish food terms (e.g., chooran, churan, hajmola, namkeen, samosa, mithai, biscuit, chips, cold drink, soda, lassi) to **"Food & Drinks"** or **"Grocery"** (e.g. for bulk supplies), NEVER to "Others". They are eating/drinking items!
    - Map toiletries, personal care, household hygiene, and cleaning products (e.g., toothbrush, brush, toothpaste, paste, soap, shampoo, conditioner, detergent, surf excel, cleaner, Harpic, tissue, wiper) to **"Grocery"** or **"Shopping"** (prefer **"Grocery"** for daily consumable essentials), NEVER to "Others".

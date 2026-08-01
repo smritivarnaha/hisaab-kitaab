@@ -175,9 +175,9 @@ export function autocorrectTitleSpelling(title: string): string {
   const lower = title.toLowerCase().trim();
   
   const corrections: Record<string, string> = {
-    'chooran': 'Churan Candy',
-    'churan': 'Churan Candy',
-    'hajmola': 'Hajmola Candy',
+    'chooran': 'Churan',
+    'churan': 'Churan',
+    'hajmola': 'Hajmola',
     'toothbrush softbrush': 'Toothbrush',
     'softbrush': 'Toothbrush',
     'tooth brush': 'Toothbrush',
