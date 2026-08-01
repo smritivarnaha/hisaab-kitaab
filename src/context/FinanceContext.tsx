@@ -354,6 +354,39 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTimeout(() => {
       const lower = text.toLowerCase();
 
+      // 1. AUTONOMOUS VOICE AGENT ACTION: Delete Last Transaction Command
+      if (/(delete|remove|undo|cancel|erase)\s*(the|my)?\s*(last|recent)?\s*(transaction|trasction|trasaction|entry|record)?/i.test(lower) || /delete last/i.test(lower)) {
+        if (!transactions.length) {
+          const responseText = "There are no transactions in your ledger to delete!";
+          const aiMsg: ChatMessage = {
+            id: `msg_ai_${Date.now()}`,
+            sender: 'assistant',
+            text: responseText,
+            timestamp: Date.now()
+          };
+          setChatMessages(prev => [...prev, aiMsg]);
+          setIsProcessingAI(false);
+          if (isVoice || settings.autoTTS) speakText(responseText, settings.voiceLanguage);
+          return;
+        }
+
+        const lastTx = transactions[0];
+        deleteTransaction(lastTx.id);
+
+        const responseText = `🗑️ **Deleted Last Transaction**: Removed **Rs. ${lastTx.amount.toLocaleString('en-IN')}** for **${lastTx.title}** (${lastTx.category}) from your Passbook!`;
+        const aiMsg: ChatMessage = {
+          id: `msg_ai_${Date.now()}`,
+          sender: 'assistant',
+          text: responseText,
+          timestamp: Date.now(),
+          actionSummary: `Deleted ${lastTx.title} Rs. ${lastTx.amount}`
+        };
+        setChatMessages(prev => [...prev, aiMsg]);
+        setIsProcessingAI(false);
+        if (isVoice || settings.autoTTS) speakText(responseText, settings.voiceLanguage);
+        return;
+      }
+
       // If active clarification is pending and user responds directly
       if (activeClarification && !/\d+/.test(lower)) {
         processClarificationAnswer(text);
@@ -362,7 +395,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
 
       // Conversational Q&A / Advice / Financial Queries (without amounts)
-      if (/hi|hello|hey|namaste|kaise ho|who are you|how much|total spend|show|what happened|rahul|july|summary|advice|saving|tip|budget|balance|cashflow/i.test(lower) && !/\d+/.test(lower)) {
+      if (/hi|hello|hey|namaste|kaise ho|who are you|how much|total spend|show|what happened|rahul|nandini|july|summary|advice|saving|tip|budget|balance|cashflow|report|organis|organiz|table|breakdown/i.test(lower) && !/\d+/.test(lower)) {
         let responseText = handleNaturalLanguageQuery(lower, transactions);
         const aiMsg: ChatMessage = {
           id: `msg_ai_${Date.now()}`,
@@ -382,7 +415,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const parsedItems = parseMultiInput(text, aiMemory);
 
       if (!parsedItems.length) {
-        const responseText = `I couldn't detect an amount in your input. Try saying e.g. *"Petrol 2200"* or *"Paid Rahul 500"*`;
+        const responseText = `I couldn't detect an amount in your input. Try saying e.g. *"Petrol 2200"* or *"Spent 23 for Nandini"*`;
         const aiMsg: ChatMessage = {
           id: `msg_ai_${Date.now()}`,
           sender: 'assistant',
@@ -525,18 +558,52 @@ function handleNaturalLanguageQuery(query: string, transactions: Transaction[]):
 
   // Greetings & Intros
   if (/hi|hello|hey|namaste|kaise ho|who are you|what can you do/i.test(lower)) {
-    return `Namaste! 🙏 I am your **Hisaab Kitab AI Voice Accountant**. I help you record expenses, track cashflow, reconcile pending entries, and analyze your money naturally! You can talk to me in English, Hindi, or Hinglish!`;
+    return `Namaste! 🙏 I am your **Hisaab Kitab AI Voice Agent**.\n\nI execute commands, track expenses, and analyze your financial data!\n\nTry asking:\n• *"Delete last transaction"*\n• *"I spent 23 rupees in the name of Nandini"*\n• *"Show organized spending report"*\n• *"Nandini ka kitna baaki hai"*`;
+  }
+
+  // Organized Financial Report / Breakdown
+  if (/report|organis|organiz|table|breakdown|all|everything|details/i.test(lower)) {
+    if (!transactions.length) return "No transactions recorded yet in your Passbook.";
+
+    const categoryTotals: Record<string, { total: number; count: number; type: string }> = {};
+    let totalInc = 0;
+    let totalExp = 0;
+
+    transactions.forEach(t => {
+      if (t.type === 'income') totalInc += t.amount;
+      else totalExp += t.amount;
+
+      if (!categoryTotals[t.category]) {
+        categoryTotals[t.category] = { total: 0, count: 0, type: t.type };
+      }
+      categoryTotals[t.category].total += t.amount;
+      categoryTotals[t.category].count += 1;
+    });
+
+    let report = `📊 **Organized Financial Report**:\n\n`;
+    report += `| Category | Type | Total Amount | Count |\n`;
+    report += `| :--- | :--- | :--- | :--- |\n`;
+
+    Object.entries(categoryTotals).forEach(([cat, data]) => {
+      report += `| ${cat} | ${data.type} | Rs. ${data.total.toLocaleString('en-IN')} | ${data.count} |\n`;
+    });
+
+    report += `\n• **Total Income**: Rs. ${totalInc.toLocaleString('en-IN')}\n`;
+    report += `• **Total Expenses**: Rs. ${totalExp.toLocaleString('en-IN')}\n`;
+    report += `• **Current Net Balance**: Rs. ${(totalInc - totalExp).toLocaleString('en-IN')}`;
+
+    return report;
   }
 
   // Savings & Advice
   if (/advice|saving|tip|budget|how to save|reduce expense/i.test(lower)) {
     const totalExp = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
     const foodExp = transactions.filter(t => t.category === 'Food & Drinks' && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-    let tip = `💡 **AI Financial Tip**: Your total spending is **Rs. ${totalExp.toLocaleString('en-IN')}**.`;
+    let tip = `💡 **AI Financial Advice**: Your total spending is **Rs. ${totalExp.toLocaleString('en-IN')}**.`;
     if (foodExp > 2000) {
-      tip += ` You spent **Rs. ${foodExp.toLocaleString('en-IN')}** on Food & Dining. Cutting down 15% on dining out can save you **Rs. ${Math.round(foodExp * 0.15).toLocaleString('en-IN')}** monthly!`;
+      tip += ` You spent **Rs. ${foodExp.toLocaleString('en-IN')}** on Food & Dining. Cutting down 15% on dining out saves **Rs. ${Math.round(foodExp * 0.15).toLocaleString('en-IN')}** monthly!`;
     } else {
-      tip += ` Keep tracking every small cash and UPI transaction daily to maintain 100% financial clarity!`;
+      tip += ` Track every small cash and UPI payment daily to maintain 100% financial clarity!`;
     }
     return tip;
   }
@@ -562,18 +629,18 @@ function handleNaturalLanguageQuery(query: string, transactions: Transaction[]):
     return `Total spent on Household Groceries is **Rs. ${total.toLocaleString('en-IN')}** (${groceryTx.length} orders).`;
   }
 
-  // Person / Friend Loans (Rahul, etc.)
-  if (lower.includes('rahul') || lower.includes('friend') || lower.includes('lent') || lower.includes('borrow')) {
-    const rahulTx = transactions.filter(t => (t.person?.toLowerCase().includes('rahul') || t.title?.toLowerCase().includes('rahul')));
-    if (!rahulTx.length) return `No pending debt/lent records found for Rahul.`;
-    const lent = rahulTx.filter(t => t.type === 'lent').reduce((s, t) => s + t.amount, 0);
-    const returned = rahulTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-    const net = lent - returned;
-    return `Summary for **Rahul**:\n• Total Money Lent: Rs. ${lent}\n• Total Returned: Rs. ${returned}\n• **Net Pending to Receive**: Rs. ${net > 0 ? net : 0}`;
+  // Person / Friend Loans (Nandini, Rahul, etc.)
+  const personMatch = lower.match(/(nandini|rahul|rohan|priya|amit|neha|vikas|mummy|papa)/i);
+  if (personMatch) {
+    const pName = personMatch[1];
+    const pTx = transactions.filter(t => (t.person?.toLowerCase().includes(pName) || t.title?.toLowerCase().includes(pName)));
+    if (!pTx.length) return `No pending ledger entries found for ${pName.charAt(0).toUpperCase() + pName.slice(1)}.`;
+    const totalAmount = pTx.reduce((s, t) => s + t.amount, 0);
+    return `Ledger for **${pName.charAt(0).toUpperCase() + pName.slice(1)}**:\n• Total Entries: ${pTx.length}\n• Total Amount: Rs. ${totalAmount.toLocaleString('en-IN')}`;
   }
 
   // Summary & Cashflow
   const totalExp = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const totalInc = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  return `📊 **Financial Summary**:\n• Total Income: Rs. ${totalInc.toLocaleString('en-IN')}\n• Total Expenses: Rs. ${totalExp.toLocaleString('en-IN')}\n• Current Balance: Rs. ${(totalInc - totalExp).toLocaleString('en-IN')}`;
+  return `📊 **Financial Summary**:\n• Total Income: Rs. ${totalInc.toLocaleString('en-IN')}\n• Total Expenses: Rs. ${totalExp.toLocaleString('en-IN')}\n• Current Net Balance: Rs. ${(totalInc - totalExp).toLocaleString('en-IN')}`;
 }

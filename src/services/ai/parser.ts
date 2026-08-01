@@ -262,6 +262,13 @@ export function parseSingleInput(input: string, memory: AIMemoryMap = DEFAULT_ME
   let notes: string | undefined = undefined;
   let isPending = false;
 
+  // Check for explicit "in the name of <Name>" or "for <Name>" or "to <Name>"
+  const nameOfMatch = cleaned.match(/(?:in the name of|in name of|named|for|to)\s+([A-Za-z0-9]+)/i);
+  if (nameOfMatch && nameOfMatch[1] && !/^(the|a|an|me|my|rs|rupees|cash|upi|today|yesterday|aaj|kal)$/i.test(nameOfMatch[1])) {
+    const extracted = nameOfMatch[1].trim();
+    rawTitleCandidate = extracted.charAt(0).toUpperCase() + extracted.slice(1);
+  }
+
   const words = cleaned.split(/\s+/);
   const nonAmountWords = words.filter(w => !/^\d+$/.test(w) && !/^(rs|inr|₹|rs\.)$/i.test(w) && !/^(today|aaj|kal|yesterday|upi|cash)$/i.test(w));
 
@@ -272,13 +279,24 @@ export function parseSingleInput(input: string, memory: AIMemoryMap = DEFAULT_ME
   let title = 'Reason Missing';
 
   if (rawTitleCandidate) {
-    const candidateWords = rawTitleCandidate.split(/\s+/);
-    if (candidateWords.length > 3) {
-      title = candidateWords.slice(0, 3).join(' ');
-      notes = cleaned;
+    // Strip conversational intro fluff (e.g. "hi how are you so I spend 23 in the name of Nandini")
+    let cleanedTitle = rawTitleCandidate
+      .replace(/^(hi|hello|hey|so|i|we)\s+(how are you|hope you are well)?\s*(so|then)?\s*(i|we)?\s*(spent|spend|paid|gave|received|got)?\s*/i, '')
+      .replace(/^(in the name of|in name of|for the purpose of|under the name of|for|to)\s+/i, '')
+      .replace(/\b(rupees|rupee|rs|inr|cash|upi|today|aaj|kal|yesterday)\b/gi, '')
+      .trim();
+
+    if (cleanedTitle.length > 0) {
+      const candidateWords = cleanedTitle.split(/\s+/).filter(Boolean);
+      if (candidateWords.length > 3) {
+        title = candidateWords.slice(0, 3).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        notes = cleaned;
+      } else {
+        title = candidateWords.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        if (words.length > 4) notes = cleaned;
+      }
     } else {
-      title = rawTitleCandidate;
-      if (words.length > 4) notes = cleaned;
+      isPending = true;
     }
   } else {
     isPending = true; // Only mark pending if reason/name is missing!
