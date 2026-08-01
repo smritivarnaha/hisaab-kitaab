@@ -40,7 +40,7 @@ export async function processWithGeminiAgent(
   apiKey?: string,
   audioBlob?: Blob
 ): Promise<GeminiAgentResponse | null> {
-  const activeKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY;
+  const activeKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || 'AQ.Ab8RN6Ie0wYTm7AqZrmWDg0LJfeu3IP-k9IKFAC8PPlgl7Yv5A-';
   if (!activeKey || !activeKey.trim()) return null;
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeKey.trim()}`;
