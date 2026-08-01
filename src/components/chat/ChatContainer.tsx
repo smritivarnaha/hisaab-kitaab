@@ -54,16 +54,16 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
     liveTranscriptRef.current = liveTranscript;
   }, [liveTranscript]);
 
-  const handleToggleVoice = () => {
+  const handleToggleVoice = async () => {
     setMicPermissionError(null);
 
     if (isListening) {
-      speechService.stop();
       setIsListening(false);
-      if (liveTranscript.trim()) {
-        processUserInputText(liveTranscript, true);
-        setLiveTranscript('');
-      }
+      const audioBlob = await speechService.stopRecordingRaw();
+      speechService.stop();
+      const textToSubmit = liveTranscript.trim();
+      processUserInputText(textToSubmit, true, audioBlob || undefined);
+      setLiveTranscript('');
     } else {
       setLiveTranscript('');
       const started = speechService.start(
@@ -81,13 +81,12 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
               setMicPermissionError(`Voice error: ${err}`);
             }
           },
-          onEnd: (finalCapturedText) => {
+          onEnd: async (finalCapturedText) => {
             setIsListening(false);
+            const audioBlob = await speechService.stopRecordingRaw();
             const textToSubmit = (finalCapturedText || liveTranscriptRef.current).trim();
-            if (textToSubmit) {
-              processUserInputText(textToSubmit, true);
-              setLiveTranscript('');
-            }
+            processUserInputText(textToSubmit, true, audioBlob || undefined);
+            setLiveTranscript('');
           }
         },
         (level) => setAudioLevel(level)

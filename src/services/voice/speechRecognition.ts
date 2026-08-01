@@ -9,7 +9,9 @@ export interface VoiceRecognitionConfig {
 
 export class VoiceRecognitionService {
   private recognition: any = null;
-  private isListening = false;
+  public isListening = false;
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
   private currentTranscript = '';
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
@@ -29,12 +31,68 @@ export class VoiceRecognitionService {
     return !!this.recognition || !!(window as any).navigator?.mediaDevices;
   }
 
+  public async startRecordingRaw(): Promise<boolean> {
+    try {
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.audioChunks = [];
+      
+      let mimeType = 'audio/webm';
+      if (typeof MediaRecorder !== 'undefined') {
+        if (!MediaRecorder.isTypeSupported('audio/webm')) {
+          if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            mimeType = 'audio/mp4';
+          } else {
+            mimeType = '';
+          }
+        }
+      }
+
+      const options = mimeType ? { mimeType } : undefined;
+      this.mediaRecorder = new MediaRecorder(this.mediaStream, options);
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.audioChunks.push(event.data);
+        }
+      };
+
+      this.mediaRecorder.start();
+      this.isListening = true;
+      return true;
+    } catch (err) {
+      console.warn('Failed to start raw audio recording:', err);
+      return false;
+    }
+  }
+
+  public stopRecordingRaw(): Promise<Blob | null> {
+    return new Promise((resolve) => {
+      if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
+        resolve(null);
+        return;
+      }
+
+      this.mediaRecorder.onstop = () => {
+        const mime = this.mediaRecorder?.mimeType || 'audio/webm';
+        const audioBlob = new Blob(this.audioChunks, { type: mime });
+        this.stopAudioVisualizer();
+        resolve(audioBlob);
+      };
+
+      this.mediaRecorder.stop();
+      this.isListening = false;
+    });
+  }
+
   public start(
     config: VoiceRecognitionConfig,
     onAudioLevel?: (level: number) => void
   ): boolean {
     if (this.isListening) return true;
     this.currentTranscript = '';
+    this.audioChunks = [];
+
+    // Start raw recording concurrently for Gemini Multimodal Audio fallback
+    this.startRecordingRaw();
 
     if (!this.recognition) {
       // Re-try initialization just in case window properties loaded late
@@ -48,15 +106,10 @@ export class VoiceRecognitionService {
     }
 
     if (!this.recognition) {
-      setTimeout(() => {
-        const isHttpNotLocal = window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-        if (isHttpNotLocal) {
-          config.onError('Mobile browsers block Microphone/Speech API on HTTP! Please deploy to Vercel (HTTPS) to use Mobile Voice.');
-        } else {
-          config.onError('Speech Recognition is not supported in this browser. Please use Chrome or Edge.');
-        }
-      }, 200);
-      return false;
+      // If native SpeechRecognition is missing (e.g. Firefox/Brave), we still return true so raw audio recording runs!
+      this.isListening = true;
+      this.startAudioVisualizer(onAudioLevel);
+      return true;
     }
 
     this.recognition.lang = config.language || 'en-IN';
@@ -133,6 +186,11 @@ export class VoiceRecognitionService {
     if (this.recognition && this.isListening) {
       try {
         this.recognition.stop();
+      } catch (e) {}
+    }
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      try {
+        this.mediaRecorder.stop();
       } catch (e) {}
     }
     this.isListening = false;

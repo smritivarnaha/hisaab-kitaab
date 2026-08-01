@@ -17,11 +17,28 @@ export interface GeminiAgentResponse {
   transactionIdToDelete?: string;
 }
 
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        const base64data = reader.result.split(',')[1];
+        resolve(base64data);
+      } else {
+        reject(new Error('Failed to convert blob to base64'));
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 export async function processWithGeminiAgent(
   userInput: string,
   transactions: Transaction[],
   memory: AIMemoryMap,
-  apiKey?: string
+  apiKey?: string,
+  audioBlob?: Blob
 ): Promise<GeminiAgentResponse | null> {
   const activeKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY;
   if (!activeKey || !activeKey.trim()) return null;
@@ -43,16 +60,18 @@ export async function processWithGeminiAgent(
 You are Hisaab Kitab AI - an autonomous, highly intelligent voice finance agent & accountant for India.
 You manage money ledgers, parse user inputs in English, Hindi, and Hinglish, execute ledger operations (create, delete, edit), and answer complex accounting queries.
 
+${audioBlob ? 'The user has sent a voice note containing their command. Listen to it and process it directly.' : ''}
+
 USER'S CURRENT LEDGER TRANSACTIONS (${transactions.length} total):
 ${JSON.stringify(recentTransactionsSummary, null, 2)}
 
 USER'S LEARNED MEMORY & PREFERENCES:
 ${JSON.stringify(memory, null, 2)}
 
-USER MESSAGE: "${userInput}"
+USER MESSAGE TEXT (IF ANY): "${userInput}"
 
 YOUR TASK:
-Analyze the user's message and determine the exact action to perform.
+Analyze the user's audio or text message and determine the exact action to perform.
 Return ONLY a valid JSON object matching this schema (do NOT include markdown codeblocks or surrounding text):
 {
   "action": "CREATE_TRANSACTIONS" | "DELETE_TRANSACTION" | "UPDATE_TRANSACTION" | "GENERAL_RESPONSE",
@@ -72,7 +91,7 @@ Return ONLY a valid JSON object matching this schema (do NOT include markdown co
 }
 
 CRITICAL RULES:
-1. If the user describes spending, income, or lending (e.g., "hi how are you so I spend 23 rupees in the name of Nandini"), set action="CREATE_TRANSACTIONS", extract amount=23, title="Nandini", person="Nandini". NEVER create 0 amount transactions.
+1. If the user describes spending, income, or lending, set action="CREATE_TRANSACTIONS" and extract amount, title, person. NEVER create 0 amount transactions.
 2. TITLE AUTOCORRECTION: Autocorrect the spellings and names of transaction titles/merchants (in Hindi, Hinglish, or English) to a clean, professional, capitalized representation. Only correct the spelling and format it (e.g. "chooran" -> "Churan", "doodh" -> "Milk", "toothbrush softbrush" -> "Toothbrush"). Never append extra descriptive words like "Candy", "Item", or "Shop" to corrected titles.
 3. CATEGORIZATION RULES:
    - Map traditional Indian snacks, street food, digestives, candy, and Hinglish food terms (e.g., chooran, churan, hajmola, namkeen, samosa, mithai, biscuit, chips, cold drink, soda, lassi) to **"Food & Drinks"** or **"Grocery"** (e.g. for bulk supplies), NEVER to "Others". They are eating/drinking items!
@@ -86,11 +105,23 @@ CRITICAL RULES:
   `;
 
   try {
+    const parts: any[] = [];
+    if (audioBlob) {
+      const base64Audio = await blobToBase64(audioBlob);
+      parts.push({
+        inlineData: {
+          mimeType: audioBlob.type || 'audio/webm',
+          data: base64Audio
+        }
+      });
+    }
+    parts.push({ text: systemPrompt });
+
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: systemPrompt }] }],
+        contents: [{ parts }],
         generationConfig: {
           temperature: 0.1,
           responseMimeType: "application/json"

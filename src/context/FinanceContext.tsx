@@ -27,7 +27,7 @@ interface FinanceContextType {
   addTransactionsBatch: (txList: Transaction[]) => void;
   updateTransaction: (id: string, updated: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
-  processUserInputText: (text: string, isVoice?: boolean) => void;
+  processUserInputText: (text: string, isVoice?: boolean, audioBlob?: Blob) => void;
   processClarificationAnswer: (answerValue: string) => void;
   resolvePendingWithAIInput: (voiceOrText: string) => void;
   confirmPendingItemsBatch: (clearedList: Transaction[]) => void;
@@ -338,14 +338,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     transactions.forEach(tx => deleteTransactionFromDb(tx.id));
   };
 
-  const processUserInputText = async (text: string, isVoice = false) => {
-    if (!text.trim()) return;
+  const processUserInputText = async (text: string, isVoice = false, audioBlob?: Blob) => {
+    if (!text.trim() && !audioBlob) return;
 
     const userMsgId = `msg_u_${Date.now()}`;
     const userMsg: ChatMessage = {
       id: userMsgId,
       sender: 'user',
-      text: text,
+      text: text || "🎙️ Voice Entry",
       timestamp: Date.now()
     };
 
@@ -354,7 +354,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // 1. Try Gemini 1.5 Flash LLM Agent (Real AI reasoning & tool execution)
     try {
-      const geminiRes = await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey);
+      const geminiRes = await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey, audioBlob);
       if (geminiRes) {
         if (geminiRes.action === 'DELETE_TRANSACTION' && geminiRes.transactionIdToDelete) {
           deleteTransaction(geminiRes.transactionIdToDelete);
