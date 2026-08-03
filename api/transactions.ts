@@ -1,35 +1,32 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { Pool } from 'pg';
+import { neon } from '@neondatabase/serverless';
 
-// Vercel's Neon integration sets POSTGRES_URL.
-// Also support DATABASE_URL and NEON_DATABASE_URL for manual setups.
-const connectionString =
-  process.env.POSTGRES_URL ||
-  process.env.DATABASE_URL ||
-  process.env.NEON_DATABASE_URL ||
-  process.env.POSTGRES_URL_NON_POOLING;
+// @neondatabase/serverless is the correct driver for Vercel serverless functions.
+// The standard 'pg' Pool keeps persistent TCP connections which Vercel kills between invocations.
+// neon() creates a fresh HTTP-based connection per request — perfect for serverless.
 
-let pool: Pool | null = null;
+function getDb() {
+  const connectionString =
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    process.env.NEON_DATABASE_URL ||
+    process.env.POSTGRES_URL_NON_POOLING;
 
-if (connectionString) {
-  pool = new Pool({
-    connectionString,
-    ssl: { rejectUnauthorized: false }
-  });
+  if (!connectionString) throw new Error('No database connection string found in environment variables.');
+  return neon(connectionString);
 }
 
-// Helper to ensure the transactions table exists
-async function ensureTableExists(clientPool: Pool) {
-  const createTableQuery = `
+async function ensureTableExists(sql: ReturnType<typeof neon>) {
+  await sql`
     CREATE TABLE IF NOT EXISTS transactions (
       "id" TEXT PRIMARY KEY,
       "amount" NUMERIC NOT NULL,
-      "currency" TEXT NOT NULL,
+      "currency" TEXT NOT NULL DEFAULT '₹',
       "type" TEXT NOT NULL,
       "category" TEXT NOT NULL,
       "title" TEXT NOT NULL,
       "merchant" TEXT,
-      "paymentMethod" TEXT NOT NULL,
+      "paymentMethod" TEXT NOT NULL DEFAULT 'UPI',
       "date" TEXT NOT NULL,
       "relativeDateText" TEXT,
       "timestamp" BIGINT NOT NULL,
@@ -39,196 +36,126 @@ async function ensureTableExists(clientPool: Pool) {
       "notes" TEXT,
       "isPending" BOOLEAN NOT NULL DEFAULT FALSE,
       "person" TEXT
-    );
+    )
   `;
-  await clientPool.query(createTableQuery);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Set CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
-  if (!pool) {
-    return res.status(500).json({ 
-      error: 'Database connection configuration missing. Please set DATABASE_URL or NEON_DATABASE_URL environment variable.' 
-    });
+  let sql: ReturnType<typeof neon>;
+  try {
+    sql = getDb();
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 
   try {
-    // Auto-create table if not exists on first request
-    await ensureTableExists(pool);
+    await ensureTableExists(sql);
 
-    const { method } = req;
+    // ── GET — fetch all transactions ─────────────────────────────────────────
+    if (req.method === 'GET') {
+      const rows = await sql`SELECT * FROM transactions ORDER BY timestamp DESC`;
+      const parsed = rows.map((row: any) => ({
+        ...row,
+        amount: Number(row.amount),
+        confidenceScore: row.confidenceScore != null ? Number(row.confidenceScore) : null,
+        timestamp: Number(row.timestamp),
+        isPending: Boolean(row.isPending)
+      }));
+      return res.status(200).json(parsed);
+    }
 
-    switch (method) {
-      case 'GET': {
-        const result = await pool.query('SELECT * FROM transactions ORDER BY timestamp DESC');
-        // Parse database values to make sure numbers are returned properly
-        const rows = result.rows.map(row => ({
-          ...row,
-          amount: Number(row.amount),
-          confidenceScore: row.confidenceScore !== null ? Number(row.confidenceScore) : null,
-          timestamp: Number(row.timestamp),
-          isPending: Boolean(row.isPending)
-        }));
-        return res.status(200).json(rows);
-      }
+    // ── POST — upsert a single transaction ───────────────────────────────────
+    if (req.method === 'POST') {
+      const body = req.body;
+      if (!body?.id) return res.status(400).json({ error: 'Missing transaction id' });
 
-      case 'POST': {
-        const body = req.body;
-        if (!body || !body.id) {
-          return res.status(400).json({ error: 'Invalid transaction payload' });
-        }
+      await sql`
+        INSERT INTO transactions (
+          "id","amount","currency","type","category","title","merchant",
+          "paymentMethod","date","relativeDateText","timestamp","confidenceScore",
+          "rawInput","shortDisplayTitle","notes","isPending","person"
+        ) VALUES (
+          ${body.id}, ${body.amount}, ${body.currency || '₹'}, ${body.type},
+          ${body.category}, ${body.title}, ${body.merchant || null},
+          ${body.paymentMethod || 'UPI'}, ${body.date}, ${body.relativeDateText || null},
+          ${body.timestamp}, ${body.confidenceScore || null}, ${body.rawInput || null},
+          ${body.shortDisplayTitle || null}, ${body.notes || null},
+          ${body.isPending || false}, ${body.person || null}
+        )
+        ON CONFLICT ("id") DO UPDATE SET
+          "amount" = EXCLUDED."amount",
+          "currency" = EXCLUDED."currency",
+          "type" = EXCLUDED."type",
+          "category" = EXCLUDED."category",
+          "title" = EXCLUDED."title",
+          "merchant" = EXCLUDED."merchant",
+          "paymentMethod" = EXCLUDED."paymentMethod",
+          "date" = EXCLUDED."date",
+          "relativeDateText" = EXCLUDED."relativeDateText",
+          "timestamp" = EXCLUDED."timestamp",
+          "confidenceScore" = EXCLUDED."confidenceScore",
+          "rawInput" = EXCLUDED."rawInput",
+          "shortDisplayTitle" = EXCLUDED."shortDisplayTitle",
+          "notes" = EXCLUDED."notes",
+          "isPending" = EXCLUDED."isPending",
+          "person" = EXCLUDED."person"
+      `;
+      return res.status(200).json({ success: true, id: body.id });
+    }
 
-        const insertQuery = `
+    // ── PUT — upsert a batch of transactions ─────────────────────────────────
+    if (req.method === 'PUT') {
+      const list = req.body;
+      if (!Array.isArray(list)) return res.status(400).json({ error: 'Body must be an array' });
+
+      // Run each upsert in parallel
+      await Promise.all(list.map((body: any) => {
+        if (!body?.id) return Promise.resolve();
+        return sql`
           INSERT INTO transactions (
-            "id", "amount", "currency", "type", "category", "title", "merchant", 
-            "paymentMethod", "date", "relativeDateText", "timestamp", "confidenceScore", 
-            "rawInput", "shortDisplayTitle", "notes", "isPending", "person"
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            "id","amount","currency","type","category","title","merchant",
+            "paymentMethod","date","relativeDateText","timestamp","confidenceScore",
+            "rawInput","shortDisplayTitle","notes","isPending","person"
+          ) VALUES (
+            ${body.id}, ${body.amount}, ${body.currency || '₹'}, ${body.type},
+            ${body.category}, ${body.title}, ${body.merchant || null},
+            ${body.paymentMethod || 'UPI'}, ${body.date}, ${body.relativeDateText || null},
+            ${body.timestamp}, ${body.confidenceScore || null}, ${body.rawInput || null},
+            ${body.shortDisplayTitle || null}, ${body.notes || null},
+            ${body.isPending || false}, ${body.person || null}
+          )
           ON CONFLICT ("id") DO UPDATE SET
             "amount" = EXCLUDED."amount",
-            "currency" = EXCLUDED."currency",
             "type" = EXCLUDED."type",
             "category" = EXCLUDED."category",
             "title" = EXCLUDED."title",
-            "merchant" = EXCLUDED."merchant",
-            "paymentMethod" = EXCLUDED."paymentMethod",
-            "date" = EXCLUDED."date",
-            "relativeDateText" = EXCLUDED."relativeDateText",
-            "timestamp" = EXCLUDED."timestamp",
-            "confidenceScore" = EXCLUDED."confidenceScore",
-            "rawInput" = EXCLUDED."rawInput",
-            "shortDisplayTitle" = EXCLUDED."shortDisplayTitle",
-            "notes" = EXCLUDED."notes",
-            "isPending" = EXCLUDED."isPending",
-            "person" = EXCLUDED."person"
-          RETURNING *;
+            "timestamp" = EXCLUDED."timestamp"
         `;
-
-        const values = [
-          body.id,
-          body.amount,
-          body.currency,
-          body.type,
-          body.category,
-          body.title,
-          body.merchant || null,
-          body.paymentMethod,
-          body.date,
-          body.relativeDateText || null,
-          body.timestamp,
-          body.confidenceScore || null,
-          body.rawInput || null,
-          body.shortDisplayTitle || null,
-          body.notes || null,
-          body.isPending || false,
-          body.person || null
-        ];
-
-        const result = await pool.query(insertQuery, values);
-        const saved = {
-          ...result.rows[0],
-          amount: Number(result.rows[0].amount),
-          confidenceScore: result.rows[0].confidenceScore !== null ? Number(result.rows[0].confidenceScore) : null,
-          timestamp: Number(result.rows[0].timestamp),
-          isPending: Boolean(result.rows[0].isPending)
-        };
-        return res.status(200).json(saved);
-      }
-
-      case 'PUT': {
-        // Batch sync endpoint: saves or updates multiple transactions at once
-        const list = req.body;
-        if (!Array.isArray(list)) {
-          return res.status(400).json({ error: 'Body must be an array of transactions' });
-        }
-
-        const client = await pool.connect();
-        try {
-          await client.query('BEGIN');
-          for (const body of list) {
-            const upsertQuery = `
-              INSERT INTO transactions (
-                "id", "amount", "currency", "type", "category", "title", "merchant", 
-                "paymentMethod", "date", "relativeDateText", "timestamp", "confidenceScore", 
-                "rawInput", "shortDisplayTitle", "notes", "isPending", "person"
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-              ON CONFLICT ("id") DO UPDATE SET
-                "amount" = EXCLUDED."amount",
-                "currency" = EXCLUDED."currency",
-                "type" = EXCLUDED."type",
-                "category" = EXCLUDED."category",
-                "title" = EXCLUDED."title",
-                "merchant" = EXCLUDED."merchant",
-                "paymentMethod" = EXCLUDED."paymentMethod",
-                "date" = EXCLUDED."date",
-                "relativeDateText" = EXCLUDED."relativeDateText",
-                "timestamp" = EXCLUDED."timestamp",
-                "confidenceScore" = EXCLUDED."confidenceScore",
-                "rawInput" = EXCLUDED."rawInput",
-                "shortDisplayTitle" = EXCLUDED."shortDisplayTitle",
-                "notes" = EXCLUDED."notes",
-                "isPending" = EXCLUDED."isPending",
-                "person" = EXCLUDED."person";
-            `;
-            const values = [
-              body.id,
-              body.amount,
-              body.currency,
-              body.type,
-              body.category,
-              body.title,
-              body.merchant || null,
-              body.paymentMethod,
-              body.date,
-              body.relativeDateText || null,
-              body.timestamp,
-              body.confidenceScore || null,
-              body.rawInput || null,
-              body.shortDisplayTitle || null,
-              body.notes || null,
-              body.isPending || false,
-              body.person || null
-            ];
-            await client.query(upsertQuery, values);
-          }
-          await client.query('COMMIT');
-          return res.status(200).json({ success: true, count: list.length });
-        } catch (error) {
-          await client.query('ROLLBACK');
-          throw error;
-        } finally {
-          client.release();
-        }
-      }
-
-      case 'DELETE': {
-        const { id } = req.query;
-        if (!id || typeof id !== 'string') {
-          return res.status(400).json({ error: 'Missing active transaction id for deletion' });
-        }
-        await pool.query('DELETE FROM transactions WHERE "id" = $1', [id]);
-        return res.status(200).json({ success: true });
-      }
-
-      default:
-        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-        return res.status(455).end(`Method ${method} Not Allowed`);
+      }));
+      return res.status(200).json({ success: true, count: list.length });
     }
+
+    // ── DELETE — remove a single transaction ─────────────────────────────────
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      if (!id || typeof id !== 'string') return res.status(400).json({ error: 'Missing id' });
+      await sql`DELETE FROM transactions WHERE "id" = ${id}`;
+      return res.status(200).json({ success: true });
+    }
+
+    return res.status(405).json({ error: `Method ${req.method} not allowed` });
+
   } catch (err: any) {
     console.error('API Error:', err);
-    return res.status(500).json({ error: 'Internal Database Server Error', details: err.message });
+    return res.status(500).json({ error: 'Database error', details: err.message });
   }
 }

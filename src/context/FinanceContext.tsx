@@ -181,18 +181,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     document.documentElement.classList.toggle('light', settings.theme !== 'dark');
   }, [settings]);
 
-  const addTransaction = (tx: Transaction) => {
+  const addTransaction = async (tx: Transaction) => {
     setTransactions(prev => [tx, ...prev]);
-    saveTransactionToDb(tx); // Sync to Neon DB
+    try {
+      await saveTransactionToDb(tx);
+    } catch (err) {
+      console.error('Failed to save to Neon, will retry on next poll:', err);
+    }
     if (tx.merchant && tx.category) {
       const updatedMem = learnMerchantCategory(tx.merchant, tx.category);
       setAiMemory(updatedMem);
     }
   };
 
-  const addTransactionsBatch = (txList: Transaction[]) => {
+  const addTransactionsBatch = async (txList: Transaction[]) => {
     setTransactions(prev => [...txList, ...prev]);
-    saveTransactionsBatchToDb(txList); // Sync to Neon DB
+    try {
+      // Save each transaction individually via POST (more reliable than batch PUT)
+      await Promise.all(txList.map(tx => saveTransactionToDb(tx)));
+    } catch (err) {
+      console.error('Failed to save batch to Neon:', err);
+    }
     txList.forEach(tx => {
       if (tx.merchant && tx.category) {
         learnMerchantCategory(tx.merchant, tx.category);
