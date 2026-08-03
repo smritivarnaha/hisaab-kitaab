@@ -26,15 +26,15 @@ export const DashboardOverview: React.FC = () => {
 
   const totalExpense = finalizedTransactions
     .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const totalIncome = finalizedTransactions
     .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const totalLent = finalizedTransactions
     .filter(t => t.type === 'lent')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const currentBalance = totalIncome - totalExpense - totalLent;
 
@@ -281,7 +281,7 @@ export const DashboardOverview: React.FC = () => {
                               isCredit ? 'text-green-700' : 'text-[#D93025]'
                             }`}
                           >
-                            {isCredit ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                            {isCredit ? '+' : '-'}₹{Number(tx.amount || 0).toLocaleString('en-IN')}
                           </span>
                         </div>
                       </div>

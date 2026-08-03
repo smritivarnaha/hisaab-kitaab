@@ -245,7 +245,7 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
 
                   <div className="min-w-0 flex-1">
                     <h5 className="text-xs font-semibold text-[#0D2E14] truncate">
-                      What was reason for <span className="font-bold text-[#D93025]">₹{item.amount.toLocaleString('en-IN')}</span> ({item.category})?
+                      What was reason for <span className="font-bold text-[#D93025]">₹{Number(item.amount || 0).toLocaleString('en-IN')}</span> ({item.category})?
                     </h5>
                     <span className="text-[10px] text-gray-500 font-medium truncate block">
                       {item.paymentMethod} • {item.date}

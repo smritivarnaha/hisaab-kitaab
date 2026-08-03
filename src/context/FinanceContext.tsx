@@ -257,27 +257,29 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [chatMessages]);
 
   const addTransaction = async (tx: Transaction) => {
-    setTransactions(prev => [tx, ...prev]);
+    const sanitized = { ...tx, amount: Number(tx.amount || 0) };
+    setTransactions(prev => [sanitized, ...prev]);
     try {
-      await saveTransactionToDb(tx);
+      await saveTransactionToDb(sanitized);
     } catch (err) {
       console.error('Failed to save to Neon, will retry on next poll:', err);
     }
-    if (tx.merchant && tx.category) {
-      const updatedMem = learnMerchantCategory(tx.merchant, tx.category);
+    if (sanitized.merchant && sanitized.category) {
+      const updatedMem = learnMerchantCategory(sanitized.merchant, sanitized.category);
       setAiMemory(updatedMem);
     }
   };
 
   const addTransactionsBatch = async (txList: Transaction[]) => {
-    setTransactions(prev => [...txList, ...prev]);
+    const sanitizedList = txList.map(tx => ({ ...tx, amount: Number(tx.amount || 0) }));
+    setTransactions(prev => [...sanitizedList, ...prev]);
     try {
-      // Save each transaction individually via POST (more reliable than batch PUT)
-      await Promise.all(txList.map(tx => saveTransactionToDb(tx)));
+      // Save each transaction individually via POST
+      await Promise.all(sanitizedList.map(tx => saveTransactionToDb(tx)));
     } catch (err) {
       console.error('Failed to save batch to Neon:', err);
     }
-    txList.forEach(tx => {
+    sanitizedList.forEach(tx => {
       if (tx.merchant && tx.category) {
         learnMerchantCategory(tx.merchant, tx.category);
       }
@@ -289,6 +291,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTransactions(prev => prev.map(t => {
       if (t.id === id) {
         const merged = { ...t, ...updated };
+        merged.amount = Number(merged.amount || 0);
         saveTransactionToDb(merged); // Sync updated transaction to Neon DB
         return merged;
       }
@@ -492,7 +495,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const lastTx = transactions[0];
         deleteTransaction(lastTx.id);
 
-        const responseText = `🗑️ **Deleted Last Transaction**: Removed **Rs. ${lastTx.amount.toLocaleString('en-IN')}** for **${lastTx.title}** (${lastTx.category}) from your Passbook!`;
+        const responseText = `🗑️ **Deleted Last Transaction**: Removed **Rs. ${Number(lastTx.amount || 0).toLocaleString('en-IN')}** for **${lastTx.title}** (${lastTx.category}) from your Passbook!`;
         const aiMsg: ChatMessage = {
           id: `msg_ai_${Date.now()}`,
           sender: 'assistant',
@@ -584,7 +587,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const singleTx = readyItems[0];
       const typeLabel = singleTx.type === 'income' ? 'Income 📈' : singleTx.type === 'lent' ? 'Lent Money 🤝' : 'Expense 💳';
-      const responseText = `Saved **Rs. ${singleTx.amount.toLocaleString('en-IN')}** for **${singleTx.title}** as ${typeLabel}. Added to Passbook!`;
+      const responseText = `Saved **Rs. ${Number(singleTx.amount || 0).toLocaleString('en-IN')}** for **${singleTx.title}** as ${typeLabel}. Added to Passbook!`;
 
       const aiMsg: ChatMessage = {
         id: `msg_ai_${Date.now()}`,
@@ -623,7 +626,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Remove from pendingReviewItems if present
     setPendingReviewItems(prev => prev.filter(p => p.id !== draft.id));
 
-    const responseText = `Saved **Rs. ${draft.amount.toLocaleString('en-IN')}** for **${draft.title}** to Passbook!`;
+    const responseText = `Saved **Rs. ${Number(draft.amount || 0).toLocaleString('en-IN')}** for **${draft.title}** to Passbook!`;
     const aiMsg: ChatMessage = {
       id: `msg_ai_${Date.now()}`,
       sender: 'assistant',

@@ -37,11 +37,11 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
   // Calculations
   const totalIncome = monthTransactions
     .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const totalExpense = monthTransactions
     .filter(t => t.type === 'expense' || t.type === 'lent')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const netSavings = totalIncome - totalExpense;
   const savingsRate = totalIncome > 0 ? Math.round((netSavings / totalIncome) * 100) : 0;
@@ -266,7 +266,7 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                       </div>
                     </div>
                     <span className={`font-black ${isCredit ? 'text-green-700' : 'text-red-600'}`}>
-                      {isCredit ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                      {isCredit ? '+' : '-'}₹{Number(tx.amount || 0).toLocaleString('en-IN')}
                     </span>
                   </div>
                 );
