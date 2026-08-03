@@ -31,6 +31,7 @@ export class VoiceRecognitionService {
   }
 
   private initSpeechRecognition() {
+    if (typeof window === 'undefined') return;
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       this.recognition = new SpeechRecognition();
@@ -99,6 +100,7 @@ export class VoiceRecognitionService {
       'audio/ogg;codecs=opus',
       'audio/mp4',
     ];
+    if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
     for (const t of types) {
       if (MediaRecorder.isTypeSupported(t)) return t;
     }

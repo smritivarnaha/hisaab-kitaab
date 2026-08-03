@@ -129,7 +129,8 @@ function parseDate(text: string): { date: string; relativeText: string; explicit
 function parseCategory(text: string, memory: AIMemoryMap = DEFAULT_MEMORY): { category: Category; confidenceBoost: number } {
   const lower = text.toLowerCase();
 
-  for (const [merchantKey, cat] of Object.entries(memory.merchants)) {
+  const merchants = memory?.merchants || {};
+  for (const [merchantKey, cat] of Object.entries(merchants)) {
     if (lower.includes(merchantKey)) {
       return { category: cat as Category, confidenceBoost: 20 };
     }

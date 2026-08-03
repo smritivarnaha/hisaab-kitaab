@@ -38,6 +38,17 @@ async function ensureTableExists(sql: ReturnType<typeof neon>) {
       "person" TEXT
     )
   `;
+  // Ensure fields added later exist in case the table was created in an older session
+  try {
+    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "isPending" BOOLEAN NOT NULL DEFAULT FALSE`;
+  } catch (err) {
+    console.warn("Alter table error isPending:", err);
+  }
+  try {
+    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "person" TEXT`;
+  } catch (err) {
+    console.warn("Alter table error person:", err);
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

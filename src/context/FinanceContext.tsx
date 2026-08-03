@@ -193,7 +193,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       // AI memory
       const dbMemory = await fetchMemoryFromDb();
-      if (dbMemory && Object.keys(dbMemory).length > 0) setAiMemory(dbMemory);
+      if (dbMemory && Object.keys(dbMemory).length > 0) {
+        setAiMemory(prev => ({
+          ...prev,
+          ...dbMemory,
+          merchants: { ...prev.merchants, ...(dbMemory.merchants || {}) },
+          contacts: { ...prev.contacts, ...(dbMemory.contacts || {}) },
+          paymentPreferences: { ...prev.paymentPreferences, ...(dbMemory.paymentPreferences || {}) }
+        }));
+      }
     };
     load();
   }, []);
