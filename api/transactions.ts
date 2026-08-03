@@ -1,18 +1,20 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { Pool } from 'pg';
 
-// Neon database connection pool
-// Will use DATABASE_URL or NEON_DATABASE_URL environment variable
-const connectionString = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
+// Vercel's Neon integration sets POSTGRES_URL.
+// Also support DATABASE_URL and NEON_DATABASE_URL for manual setups.
+const connectionString =
+  process.env.POSTGRES_URL ||
+  process.env.DATABASE_URL ||
+  process.env.NEON_DATABASE_URL ||
+  process.env.POSTGRES_URL_NON_POOLING;
 
 let pool: Pool | null = null;
 
 if (connectionString) {
   pool = new Pool({
     connectionString,
-    ssl: {
-      rejectUnauthorized: false // Required for Neon serverless connections
-    }
+    ssl: { rejectUnauthorized: false }
   });
 }
 
