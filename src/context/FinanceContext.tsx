@@ -575,48 +575,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
 
-      const pendingItems = parsedItems.filter(tx => tx.isPending);
-      const readyItems = parsedItems.filter(tx => !tx.isPending);
+      // Force ALL parsed items to require explicit user confirmation before saving to Passbook
+      const pendingItems = parsedItems.map(item => ({ ...item, isPending: true }));
+      addTransactionsBatch(pendingItems);
+      setPendingReviewItems(prev => [...prev, ...pendingItems]);
 
-      if (pendingItems.length > 0) {
-        // Sync to Pending Section AND prompt immediately in Chat!
-        addTransactionsBatch(parsedItems);
-        setPendingReviewItems(parsedItems);
-
-        const singlePending = pendingItems[0];
-        const clarification = buildClarification(singlePending);
-        setActiveClarification(clarification);
-
-        const responseText = clarification?.prompt || `I logged **Rs. ${singlePending.amount}**, but the reason is missing. Please tell me what it was spent for!`;
-        const aiMsg: ChatMessage = {
-          id: `msg_ai_${Date.now()}`,
-          sender: 'assistant',
-          text: responseText,
-          timestamp: Date.now(),
-          clarification: clarification || undefined,
-          pendingReviewItems: parsedItems
-        };
-        setChatMessages(prev => [...prev, aiMsg]);
-        setIsProcessingAI(false);
-
-        if (settings.autoTTS) {
-          speakText(responseText, settings.voiceLanguage);
-        }
-        return;
-      }
-
-      addTransactionsBatch(readyItems);
-
-      const singleTx = readyItems[0];
-      const typeLabel = singleTx.type === 'income' ? 'Income 📈' : singleTx.type === 'lent' ? 'Lent Money 🤝' : 'Expense 💳';
-      const responseText = `Saved **Rs. ${Number(singleTx.amount || 0).toLocaleString('en-IN')}** for **${singleTx.title}** as ${typeLabel}. Added to Passbook!`;
+      const singlePending = pendingItems[0];
+      const responseText = `I extracted this entry from your input. Please verify the spellings and details below before saving to your Passbook:`;
 
       const aiMsg: ChatMessage = {
         id: `msg_ai_${Date.now()}`,
         sender: 'assistant',
         text: responseText,
         timestamp: Date.now(),
-        actionSummary: `Saved ${singleTx.title} Rs. ${singleTx.amount}`
+        pendingReviewItems: pendingItems
       };
       setChatMessages(prev => [...prev, aiMsg]);
       setIsProcessingAI(false);
@@ -624,7 +596,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (settings.autoTTS) {
         speakText(responseText, settings.voiceLanguage);
       }
-
     }, 400);
   };
 

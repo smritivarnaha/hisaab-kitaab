@@ -1,11 +1,129 @@
 import React, { useState } from 'react';
-import { ChatMessage } from '../../types/finance';
-import { Bot, User, CheckCircle2 } from 'lucide-react';
+import { ChatMessage, Transaction, Category, CATEGORIES_LIST, PaymentMethod } from '../../types/finance';
+import { Bot, User, CheckCircle2, Check, Trash2 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 
 interface Props {
   message: ChatMessage;
 }
+
+const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
+  const { updateTransaction, deleteTransaction } = useFinance();
+  const [title, setTitle] = useState(item.title === 'Reason Missing' ? '' : item.title);
+  const [amount, setAmount] = useState(String(item.amount || ''));
+  const [category, setCategory] = useState<Category>(item.category);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(item.paymentMethod || 'UPI');
+  const [isConfirmed, setIsConfirmed] = useState(!item.isPending);
+  const [isDiscarded, setIsDiscarded] = useState(false);
+
+  if (isDiscarded) return null;
+
+  const handleConfirm = () => {
+    updateTransaction(item.id, {
+      title: title.trim() || 'Expense',
+      amount: Number(amount) || 0,
+      category,
+      paymentMethod,
+      isPending: false // Confirmed and added to Passbook!
+    });
+    setIsConfirmed(true);
+  };
+
+  const handleDiscard = () => {
+    deleteTransaction(item.id);
+    setIsDiscarded(true);
+  };
+
+  return (
+    <div className="mt-3 p-3 bg-white/95 dark:bg-slate-800/95 rounded-xl border border-amber-200 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-extrabold uppercase text-amber-700 tracking-wider flex items-center gap-1">
+          ✏️ Verify Spelling & Details Before Saving
+        </span>
+        <span className="text-[9px] text-gray-400 font-semibold">{item.date}</span>
+      </div>
+
+      {!isConfirmed ? (
+        <div className="space-y-2">
+          {/* Title / Reason Field */}
+          <div>
+            <label className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Spelling / Description</label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Correct title or spelling..."
+              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-gray-900 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
+            />
+          </div>
+
+          {/* Amount & Category */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Amount (₹)</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                className="w-full bg-slate-50 border border-gray-200 text-xs font-extrabold text-emerald-700 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
+              />
+            </div>
+            <div>
+              <label className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Category</label>
+              <select
+                value={category}
+                onChange={e => setCategory(e.target.value as Category)}
+                className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-gray-900 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
+              >
+                {CATEGORIES_LIST.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Payment Method */}
+          <div>
+            <label className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Payment Method</label>
+            <select
+              value={paymentMethod}
+              onChange={e => setPaymentMethod(e.target.value as PaymentMethod)}
+              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-gray-900 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
+            >
+              <option value="UPI">UPI</option>
+              <option value="Cash">Cash</option>
+              <option value="Credit Card">Credit Card</option>
+              <option value="Debit Card">Debit Card</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+            </select>
+          </div>
+
+          {/* Confirm & Discard Buttons */}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={handleConfirm}
+              className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Yes, Confirm & Add to Passbook</span>
+            </button>
+            <button
+              onClick={handleDiscard}
+              className="py-2 px-2.5 border border-gray-200 text-gray-500 hover:text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 transition-colors"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>Confirmed & Added to Passbook!</span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const ChatMessageItem: React.FC<Props> = ({ message }) => {
   const { settings } = useFinance();
@@ -91,6 +209,15 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
       <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[75%]`}>
         <div className={`font-outfit shadow-2xs ${fontSizeClass} ${sizeClasses.bubble} ${bubbleStyleClass}`}>
           {renderFormattedText(message.text)}
+
+          {/* Inline Editable Confirmation Cards */}
+          {message.pendingReviewItems && message.pendingReviewItems.length > 0 && (
+            <div className="space-y-2 mt-2">
+              {message.pendingReviewItems.map(item => (
+                <InlineTransactionEditor key={item.id} item={item} />
+              ))}
+            </div>
+          )}
 
           {/* Action Summary Pill */}
           {message.actionSummary && (
