@@ -116,10 +116,7 @@ export const DashboardOverview: React.FC = () => {
         <div className="relative z-10">
           <div className="flex items-center justify-between gap-3 mb-2.5 sm:mb-3">
             <div>
-              <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-[#93E044] block">
-                Financial Summary
-              </span>
-              <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight font-outfit mt-0.5">
+              <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight font-outfit">
                 Net Overview
               </h2>
               <span className="text-[10px] sm:text-xs font-semibold text-emerald-300 block mt-0.5">
