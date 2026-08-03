@@ -18,9 +18,13 @@ async function ensureTable(sql: ReturnType<typeof neon>) {
       "text" TEXT NOT NULL,
       "timestamp" BIGINT NOT NULL,
       "isVoice" BOOLEAN DEFAULT FALSE,
-      "audioLevel" NUMERIC
+      "audioLevel" NUMERIC,
+      "userId" TEXT NOT NULL DEFAULT 'nandini'
     )
   `;
+  try {
+    await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
+  } catch {}
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -35,8 +39,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     await ensureTable(sql);
 
+    const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
+
     if (req.method === 'GET') {
-      const rows = await sql`SELECT * FROM chat_messages ORDER BY timestamp ASC LIMIT 200`;
+      const rows = await sql`
+        SELECT * FROM chat_messages 
+        WHERE "userId" = ${userId} 
+        ORDER BY timestamp ASC LIMIT 200
+      `;
       const parsed = rows.map((row: any) => ({
         ...row,
         timestamp: Number(row.timestamp)
@@ -46,22 +56,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'POST') {
       const body = req.body;
-      // Accept single message or array
       const msgs = Array.isArray(body) ? body : [body];
       await Promise.all(msgs.map((m: any) => {
         if (!m?.id) return Promise.resolve();
+        const msgUserId = m.userId || userId;
         return sql`
-          INSERT INTO chat_messages ("id","sender","text","timestamp","isVoice","audioLevel")
-          VALUES (${m.id}, ${m.sender}, ${m.text}, ${m.timestamp}, ${m.isVoice || false}, ${m.audioLevel || null})
+          INSERT INTO chat_messages ("id","sender","text","timestamp","isVoice","audioLevel","userId")
+          VALUES (${m.id}, ${m.sender}, ${m.text}, ${m.timestamp}, ${m.isVoice || false}, ${m.audioLevel || null}, ${msgUserId})
           ON CONFLICT ("id") DO UPDATE SET "text" = EXCLUDED."text"
         `;
       }));
       return res.status(200).json({ success: true });
     }
 
-    // DELETE all — for reset
+    // DELETE all for user
     if (req.method === 'DELETE') {
-      await sql`DELETE FROM chat_messages`;
+      await sql`DELETE FROM chat_messages WHERE "userId" = ${userId}`;
       return res.status(200).json({ success: true });
     }
 

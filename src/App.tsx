@@ -6,8 +6,9 @@ import { DashboardOverview } from './components/dashboard/DashboardOverview';
 import { ReceiptScannerModal } from './components/ocr/ReceiptScannerModal';
 import { StatementImporterModal } from './components/import/StatementImporterModal';
 import { SettingsModal } from './components/settings/SettingsModal';
+import { LoginPage } from './components/auth/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
-import { MessageSquare, X, Bot, Calculator } from 'lucide-react';
+import { X, Bot, Calculator } from 'lucide-react';
 
 const ACCENT_COLORS = {
   emerald: { primary: '#0D2E14', hover: '#12441d', light: '#F0F7EE', activeBg: '#E4ECE2', lime: '#93E044' },
@@ -19,7 +20,7 @@ const ACCENT_COLORS = {
 };
 
 export const AppContent: React.FC = () => {
-  const { settings } = useFinance();
+  const { settings, currentUser, login } = useFinance();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOCROpen, setIsOCROpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -36,6 +37,11 @@ export const AppContent: React.FC = () => {
     root.style.setProperty('--accent-active-bg', colors.activeBg);
     root.style.setProperty('--accent-lime', colors.lime);
   }, [settings.accentColor]);
+
+  // If no user is logged in, show the Login Page
+  if (!currentUser) {
+    return <LoginPage onLoginSuccess={user => login(user)} />;
+  }
 
   const botAvatar = settings.botAvatarUrl;
   const bubbleSizeClass = 
@@ -112,12 +118,22 @@ export const AppContent: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Modals & Overlays */}
-      {isOCROpen && <ReceiptScannerModal onClose={() => setIsOCROpen(false)} />}
-      {isImportOpen && <StatementImporterModal onClose={() => setIsImportOpen(false)} />}
-      {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
+        {/* OCR Scanner Modal */}
+        {isOCROpen && (
+          <ReceiptScannerModal onClose={() => setIsOCROpen(false)} />
+        )}
+
+        {/* Statement Importer Modal */}
+        {isImportOpen && (
+          <StatementImporterModal onClose={() => setIsImportOpen(false)} />
+        )}
+
+        {/* Settings Modal */}
+        {isSettingsOpen && (
+          <SettingsModal onClose={() => setIsSettingsOpen(false)} />
+        )}
+      </div>
     </div>
   );
 };
@@ -133,4 +149,3 @@ export function App() {
 }
 
 export default App;
-

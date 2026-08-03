@@ -10,14 +10,18 @@ function getDb() {
   return neon(connectionString);
 }
 
-async function ensureTableExists(sql: ReturnType<typeof neon>) {
+async function ensureTable(sql: ReturnType<typeof neon>) {
   await sql`
-    CREATE TABLE IF NOT EXISTS app_settings (
-      "key" TEXT PRIMARY KEY,
-      "value" TEXT NOT NULL,
-      "updated_at" BIGINT NOT NULL DEFAULT 0
+    CREATE TABLE IF NOT EXISTS user_settings (
+      "id" TEXT PRIMARY KEY,
+      "settingsJson" TEXT NOT NULL,
+      "updatedAt" BIGINT NOT NULL,
+      "userId" TEXT NOT NULL DEFAULT 'nandini'
     )
   `;
+  try {
+    await sql`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
+  } catch {}
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -30,35 +34,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try { sql = getDb(); } catch (err: any) { return res.status(500).json({ error: err.message }); }
 
   try {
-    await ensureTableExists(sql);
+    await ensureTable(sql);
 
-    // GET — return all settings as a flat object
+    const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
+
     if (req.method === 'GET') {
-      const rows = await sql`SELECT "key", "value" FROM app_settings`;
-      const result: Record<string, any> = {};
-      for (const row of rows as any[]) {
-        try { result[row.key] = JSON.parse(row.value); }
-        catch { result[row.key] = row.value; }
+      const rows = await sql`
+        SELECT * FROM user_settings WHERE "userId" = ${userId} OR "id" = ${'settings_' + userId} LIMIT 1
+      `;
+      if (!rows.length) return res.status(200).json(null);
+      try {
+        const parsed = JSON.parse(rows[0].settingsJson);
+        return res.status(200).json(parsed);
+      } catch {
+        return res.status(200).json(null);
       }
-      return res.status(200).json(result);
     }
 
-    // POST — upsert all settings from body object
     if (req.method === 'POST') {
       const body = req.body;
-      if (!body || typeof body !== 'object') return res.status(400).json({ error: 'Body must be an object' });
+      if (!body) return res.status(400).json({ error: 'Missing settings payload' });
+
+      const settingsId = 'settings_' + userId;
+      const jsonStr = JSON.stringify(body);
       const now = Date.now();
-      await Promise.all(
-        Object.entries(body).map(([key, value]) =>
-          sql`
-            INSERT INTO app_settings ("key", "value", "updated_at")
-            VALUES (${key}, ${JSON.stringify(value)}, ${now})
-            ON CONFLICT ("key") DO UPDATE SET
-              "value" = EXCLUDED."value",
-              "updated_at" = EXCLUDED."updated_at"
-          `
-        )
-      );
+
+      await sql`
+        INSERT INTO user_settings ("id", "settingsJson", "updatedAt", "userId")
+        VALUES (${settingsId}, ${jsonStr}, ${now}, ${userId})
+        ON CONFLICT ("id") DO UPDATE SET
+          "settingsJson" = EXCLUDED."settingsJson",
+          "updatedAt" = EXCLUDED."updatedAt",
+          "userId" = EXCLUDED."userId"
+      `;
       return res.status(200).json({ success: true });
     }
 

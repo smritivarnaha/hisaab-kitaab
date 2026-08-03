@@ -1,10 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 
-// @neondatabase/serverless is the correct driver for Vercel serverless functions.
-// The standard 'pg' Pool keeps persistent TCP connections which Vercel kills between invocations.
-// neon() creates a fresh HTTP-based connection per request — perfect for serverless.
-
 function getDb() {
   const connectionString =
     process.env.POSTGRES_URL ||
@@ -35,19 +31,16 @@ async function ensureTableExists(sql: ReturnType<typeof neon>) {
       "shortDisplayTitle" TEXT,
       "notes" TEXT,
       "isPending" BOOLEAN NOT NULL DEFAULT FALSE,
-      "person" TEXT
+      "person" TEXT,
+      "userId" TEXT NOT NULL DEFAULT 'nandini'
     )
   `;
-  // Ensure fields added later exist in case the table was created in an older session
   try {
     await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "isPending" BOOLEAN NOT NULL DEFAULT FALSE`;
-  } catch (err) {
-    console.warn("Alter table error isPending:", err);
-  }
-  try {
     await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "person" TEXT`;
+    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
   } catch (err) {
-    console.warn("Alter table error person:", err);
+    console.warn("Alter table error:", err);
   }
 }
 
@@ -57,9 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   let sql: ReturnType<typeof neon>;
   try {
@@ -71,9 +62,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     await ensureTableExists(sql);
 
-    // ── GET — fetch all transactions ─────────────────────────────────────────
+    const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
+
+    // ── GET — fetch all transactions for specific user ────────────────────────
     if (req.method === 'GET') {
-      const rows = await sql`SELECT * FROM transactions ORDER BY timestamp DESC`;
+      const rows = await sql`SELECT * FROM transactions WHERE "userId" = ${userId} ORDER BY timestamp DESC`;
       const parsed = rows.map((row: any) => ({
         ...row,
         amount: Number(row.amount),
@@ -84,23 +77,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(parsed);
     }
 
-    // ── POST — upsert a single transaction ───────────────────────────────────
+    // ── POST — upsert a single transaction for specific user ─────────────────
     if (req.method === 'POST') {
       const body = req.body;
       if (!body?.id) return res.status(400).json({ error: 'Missing transaction id' });
+
+      const txUserId = body.userId || userId;
 
       await sql`
         INSERT INTO transactions (
           "id","amount","currency","type","category","title","merchant",
           "paymentMethod","date","relativeDateText","timestamp","confidenceScore",
-          "rawInput","shortDisplayTitle","notes","isPending","person"
+          "rawInput","shortDisplayTitle","notes","isPending","person","userId"
         ) VALUES (
           ${body.id}, ${body.amount}, ${body.currency || '₹'}, ${body.type},
           ${body.category}, ${body.title}, ${body.merchant || null},
           ${body.paymentMethod || 'UPI'}, ${body.date}, ${body.relativeDateText || null},
           ${body.timestamp}, ${body.confidenceScore || null}, ${body.rawInput || null},
           ${body.shortDisplayTitle || null}, ${body.notes || null},
-          ${body.isPending || false}, ${body.person || null}
+          ${body.isPending || false}, ${body.person || null}, ${txUserId}
         )
         ON CONFLICT ("id") DO UPDATE SET
           "amount" = EXCLUDED."amount",
@@ -118,7 +113,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           "shortDisplayTitle" = EXCLUDED."shortDisplayTitle",
           "notes" = EXCLUDED."notes",
           "isPending" = EXCLUDED."isPending",
-          "person" = EXCLUDED."person"
+          "person" = EXCLUDED."person",
+          "userId" = EXCLUDED."userId"
       `;
       return res.status(200).json({ success: true, id: body.id });
     }
@@ -128,28 +124,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const list = req.body;
       if (!Array.isArray(list)) return res.status(400).json({ error: 'Body must be an array' });
 
-      // Run each upsert in parallel
       await Promise.all(list.map((body: any) => {
         if (!body?.id) return Promise.resolve();
+        const txUserId = body.userId || userId;
         return sql`
           INSERT INTO transactions (
             "id","amount","currency","type","category","title","merchant",
             "paymentMethod","date","relativeDateText","timestamp","confidenceScore",
-            "rawInput","shortDisplayTitle","notes","isPending","person"
+            "rawInput","shortDisplayTitle","notes","isPending","person","userId"
           ) VALUES (
             ${body.id}, ${body.amount}, ${body.currency || '₹'}, ${body.type},
             ${body.category}, ${body.title}, ${body.merchant || null},
             ${body.paymentMethod || 'UPI'}, ${body.date}, ${body.relativeDateText || null},
             ${body.timestamp}, ${body.confidenceScore || null}, ${body.rawInput || null},
             ${body.shortDisplayTitle || null}, ${body.notes || null},
-            ${body.isPending || false}, ${body.person || null}
+            ${body.isPending || false}, ${body.person || null}, ${txUserId}
           )
           ON CONFLICT ("id") DO UPDATE SET
             "amount" = EXCLUDED."amount",
             "type" = EXCLUDED."type",
             "category" = EXCLUDED."category",
             "title" = EXCLUDED."title",
-            "timestamp" = EXCLUDED."timestamp"
+            "timestamp" = EXCLUDED."timestamp",
+            "isPending" = EXCLUDED."isPending",
+            "userId" = EXCLUDED."userId"
         `;
       }));
       return res.status(200).json({ success: true, count: list.length });
@@ -159,12 +157,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'DELETE') {
       const { id } = req.query;
       if (!id || typeof id !== 'string') return res.status(400).json({ error: 'Missing id' });
-      await sql`DELETE FROM transactions WHERE "id" = ${id}`;
+      await sql`DELETE FROM transactions WHERE "id" = ${id} AND "userId" = ${userId}`;
       return res.status(200).json({ success: true });
     }
 
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
-
   } catch (err: any) {
     console.error('API Error:', err);
     return res.status(500).json({ error: 'Database error', details: err.message });

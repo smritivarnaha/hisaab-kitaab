@@ -11,15 +11,14 @@ import {
   Save, 
   Bot, 
   Check, 
-  Mic, 
-  Volume2, 
   Upload, 
   User,
   Palette,
   Type,
   MessageSquare,
-  Sparkles,
-  Maximize2
+  Maximize2,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 import { UserSettings } from '../../types/finance';
 
@@ -27,7 +26,7 @@ interface Props {
   onClose: () => void;
 }
 
-type TabType = 'ai' | 'avatars' | 'appearance';
+type TabType = 'ai' | 'avatars' | 'appearance' | 'account';
 
 const PRESET_BOT_AVATARS = [
   { name: 'Classic Bot', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Felix' },
@@ -53,8 +52,15 @@ const ACCENT_OPTIONS = [
 ] as const;
 
 export const SettingsModal: React.FC<Props> = ({ onClose }) => {
-  const { settings, updateSettings, resetAllData } = useFinance();
+  const { settings, updateSettings, resetAllData, currentUser, changePassword } = useFinance();
   const [activeTab, setActiveTab] = useState<TabType>('ai');
+
+  // Password state
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passMsg, setPassMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [passLoading, setPassLoading] = useState(false);
 
   // Draft state — changes are NOT saved until the user hits "Save Settings"
   const [draft, setDraft] = useState<UserSettings>({ ...settings });
@@ -69,6 +75,34 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
     updateSettings(draft);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handlePasswordChangeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassMsg(null);
+
+    if (newPassword.length < 4) {
+      setPassMsg({ type: 'error', text: 'New password must be at least 4 characters long' });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPassMsg({ type: 'error', text: 'New password and confirm password do not match' });
+      return;
+    }
+
+    setPassLoading(true);
+    const res = await changePassword(oldPassword, newPassword);
+    setPassLoading(false);
+
+    if (res.success) {
+      setPassMsg({ type: 'success', text: 'Password updated successfully!' });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } else {
+      setPassMsg({ type: 'error', text: res.error || 'Failed to update password' });
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'botAvatarUrl' | 'userAvatarUrl') => {
@@ -86,9 +120,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
     }
   };
 
-  const activeProvider = draft.aiProvider || 'gemini';
-  const geminiActive = !!(draft.apiKey?.trim());
-  const openaiActive = !!(draft.openaiApiKey?.trim());
+  const activeProvider = draft.aiProvider || 'openai';
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn font-outfit">
@@ -101,7 +133,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
               <Settings className="w-3.5 h-3.5" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-xs">Settings</h3>
+              <h3 className="font-bold text-gray-900 text-xs">Settings ({currentUser?.name})</h3>
               <p className="text-[10px] text-gray-400">Configure application preferences</p>
             </div>
           </div>
@@ -111,18 +143,18 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-gray-100 bg-gray-50/60 px-3 py-1.5 flex-shrink-0 gap-1">
+        <div className="flex border-b border-gray-100 bg-gray-50/60 px-2 py-1.5 flex-shrink-0 gap-1 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('ai')}
-            className={`flex-1 py-1.5 px-2 text-center text-xs font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
               activeTab === 'ai' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
-            🤖 AI Settings
+            🤖 AI
           </button>
           <button
             onClick={() => setActiveTab('avatars')}
-            className={`flex-1 py-1.5 px-2 text-center text-xs font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
               activeTab === 'avatars' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
@@ -130,11 +162,19 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
           </button>
           <button
             onClick={() => setActiveTab('appearance')}
-            className={`flex-1 py-1.5 px-2 text-center text-xs font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
               activeTab === 'appearance' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
-            🎨 Preferences
+            🎨 Theme
+          </button>
+          <button
+            onClick={() => setActiveTab('account')}
+            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
+              activeTab === 'account' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            }`}
+          >
+            🔐 Password
           </button>
         </div>
 
@@ -165,58 +205,18 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => updateDraft({ aiProvider: 'gemini' })}
-                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${activeProvider === 'gemini' ? 'border-emerald-600 bg-emerald-50 text-emerald-900' : 'border-gray-200 bg-gray-50 text-gray-600'}`}
-                  >
-                    🟢 Google Gemini
-                  </button>
-                  <button
                     onClick={() => updateDraft({ aiProvider: 'openai' })}
                     className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${activeProvider === 'openai' ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-gray-200 bg-gray-50 text-gray-600'}`}
                   >
-                    🔵 OpenAI GPT-4o
+                    🔵 OpenAI (Default)
+                  </button>
+                  <button
+                    onClick={() => updateDraft({ aiProvider: 'gemini' })}
+                    className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${activeProvider === 'gemini' ? 'border-emerald-600 bg-emerald-50 text-emerald-900' : 'border-gray-200 bg-gray-50 text-gray-600'}`}
+                  >
+                    🟢 Gemini
                   </button>
                 </div>
-
-                {/* Gemini Key */}
-                {activeProvider === 'gemini' && (
-                  <div className="space-y-1 animate-fadeIn">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-semibold text-gray-600">Gemini API Key</label>
-                      <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[10px] text-emerald-700 hover:underline font-semibold">Get Free Key ↗</a>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="password"
-                        value={draft.apiKey || ''}
-                        onChange={e => updateDraft({ apiKey: e.target.value })}
-                        placeholder="AIzaSy..."
-                        className="w-full bg-slate-50 border border-gray-200 text-xs text-gray-900 rounded-lg py-2 pl-3 pr-8 outline-none focus:border-emerald-600 font-mono transition-all"
-                      />
-                      {geminiActive && <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-600" />}
-                    </div>
-                  </div>
-                )}
-
-                {/* OpenAI Key */}
-                {activeProvider === 'openai' && (
-                  <div className="space-y-1 animate-fadeIn">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-semibold text-gray-600">OpenAI API Key</label>
-                      <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 hover:underline font-semibold">Get Key ↗</a>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="password"
-                        value={draft.openaiApiKey || ''}
-                        onChange={e => updateDraft({ openaiApiKey: e.target.value })}
-                        placeholder="sk-proj-..."
-                        className="w-full bg-slate-50 border border-gray-200 text-xs text-gray-900 rounded-lg py-2 pl-3 pr-8 outline-none focus:border-blue-600 font-mono transition-all"
-                      />
-                      {openaiActive && <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-blue-600" />}
-                    </div>
-                  </div>
-                )}
               </section>
 
               {/* CUSTOM AI INSTRUCTIONS */}
@@ -473,6 +473,78 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
               </section>
             </div>
           )}
+
+          {/* TAB 4: ACCOUNT & SECURITY */}
+          {activeTab === 'account' && (
+            <div className="space-y-3">
+              <section className="bg-white border border-gray-200/80 rounded-xl p-3.5 space-y-3 shadow-2xs font-outfit">
+                <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+                  <ShieldCheck className="w-4 h-4 text-[#0D2E14]" />
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-900">Change Account Password</h4>
+                    <p className="text-[10px] text-gray-400">Update security password for {currentUser?.name} ({currentUser?.username})</p>
+                  </div>
+                </div>
+
+                {passMsg && (
+                  <div className={`p-2.5 rounded-lg text-xs font-semibold ${
+                    passMsg.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+                  }`}>
+                    {passMsg.type === 'success' ? '✅ ' : '⚠️ '}
+                    {passMsg.text}
+                  </div>
+                )}
+
+                <form onSubmit={handlePasswordChangeSubmit} className="space-y-2.5">
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Current Password</label>
+                    <input
+                      type="password"
+                      value={oldPassword}
+                      onChange={e => setOldPassword(e.target.value)}
+                      placeholder="Enter current password..."
+                      required
+                      className="w-full bg-slate-50 border border-gray-200 text-xs font-mono rounded-lg py-2 px-3 outline-none focus:border-[#0D2E14]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder="Enter new password..."
+                      required
+                      className="w-full bg-slate-50 border border-gray-200 text-xs font-mono rounded-lg py-2 px-3 outline-none focus:border-[#0D2E14]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block mb-1">Confirm New Password</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter new password..."
+                      required
+                      className="w-full bg-slate-50 border border-gray-200 text-xs font-mono rounded-lg py-2 px-3 outline-none focus:border-[#0D2E14]"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={passLoading}
+                    className="w-full py-2.5 rounded-lg bg-[#0D2E14] hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all disabled:opacity-50"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>{passLoading ? 'Updating Password...' : 'Update Password'}</span>
+                  </button>
+                </form>
+              </section>
+            </div>
+          )}
+
         </div>
 
         {/* Footer — Save Button */}

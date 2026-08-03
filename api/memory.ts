@@ -13,11 +13,15 @@ function getDb() {
 async function ensureTable(sql: ReturnType<typeof neon>) {
   await sql`
     CREATE TABLE IF NOT EXISTS ai_memory (
-      "key" TEXT PRIMARY KEY,
-      "value" TEXT NOT NULL,
-      "updated_at" BIGINT NOT NULL DEFAULT 0
+      "id" TEXT PRIMARY KEY,
+      "memoryJson" TEXT NOT NULL,
+      "updatedAt" BIGINT NOT NULL,
+      "userId" TEXT NOT NULL DEFAULT 'nandini'
     )
   `;
+  try {
+    await sql`ALTER TABLE ai_memory ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
+  } catch {}
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -32,31 +36,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     await ensureTable(sql);
 
+    const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
+
     if (req.method === 'GET') {
-      const rows = await sql`SELECT "key","value" FROM ai_memory`;
-      const result: Record<string, any> = {};
-      for (const row of rows as any[]) {
-        try { result[row.key] = JSON.parse(row.value); }
-        catch { result[row.key] = row.value; }
+      const rows = await sql`
+        SELECT * FROM ai_memory WHERE "userId" = ${userId} OR "id" = ${'memory_' + userId} LIMIT 1
+      `;
+      if (!rows.length) return res.status(200).json(null);
+      try {
+        const parsed = JSON.parse(rows[0].memoryJson);
+        return res.status(200).json(parsed);
+      } catch {
+        return res.status(200).json(null);
       }
-      return res.status(200).json(result);
     }
 
     if (req.method === 'POST') {
       const body = req.body;
-      if (!body || typeof body !== 'object') return res.status(400).json({ error: 'Body must be an object' });
+      if (!body) return res.status(400).json({ error: 'Missing memory payload' });
+
+      const memoryId = 'memory_' + userId;
+      const jsonStr = JSON.stringify(body);
       const now = Date.now();
-      await Promise.all(
-        Object.entries(body).map(([key, value]) =>
-          sql`
-            INSERT INTO ai_memory ("key","value","updated_at")
-            VALUES (${key}, ${JSON.stringify(value)}, ${now})
-            ON CONFLICT ("key") DO UPDATE SET
-              "value" = EXCLUDED."value",
-              "updated_at" = EXCLUDED."updated_at"
-          `
-        )
-      );
+
+      await sql`
+        INSERT INTO ai_memory ("id", "memoryJson", "updatedAt", "userId")
+        VALUES (${memoryId}, ${jsonStr}, ${now}, ${userId})
+        ON CONFLICT ("id") DO UPDATE SET
+          "memoryJson" = EXCLUDED."memoryJson",
+          "updatedAt" = EXCLUDED."updatedAt",
+          "userId" = EXCLUDED."userId"
+      `;
       return res.status(200).json({ success: true });
     }
 

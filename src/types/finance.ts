@@ -99,6 +99,8 @@ export interface ChatMessage {
   text: string;
   timestamp: number;
   audioUrl?: string;
+  isVoice?: boolean;
+  audioLevel?: number;
   confidenceScore?: number;
   pendingReviewItems?: Transaction[];
   clarification?: AIClarificationQuestion;
@@ -124,4 +126,10 @@ export interface UserSettings {
   chatBubbleStyle?: 'glass' | 'flat' | 'bordered';
   chatBubbleSize?: 'compact' | 'normal' | 'spacious';
   floatingBubbleSize?: 'sm' | 'md' | 'lg';
+}
+
+export interface AppUser {
+  id: string;
+  username: string;
+  name: string;
 }

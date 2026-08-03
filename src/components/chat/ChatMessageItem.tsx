@@ -133,34 +133,34 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
         <div className="space-y-2">
           {/* Tabular Table Form */}
           <div className="overflow-x-auto border border-gray-200 rounded-lg bg-slate-50">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-[11px] border-collapse">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-100/80 text-[9px] uppercase font-bold text-gray-500">
-                  <th className="p-1.5 w-6">#</th>
-                  <th className="p-1.5">Description / Title</th>
-                  <th className="p-1.5 w-24">Amount (₹)</th>
-                  <th className="p-1.5 text-center w-8">Action</th>
+                <tr className="border-b border-gray-200 bg-gray-100/80 text-[8px] sm:text-[9px] uppercase font-bold text-gray-500">
+                  <th className="p-1 w-4 text-center">#</th>
+                  <th className="p-1">Description / Title</th>
+                  <th className="p-1 w-16 sm:w-20 text-right">Amount (₹)</th>
+                  <th className="p-1 text-center w-6">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {drafts.map((row, idx) => (
                   <tr key={row.id} className="border-b border-gray-100 bg-white">
-                    <td className="p-1.5 text-[10px] font-semibold text-gray-400">{idx + 1}</td>
+                    <td className="p-1 text-[9px] font-semibold text-gray-400 text-center">{idx + 1}</td>
                     <td className="p-1">
                       <input
                         type="text"
                         value={row.title === 'Reason Missing' ? '' : row.title}
                         onChange={e => handleUpdate(row.id, 'title', e.target.value)}
                         placeholder="Title / description..."
-                        className="w-full text-xs font-semibold text-gray-900 bg-gray-50 border border-gray-200 rounded px-2 py-1 outline-none focus:border-emerald-600"
+                        className="w-full text-[10px] sm:text-xs font-semibold text-gray-900 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 outline-none focus:border-emerald-600 truncate"
                       />
                     </td>
-                    <td className="p-1">
+                    <td className="p-1 text-right">
                       <input
                         type="number"
                         value={row.amount}
                         onChange={e => handleUpdate(row.id, 'amount', e.target.value)}
-                        className="w-full text-xs font-bold text-emerald-700 bg-gray-50 border border-gray-200 rounded px-2 py-1 outline-none focus:border-emerald-600"
+                        className="w-16 sm:w-20 text-[10px] sm:text-xs font-bold text-emerald-700 bg-gray-50 border border-gray-200 rounded px-1 py-0.5 outline-none focus:border-emerald-600 text-right"
                       />
                     </td>
                     <td className="p-1 text-center">
@@ -169,7 +169,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
                         className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
                         title="Remove row"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </td>
                   </tr>
