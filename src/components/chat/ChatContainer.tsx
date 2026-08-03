@@ -163,6 +163,9 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
     'Coffee 180 cash'
   ];
 
+  const openaiKey = (settings as any).openaiApiKey?.trim();
+  const useWhisper = !!openaiKey;
+
   return (
     <div className="flex flex-col h-full bg-[#F3F5F1] relative overflow-hidden font-outfit">
       {/* Top Status Banner */}
@@ -232,7 +235,8 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
               <Camera className="w-4 h-4" />
             </button>
 
-            {/* Prominent Mic Speak Button */}
+            {/* Prominent Mic Speak Button + voice mode badge */}
+            <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
             <button
               type="button"
               onClick={isTranscribing ? undefined : handleToggleVoice}
@@ -253,6 +257,13 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
                 {isTranscribing ? 'Processing...' : isListening ? 'Stop' : 'Speak'}
               </span>
             </button>
+            {/* Voice mode badge */}
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+              useWhisper ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+            }`}>
+              {useWhisper ? '🎯 Whisper' : '🌐 Browser'}
+            </span>
+            </div>
 
             {/* Input Box */}
             <div className="flex-1 relative">
