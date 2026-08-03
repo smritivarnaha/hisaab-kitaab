@@ -97,7 +97,7 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
       <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white border border-[#E2E8E0] rounded-2xl shadow-2xs">
         <div className="flex items-center gap-1.5">
           <Clock className="w-4 h-4 text-[#0D2E14]" />
-          <span className="text-xs font-extrabold text-[#0D2E14] uppercase tracking-wider">
+          <span className="text-xs font-bold text-[#0D2E14] uppercase tracking-wider">
             Spending Timeline Matrix
           </span>
         </div>
@@ -105,7 +105,7 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
         <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-xl">
           <button
             onClick={() => { setDateFilter('all'); setSelectedDate(null); }}
-            className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+            className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-all ${
               dateFilter === 'all' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -113,7 +113,7 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
           </button>
           <button
             onClick={() => { setDateFilter('7days'); setSelectedDate(null); }}
-            className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+            className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-all ${
               dateFilter === '7days' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -121,7 +121,7 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
           </button>
           <button
             onClick={() => { setDateFilter('month'); setSelectedDate(null); }}
-            className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${
+            className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-all ${
               dateFilter === 'month' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
@@ -130,33 +130,33 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
         </div>
       </div>
 
-      {/* Mota Mota Hisaab Mini Stats Cards */}
+      {/* Mota Mota Hisaab Standardized Mini Stats Cards (Unbolded & Uniform Color) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs space-y-1">
-          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Total Spent (Period)</span>
-          <span className="text-sm sm:text-base font-extrabold text-red-600 block">
+          <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider block">Total Spent (Period)</span>
+          <span className="text-xs sm:text-sm font-semibold text-slate-900 block">
             ₹{totalExpense.toLocaleString('en-IN')}
           </span>
         </div>
 
         <div className="bg-white p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs space-y-1">
-          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Total Items Purchased</span>
+          <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider block">Total Items Purchased</span>
           <div className="flex items-center gap-1">
-            <Package className="w-3.5 h-3.5 text-[#0D2E14]" />
-            <span className="text-sm sm:text-base font-extrabold text-[#0D2E14]">{totalItemsCount} items</span>
+            <Package className="w-3.5 h-3.5 text-slate-700" />
+            <span className="text-xs sm:text-sm font-semibold text-slate-900">{totalItemsCount} items</span>
           </div>
         </div>
 
         <div className="bg-white p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs space-y-1">
-          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Highest Expense Day</span>
-          <span className="text-xs sm:text-sm font-extrabold text-amber-700 block truncate">
+          <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider block">Highest Expense Day</span>
+          <span className="text-xs sm:text-sm font-semibold text-slate-900 block truncate">
             {peakAmount > 0 ? `₹${peakAmount.toLocaleString('en-IN')} (${formatGlobalDate(peakDate)})` : 'N/A'}
           </span>
         </div>
 
         <div className="bg-white p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs space-y-1">
-          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Average Spend / Day</span>
-          <span className="text-sm sm:text-base font-extrabold text-emerald-700 block">
+          <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider block">Average Spend / Day</span>
+          <span className="text-xs sm:text-sm font-semibold text-slate-900 block">
             {sortedDates.length > 0
               ? `₹${Math.round(totalExpense / sortedDates.length).toLocaleString('en-IN')}`
               : '₹0'}
@@ -167,14 +167,14 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
       {/* 1. Interactive Timeline Graph (X-Axis: Dates, Height: Daily Spend Total) */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8E0] shadow-2xs space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-xs sm:text-sm text-[#0D2E14] flex items-center gap-1.5">
+          <h3 className="font-semibold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
             <BarChart2 className="w-4 h-4 text-[#0D2E14]" />
             Daily Spend Timeline (X-Axis: Dates | Y-Axis: Daily Totals)
           </h3>
           {selectedDate && (
             <button
               onClick={() => setSelectedDate(null)}
-              className="text-[10px] font-bold text-emerald-700 hover:underline bg-emerald-50 px-2 py-0.5 rounded-full"
+              className="text-[10px] font-semibold text-emerald-700 hover:underline bg-emerald-50 px-2 py-0.5 rounded-full"
             >
               Show All Dates
             </button>
@@ -201,8 +201,8 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                     className="flex-1 min-w-[44px] flex flex-col items-center gap-1.5 cursor-pointer group transition-all"
                   >
                     {/* Amount Tooltip over Bar */}
-                    <span className={`text-[10px] font-extrabold transition-all group-hover:scale-110 ${
-                      isSelected ? 'text-[#0D2E14] font-black' : 'text-gray-600'
+                    <span className={`text-[10px] font-semibold transition-all group-hover:scale-110 ${
+                      isSelected ? 'text-[#0D2E14] font-bold' : 'text-slate-600'
                     }`}>
                       ₹{dayData.total >= 1000 ? `${(dayData.total / 1000).toFixed(1)}k` : dayData.total}
                     </span>
@@ -220,8 +220,8 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                     </div>
 
                     {/* Date Label on X-Axis */}
-                    <span className={`text-[10px] font-bold tracking-tight text-center truncate w-full ${
-                      isSelected ? 'text-[#0D2E14] font-extrabold' : 'text-gray-500'
+                    <span className={`text-[10px] font-medium tracking-tight text-center truncate w-full ${
+                      isSelected ? 'text-[#0D2E14] font-bold' : 'text-slate-500'
                     }`}>
                       {formatGlobalDate(date).split(' ').slice(0, 2).join(' ')}
                     </span>
@@ -231,7 +231,7 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
             </div>
           </div>
         ) : (
-          <div className="text-center py-8 text-xs text-gray-400 font-bold">
+          <div className="text-center py-8 text-xs text-gray-400 font-medium">
             No spending records found for this period.
           </div>
         )}
@@ -240,11 +240,11 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
       {/* 2. Daily Bunches with Overlapping Category Avatar Chips & Click-to-Expand Accordion */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8E0] shadow-2xs space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-xs sm:text-sm text-[#0D2E14] flex items-center gap-1.5">
+          <h3 className="font-semibold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
             <ShoppingBag className="w-4 h-4 text-[#0D2E14]" />
             Daily Spend Bunches (Mota Mota Hisaab)
           </h3>
-          <span className="text-[10px] text-gray-400 font-bold">
+          <span className="text-[10px] text-gray-400 font-medium">
             {datesToDisplay.length} Date {datesToDisplay.length === 1 ? 'Bunch' : 'Bunches'} • Click to view breakdown
           </span>
         </div>
@@ -276,10 +276,10 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                   {/* Left: Date Badge + Overlapping Circular Chips */}
                   <div className="flex items-center gap-3 min-w-0">
                     <div>
-                      <span className="text-xs sm:text-sm font-extrabold text-[#0D2E14] block">
+                      <span className="text-xs sm:text-sm font-semibold text-slate-900 block">
                         {formatGlobalDate(date)}
                       </span>
-                      <span className="text-[10px] text-gray-400 font-bold block">
+                      <span className="text-[10px] text-gray-400 font-medium block">
                         {data.items.length} {data.items.length === 1 ? 'item' : 'items'}
                       </span>
                     </div>
@@ -296,7 +296,7 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                         </div>
                       ))}
                       {hiddenCount > 0 && (
-                        <div className="w-6 h-6 rounded-full bg-[#0D2E14] text-white text-[9px] font-bold border-2 border-white flex items-center justify-center -ml-2.5 shadow-2xs">
+                        <div className="w-6 h-6 rounded-full bg-[#0D2E14] text-white text-[9px] font-semibold border-2 border-white flex items-center justify-center -ml-2.5 shadow-2xs">
                           +{hiddenCount}
                         </div>
                       )}
@@ -306,10 +306,10 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                   {/* Right: Daily Subtotal + Expand/Collapse Chevron */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="text-right">
-                      <span className="text-xs sm:text-sm font-black text-red-600 block">
+                      <span className="text-xs sm:text-sm font-semibold text-slate-900 block">
                         ₹{data.total.toLocaleString('en-IN')}
                       </span>
-                      <span className="text-[9px] font-bold text-emerald-700 block">
+                      <span className="text-[9px] font-medium text-emerald-700 block">
                         {isExpanded ? 'Click to collapse' : 'Click for items'}
                       </span>
                     </div>
@@ -325,12 +325,12 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                 {/* Expanded Itemized Table Breakdown */}
                 {isExpanded && (
                   <div className="border-t border-gray-100 bg-slate-50/60 p-3 space-y-2 animate-fadeIn">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-[#0D2E14] px-1">
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-slate-900 px-1">
                       <span className="flex items-center gap-1">
                         <Layers className="w-3.5 h-3.5 text-[#0D2E14]" />
                         Itemized Material Breakdown
                       </span>
-                      <span className="text-gray-400 font-semibold text-[10px]">
+                      <span className="text-gray-400 font-medium text-[10px]">
                         Exact Prices & Details
                       </span>
                     </div>
@@ -338,7 +338,7 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                     <div className="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-2xs">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
-                          <tr className="border-b border-gray-200 bg-gray-100/70 text-[9px] uppercase font-bold text-gray-500">
+                          <tr className="border-b border-gray-200 bg-gray-100/70 text-[9px] uppercase font-semibold text-gray-500">
                             <th className="p-2 w-6 text-center">#</th>
                             <th className="p-2">Material / Item Title</th>
                             <th className="p-2">Category</th>
@@ -346,22 +346,22 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                             <th className="p-2 text-right">Price (₹)</th>
                           </tr>
                         </thead>
-                          <tbody>
+                        <tbody>
                           {data.items.map((item, idx) => (
                             <tr key={item.id} className="border-b border-gray-100 bg-white hover:bg-emerald-50/40 transition-colors">
                               <td className="p-2 text-[10px] font-semibold text-gray-400 text-center">{idx + 1}</td>
-                              <td className="p-2 font-bold text-gray-900">
+                              <td className="p-2 font-semibold text-slate-900">
                                 {item.title || item.notes || 'Expense'}
                               </td>
                               <td className="p-2">
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 inline-flex items-center gap-1">
+                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 inline-flex items-center gap-1">
                                   {item.category}
                                 </span>
                               </td>
                               <td className="p-2 text-[10px] font-medium text-gray-500 uppercase">
                                 {item.paymentMethod || 'UPI'}
                               </td>
-                              <td className="p-2 text-right font-extrabold text-red-600">
+                              <td className="p-2 text-right font-semibold text-slate-900">
                                 ₹{Number(item.amount || 0).toLocaleString('en-IN')}
                               </td>
                             </tr>
@@ -376,7 +376,7 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
           })}
 
           {datesToDisplay.length === 0 && (
-            <div className="text-center py-8 text-xs text-gray-400 font-bold">
+            <div className="text-center py-8 text-xs text-gray-400 font-medium">
               No transactions match the selected date filter.
             </div>
           )}
