@@ -19,8 +19,8 @@ export const Header: React.FC<Props> = ({
     <header className="px-3 sm:px-5 py-2.5 bg-[#F3F5F1] border-b border-[#E2E8E0] flex items-center justify-between sticky top-0 z-30 font-outfit shadow-2xs">
       {/* Brand Title + User Pill */}
       <div className="flex items-center gap-2">
-        <h1 className="font-extrabold text-[#0D2E14] text-base tracking-tight font-outfit flex items-center gap-1.5">
-          HisaabKitab
+        <h1 className="font-serif font-black text-[#0D2E14] text-lg tracking-tight flex items-center gap-1.5">
+          <span>Hisaab Kitab</span>
           {/* Live DB sync status dot */}
           {dbStatus === 'loading' && (
             <span title="Connecting to database..." className="flex items-center gap-1 text-[9px] font-bold text-amber-500">

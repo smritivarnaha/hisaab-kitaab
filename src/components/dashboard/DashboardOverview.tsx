@@ -12,15 +12,28 @@ import {
   ArrowUpRight,
   FileText,
   BarChart3,
-  History
+  History,
+  User
 } from 'lucide-react';
 
 export const DashboardOverview: React.FC = () => {
-  const { transactions, updateTransaction } = useFinance();
+  const { transactions, updateTransaction, currentUser } = useFinance();
   const [searchTerm, setSearchTerm] = useState('');
   const [txTypeFilter, setTxTypeFilter] = useState<'all' | 'debit' | 'credit'>('all');
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
   const [activeSubTab, setActiveSubTab] = useState<'passbook' | 'analytics'>('passbook');
+
+  // Compute period range e.g. "01 Aug 26 - 03 Aug 26"
+  const getCurrentPeriodRange = () => {
+    const now = new Date();
+    const year = String(now.getFullYear()).slice(-2);
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[now.getMonth()] || 'Aug';
+    const day = String(now.getDate()).padStart(2, '0');
+    return `01 ${month} ${year} - ${day} ${month} ${year}`;
+  };
+
+  const periodRange = getCurrentPeriodRange();
 
   // Only show finalized (non-pending) transactions in Passbook History
   const finalizedTransactions = transactions.filter(t => !t.isPending);
@@ -109,10 +122,14 @@ export const DashboardOverview: React.FC = () => {
               <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight font-outfit mt-0.5">
                 Net Overview
               </h2>
+              <span className="text-[10px] sm:text-xs font-semibold text-emerald-300 block mt-0.5">
+                Period: {periodRange}
+              </span>
             </div>
-            <div className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-[#93E044] text-[#0D2E14] text-xs sm:text-sm font-bold flex items-center gap-1 flex-shrink-0 shadow-xs">
-              <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              +18.4%
+            {/* Active Username Pill with WHITE text (replaces +18.4% growth pill) */}
+            <div className="px-3 py-1 rounded-full bg-[#14471f] border border-[#93E044]/50 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 flex-shrink-0 shadow-xs">
+              <User className="w-3.5 h-3.5 text-white" />
+              <span className="text-white font-bold capitalize">{currentUser?.name || 'Nandini'}</span>
             </div>
           </div>
 
