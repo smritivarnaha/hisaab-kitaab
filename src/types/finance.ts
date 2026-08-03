@@ -109,7 +109,7 @@ export interface UserSettings {
   autoSaveHighConfidence: boolean;
   currency: string;
   defaultPaymentMethod: PaymentMethod;
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'system';
   apiKey?: string;
   openaiApiKey?: string;
   aiProvider?: 'gemini' | 'openai';
@@ -119,4 +119,8 @@ export interface UserSettings {
   botAvatarUrl?: string;
   userAvatarUrl?: string;
   aiAccountantName?: string;
+  accentColor?: 'emerald' | 'blue' | 'indigo' | 'violet' | 'rose' | 'amber';
+  fontSize?: 'sm' | 'base' | 'lg';
+  chatBubbleStyle?: 'glass' | 'flat' | 'bordered';
+  chatBubbleSize?: 'compact' | 'normal' | 'spacious';
 }

@@ -23,7 +23,7 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
     const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|\n)/g);
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={index} className="font-extrabold text-[#0D2E14]">{part.slice(2, -2)}</strong>;
+        return <strong key={index} className="font-extrabold text-accent-primary">{part.slice(2, -2)}</strong>;
       }
       if (part.startsWith('*') && part.endsWith('*')) {
         return <em key={index} className="italic">{part.slice(1, -1)}</em>;
@@ -37,8 +37,40 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
 
   const customAvatarUrl = isUser ? settings.userAvatarUrl : settings.botAvatarUrl;
 
+  // Resolve font sizes
+  const fontSizeClass = 
+    settings.fontSize === 'sm' ? 'text-[11px] leading-snug' :
+    settings.fontSize === 'lg' ? 'text-sm sm:text-base leading-relaxed' :
+    'text-xs sm:text-sm leading-relaxed'; // Default 'base'
+
+  // Resolve bubble padding and gaps
+  const sizeClasses = 
+    settings.chatBubbleSize === 'compact' ? { container: 'my-1.5 gap-1.5', bubble: 'px-3 py-1.5 rounded-xl' } :
+    settings.chatBubbleSize === 'spacious' ? { container: 'my-5 gap-3.5', bubble: 'px-5 py-4 rounded-3xl' } :
+    { container: 'my-3.5 gap-2.5', bubble: 'px-4 py-3 rounded-2xl' }; // Default 'normal'
+
+  // Resolve bubble style coloring/borders
+  let bubbleStyleClass = '';
+  if (isUser) {
+    if (settings.chatBubbleStyle === 'glass') {
+      bubbleStyleClass = 'bg-accent-primary/85 backdrop-blur-xs text-white rounded-tr-2xs border border-white/20';
+    } else if (settings.chatBubbleStyle === 'bordered') {
+      bubbleStyleClass = 'bg-transparent border border-accent-primary text-gray-800 dark:text-gray-100 rounded-tr-2xs';
+    } else {
+      bubbleStyleClass = 'bg-accent-primary text-white rounded-tr-2xs'; // Default 'flat'
+    }
+  } else {
+    if (settings.chatBubbleStyle === 'glass') {
+      bubbleStyleClass = 'bg-white/40 backdrop-blur-xs border border-gray-200/40 text-accent-primary rounded-tl-2xs';
+    } else if (settings.chatBubbleStyle === 'bordered') {
+      bubbleStyleClass = 'bg-transparent border-2 border-dashed border-gray-300 text-accent-primary rounded-tl-2xs';
+    } else {
+      bubbleStyleClass = 'bg-white border border-[#E2E8E0] text-accent-primary rounded-tl-2xs dark:bg-slate-900 dark:border-slate-800'; // Default 'flat'
+    }
+  }
+
   return (
-    <div className={`flex items-start gap-2.5 my-3.5 max-w-2xl mx-auto w-full ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex items-start max-w-2xl mx-auto w-full ${isUser ? 'flex-row-reverse' : 'flex-row'} ${sizeClasses.container}`}>
       {/* Avatar */}
       {customAvatarUrl && !avatarError ? (
         <img
@@ -49,7 +81,7 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
         />
       ) : (
         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 shadow-2xs ${
-          isUser ? 'bg-[#93E044] text-[#0D2E14]' : 'bg-[#0D2E14] text-white'
+          isUser ? 'bg-accent-lime text-accent-primary' : 'bg-accent-primary text-white'
         }`}>
           {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
         </div>
@@ -57,11 +89,7 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
 
       {/* Bubble Container */}
       <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[75%]`}>
-        <div className={`px-4 py-3 rounded-2xl text-xs sm:text-sm font-outfit shadow-2xs leading-relaxed ${
-          isUser 
-            ? 'bg-[#0D2E14] text-white rounded-tr-2xs' 
-            : 'bg-white border border-[#E2E8E0] text-[#0D2E14] rounded-tl-2xs'
-        }`}>
+        <div className={`font-outfit shadow-2xs ${fontSizeClass} ${sizeClasses.bubble} ${bubbleStyleClass}`}>
           {renderFormattedText(message.text)}
 
           {/* Action Summary Pill */}

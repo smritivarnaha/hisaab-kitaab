@@ -46,7 +46,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   autoSaveHighConfidence: false,
   currency: 'Rs.',
   defaultPaymentMethod: 'UPI',
-  theme: 'light',
+  theme: 'system',
   voiceLanguage: 'en-IN',
   autoTTS: false,
   apiKey: 'AQ.Ab8RN6Ie0wYTm7AqZrmWDg0LJfeu3IP-k9IKFAC8PPlgl7Yv5A-',
@@ -56,6 +56,10 @@ const DEFAULT_SETTINGS: UserSettings = {
   botAvatarUrl: '',
   userAvatarUrl: '',
   aiAccountantName: 'AI Accountant',
+  accentColor: 'emerald',
+  fontSize: 'base',
+  chatBubbleStyle: 'flat',
+  chatBubbleSize: 'normal',
 };
 
 
@@ -240,10 +244,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => clearInterval(interval);
   }, []);
 
+  // Apply theme styling dynamically (supports light, dark, and system color schemes)
+  useEffect(() => {
+    const applyTheme = () => {
+      const isDark = 
+        settings.theme === 'dark' || 
+        (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', isDark);
+      document.documentElement.classList.toggle('light', !isDark);
+    };
+    applyTheme();
+
+    if (settings.theme === 'system') {
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      const listener = () => applyTheme();
+      media.addEventListener('change', listener);
+      return () => media.removeEventListener('change', listener);
+    }
+  }, [settings.theme]);
+
   // Save settings to Neon whenever they change (debounced 1s to avoid hammering)
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', settings.theme === 'dark');
-    document.documentElement.classList.toggle('light', settings.theme !== 'dark');
     const timer = setTimeout(() => saveSettingsToDb(settings), 1000);
     return () => clearTimeout(timer);
   }, [settings]);
@@ -305,10 +326,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const toggleTheme = () => {
-    setSettings(prev => ({
-      ...prev,
-      theme: prev.theme === 'dark' ? 'light' : 'dark'
-    }));
+    setSettings(prev => {
+      const nextTheme: UserSettings['theme'] = 
+        prev.theme === 'light' ? 'dark' : prev.theme === 'dark' ? 'system' : 'light';
+      return { ...prev, theme: nextTheme };
+    });
   };
 
   const updateSettings = (newSettings: Partial<UserSettings>) => {

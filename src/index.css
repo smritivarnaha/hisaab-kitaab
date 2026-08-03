@@ -9,6 +9,13 @@
     --border-color: #E2E8E0;
     --text-primary: #0D2E14;
     --text-secondary: #576558;
+
+    /* Accent color variables (fallback to emerald defaults) */
+    --accent-primary: #0D2E14;
+    --accent-hover: #12441d;
+    --accent-light: #F0F7EE;
+    --accent-active-bg: #E4ECE2;
+    --accent-lime: #93E044;
   }
 
   body {
@@ -19,30 +26,42 @@
   }
 }
 
+/* Accent override utility classes */
+.bg-accent-primary { background-color: var(--accent-primary) !important; }
+.text-accent-primary { color: var(--accent-primary) !important; }
+.border-accent-primary { border-color: var(--accent-primary) !important; }
+.hover\:bg-accent-hover:hover { background-color: var(--accent-hover) !important; }
+.bg-accent-light { background-color: var(--accent-light) !important; }
+.border-accent-light { border-color: var(--accent-active-bg) !important; }
+.text-accent-light { color: var(--accent-primary) !important; }
+.bg-accent-active-bg { background-color: var(--accent-active-bg) !important; }
+.bg-accent-lime { background-color: var(--accent-lime) !important; }
+.text-accent-lime { color: var(--accent-lime) !important; }
+
 /* Wise Signature Brand Cards */
 .wise-hero-card {
-  background-color: #0D2E14;
+  background-color: var(--accent-primary);
   color: #ffffff;
   border-radius: 1.5rem;
-  box-shadow: 0 4px 20px rgba(13, 46, 20, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .wise-lime-btn {
-  background-color: #93E044;
-  color: #0D2E14;
+  background-color: var(--accent-lime);
+  color: var(--accent-primary);
   font-weight: 800;
   border-radius: 9999px;
   transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 .wise-lime-btn:hover {
-  background-color: #84D137;
+  filter: brightness(0.95);
   transform: translateY(-1px);
 }
 
 .wise-active-pill {
-  background-color: #E4ECE2;
-  color: #0D2E14;
+  background-color: var(--accent-active-bg);
+  color: var(--accent-primary);
   font-weight: 800;
   border-radius: 9999px;
 }
@@ -102,18 +121,18 @@
 
 /* Mic Active Pulse Ring */
 .qor-mic-pulse {
-  box-shadow: 0 0 0 0 rgba(147, 224, 68, 0.7);
+  box-shadow: 0 0 0 0 var(--accent-lime);
   animation: qor-pulse 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
 
 @keyframes qor-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(147, 224, 68, 0.8), 0 0 20px rgba(147, 224, 68, 0.5);
+    box-shadow: 0 0 0 0 var(--accent-lime), 0 0 20px var(--accent-lime);
   }
   70% {
-    box-shadow: 0 0 0 18px rgba(147, 224, 68, 0), 0 0 35px rgba(147, 224, 68, 0);
+    box-shadow: 0 0 0 18px rgba(0, 0, 0, 0), 0 0 35px rgba(0, 0, 0, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(147, 224, 68, 0), 0 0 0 rgba(147, 224, 68, 0);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0), 0 0 0 rgba(0, 0, 0, 0);
   }
 }

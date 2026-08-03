@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FinanceProvider, useFinance } from './context/FinanceContext';
 import { Header } from './components/layout/Header';
 import { ChatContainer } from './components/chat/ChatContainer';
@@ -9,6 +9,15 @@ import { SettingsModal } from './components/settings/SettingsModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import { MessageSquare, X, Bot } from 'lucide-react';
 
+const ACCENT_COLORS = {
+  emerald: { primary: '#0D2E14', hover: '#12441d', light: '#F0F7EE', activeBg: '#E4ECE2', lime: '#93E044' },
+  blue: { primary: '#0B57D0', hover: '#0842a0', light: '#E8F0FE', activeBg: '#D2E3FC', lime: '#38BDF8' },
+  indigo: { primary: '#4F46E5', hover: '#4338CA', light: '#EEF2FF', activeBg: '#E0E7FF', lime: '#818CF8' },
+  violet: { primary: '#7C3AED', hover: '#6D28D9', light: '#F5F3FF', activeBg: '#EDE9FE', lime: '#A78BFA' },
+  rose: { primary: '#E11D48', hover: '#BE123C', light: '#FFF1F2', activeBg: '#FFE4E6', lime: '#FB7185' },
+  amber: { primary: '#D97706', hover: '#B45309', light: '#FEF3C7', activeBg: '#FEF3C7', lime: '#FBBF24' }
+};
+
 export const AppContent: React.FC = () => {
   const { settings } = useFinance();
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -16,6 +25,17 @@ export const AppContent: React.FC = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [botAvatarError, setBotAvatarError] = useState(false);
+
+  useEffect(() => {
+    const accent = settings.accentColor || 'emerald';
+    const colors = ACCENT_COLORS[accent as keyof typeof ACCENT_COLORS] || ACCENT_COLORS.emerald;
+    const root = document.documentElement;
+    root.style.setProperty('--accent-primary', colors.primary);
+    root.style.setProperty('--accent-hover', colors.hover);
+    root.style.setProperty('--accent-light', colors.light);
+    root.style.setProperty('--accent-active-bg', colors.activeBg);
+    root.style.setProperty('--accent-lime', colors.lime);
+  }, [settings.accentColor]);
 
   const botAvatar = settings.botAvatarUrl;
 
