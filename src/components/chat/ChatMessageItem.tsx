@@ -221,10 +221,10 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
     const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|\n)/g);
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={index} className="font-extrabold text-accent-primary">{part.slice(2, -2)}</strong>;
+        return <strong key={index} className="font-black text-[#0D2E14] dark:text-[#93E044]">{part.slice(2, -2)}</strong>;
       }
       if (part.startsWith('*') && part.endsWith('*')) {
-        return <em key={index} className="italic">{part.slice(1, -1)}</em>;
+        return <em key={index} className="italic text-slate-700 dark:text-slate-200">{part.slice(1, -1)}</em>;
       }
       if (part === '\n') {
         return <br key={index} />;
@@ -251,19 +251,19 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
   let bubbleStyleClass = '';
   if (isUser) {
     if (settings.chatBubbleStyle === 'glass') {
-      bubbleStyleClass = 'bg-accent-primary/85 backdrop-blur-xs text-white rounded-tr-2xs border border-white/20';
+      bubbleStyleClass = 'bg-[#0D2E14]/90 backdrop-blur-xs text-white rounded-tr-2xs border border-white/20 shadow-xs';
     } else if (settings.chatBubbleStyle === 'bordered') {
-      bubbleStyleClass = 'bg-transparent border border-accent-primary text-gray-800 dark:text-gray-100 rounded-tr-2xs';
+      bubbleStyleClass = 'bg-transparent border border-[#0D2E14] text-slate-900 dark:text-slate-100 rounded-tr-2xs';
     } else {
-      bubbleStyleClass = 'bg-accent-primary text-white rounded-tr-2xs'; // Default 'flat'
+      bubbleStyleClass = 'bg-[#0D2E14] text-white rounded-tr-2xs shadow-xs'; // Default 'flat'
     }
   } else {
     if (settings.chatBubbleStyle === 'glass') {
-      bubbleStyleClass = 'bg-white/40 backdrop-blur-xs border border-gray-200/40 text-accent-primary rounded-tl-2xs';
+      bubbleStyleClass = 'bg-white/80 backdrop-blur-xs border border-slate-200 text-slate-800 rounded-tl-2xs shadow-xs dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100';
     } else if (settings.chatBubbleStyle === 'bordered') {
-      bubbleStyleClass = 'bg-transparent border-2 border-dashed border-gray-300 text-accent-primary rounded-tl-2xs';
+      bubbleStyleClass = 'bg-transparent border-2 border-slate-300 text-slate-800 rounded-tl-2xs dark:border-slate-700 dark:text-slate-100';
     } else {
-      bubbleStyleClass = 'bg-white border border-[#E2E8E0] text-accent-primary rounded-tl-2xs dark:bg-slate-900 dark:border-slate-800'; // Default 'flat'
+      bubbleStyleClass = 'bg-white border border-[#E2E8E0] text-slate-800 rounded-tl-2xs shadow-2xs dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100'; // Default 'flat'
     }
   }
 
