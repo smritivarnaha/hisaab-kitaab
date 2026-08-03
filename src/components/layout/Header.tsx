@@ -97,7 +97,7 @@ export const Header: React.FC<Props> = ({
         <button
           onClick={onOpenSettings}
           title="Settings"
-          className="w-8 h-8 rounded-full bg-[#0D2E14] text-[#93E044] flex items-center justify-center shadow-xs active:scale-95 ml-0.5"
+          className="w-8 h-8 rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xs active:scale-95 ml-0.5"
         >
           <Settings className="w-3.5 h-3.5" />
         </button>

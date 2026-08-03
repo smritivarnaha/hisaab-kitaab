@@ -38,8 +38,8 @@ export const VoiceWaveform: React.FC<VoiceWaveformProps> = ({ isListening, audio
       <div className="flex items-center justify-between gap-4 w-full">
         {/* Left: Dynamic Mic Icon & Status Text */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[#0D2E14] text-[#93E044] flex items-center justify-center shadow-xs flex-shrink-0 animate-pulse">
-            <Mic className="w-5 h-5 text-[#93E044]" />
+          <div className="w-10 h-10 rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xs flex-shrink-0 animate-pulse">
+            <Mic className="w-5 h-5 text-white" />
           </div>
           <div className="text-left leading-tight">
             <h4 className="text-xs sm:text-sm font-black text-[#0D2E14]">Listening...</h4>

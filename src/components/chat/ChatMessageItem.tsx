@@ -36,7 +36,7 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
     <div className={`flex items-start gap-2.5 my-3.5 max-w-2xl mx-auto w-full ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 shadow-2xs ${
-        isUser ? 'bg-[#93E044] text-[#0D2E14]' : 'bg-[#0D2E14] text-[#93E044]'
+        isUser ? 'bg-[#93E044] text-[#0D2E14]' : 'bg-[#0D2E14] text-white'
       }`}>
         {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
       </div>
@@ -52,7 +52,7 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
 
           {/* Action Summary Pill */}
           {message.actionSummary && (
-            <div className="mt-2 pt-2 border-t border-gray-200/40 flex items-center gap-1.5 text-[11px] font-bold text-[#93E044]">
+            <div className="mt-2 pt-2 border-t border-gray-200/40 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>{message.actionSummary}</span>
             </div>

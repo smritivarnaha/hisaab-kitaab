@@ -117,8 +117,9 @@ CRITICAL RULES:
 2. TITLE & NUMBER PARSING:
    - Convert spoken numbers naturally (e.g. "fifty thousand" -> 50000, "two thousand two hundred" -> 2200).
    - Format merchant and title names cleanly.
-3. REMOVE PAYMENT METHOD & CATEGORY IN CONFIRMATIONS:
-   - Do NOT output payment method or category tags (e.g. "(Grocery)") in the final responseText or speechText.
+3. ASK USER FOR CONFIRMATION:
+   - The transactions are NOT saved directly to the final passbook; they are queued in a pending list first. Phrase your responseText as a question asking if you understood correctly (e.g. "I recorded an expense of **Rs. 144** for **Toothbrush**. Is this correct?").
+   - Do NOT include payment methods or category tags (e.g. "(Grocery)") in the final responseText or speechText.
 `;
 
   try {

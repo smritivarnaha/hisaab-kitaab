@@ -72,7 +72,7 @@ export const CategoryIcon: React.FC<Props> = ({ category, size = 'md' }) => {
       case 'Investments':
         return {
           icon: <TrendingUp className={iconSizes} />,
-          bg: 'bg-[#0D2E14] text-[#93E044] border-[#0D2E14]'
+          bg: 'bg-[#0D2E14] text-white border-[#0D2E14]'
         };
       case 'Salary':
         return {

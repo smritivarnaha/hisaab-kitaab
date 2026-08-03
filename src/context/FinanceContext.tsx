@@ -381,9 +381,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             confidenceScore: 99,
             rawInput: text,
             shortDisplayTitle: item.title,
-            isPending: false
+            isPending: true // Force all transactions to be pending first
           }));
           addTransactionsBatch(newTxList);
+          setPendingReviewItems(prev => [...prev, ...newTxList]); // Force open Reconcile modal
         }
       } else if (agentRes.action === 'UPDATE_TRANSACTION' && agentRes.transactionToUpdate?.id) {
         const { id, category, paymentMethod, ...rest } = agentRes.transactionToUpdate;
@@ -519,7 +520,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
 
-      const parsedItems = parseMultiInput(text, aiMemory);
+      const parsedItems = parseMultiInput(text, aiMemory).map(tx => ({ ...tx, isPending: true }));
 
       if (!parsedItems.length) {
         const responseText = `I couldn't detect an amount in your input. Try saying e.g. *"Petrol 2200"* or *"Spent 23 for Nandini"*`;
