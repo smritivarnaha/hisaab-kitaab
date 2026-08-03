@@ -1,6 +1,7 @@
 import React from 'react';
 import { Transaction } from '../../types/finance';
 import { UserCheck, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { formatGlobalDate } from '../../utils/dateUtils';
 
 interface Props {
   transactions: Transaction[];
@@ -51,7 +52,7 @@ export const DebtLentLedger: React.FC<Props> = ({ transactions, onSettle }) => {
               <ArrowUpRight className="w-3.5 h-3.5 text-green-700 flex-shrink-0" />
               <div>
                 <span className="font-bold text-[#0D2E14] block text-xs">{item.person || 'Friend'} owes you</span>
-                <span className="text-[10px] text-gray-500">{item.date}</span>
+                <span className="text-[10px] text-gray-500 font-semibold">{formatGlobalDate(item.date || item.timestamp)}</span>
               </div>
             </div>
             <div className="text-right">
@@ -74,7 +75,7 @@ export const DebtLentLedger: React.FC<Props> = ({ transactions, onSettle }) => {
               <ArrowDownLeft className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
               <div>
                 <span className="font-bold text-[#0D2E14] block text-xs">You owe {item.person || 'Friend'}</span>
-                <span className="text-[10px] text-gray-500">{item.date}</span>
+                <span className="text-[10px] text-gray-500 font-semibold">{formatGlobalDate(item.date || item.timestamp)}</span>
               </div>
             </div>
             <div className="text-right">

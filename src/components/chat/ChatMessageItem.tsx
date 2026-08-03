@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChatMessage, Transaction } from '../../types/finance';
 import { Bot, User, CheckCircle2, Check, Trash2 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
+import { formatGlobalDate } from '../../utils/dateUtils';
 
 interface Props {
   message: ChatMessage;
@@ -38,7 +39,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
         <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
           ✏️ Verify & Edit Entry
         </span>
-        <span className="text-[9px] text-gray-400 font-medium flex-shrink-0">{item.date}</span>
+        <span className="text-[9px] text-gray-500 font-semibold flex-shrink-0">{formatGlobalDate(item.date || item.timestamp)}</span>
       </div>
 
       {!isConfirmed ? (

@@ -6,6 +6,7 @@ import { DailyReconciliationCard } from './DailyReconciliationCard';
 import { CategoryIcon } from '../common/CategoryIcon';
 import { PaymentMethodIcon } from '../common/PaymentMethodIcon';
 import { AnalyticsPanel } from './AnalyticsPanel';
+import { formatGlobalDate } from '../../utils/dateUtils';
 import { 
   Search, 
   ArrowUpRight,
@@ -265,11 +266,7 @@ export const DashboardOverview: React.FC = () => {
                             </div>
 
                             <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-500 font-medium truncate">
-                              <span className="font-bold text-gray-700">{tx.category}</span>
-                              <span>•</span>
-                              <span>{tx.paymentMethod}</span>
-                              <span>•</span>
-                              <span className="font-medium text-gray-600">{displayDate}</span>
+                              <span className="font-semibold text-gray-600">{formatGlobalDate(tx.date || tx.timestamp)}</span>
                             </div>
                           </div>
                         </div>

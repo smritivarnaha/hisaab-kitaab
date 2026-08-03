@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Transaction } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
 import { speechService } from '../../services/voice/speechRecognition';
+import { formatGlobalDate } from '../../utils/dateUtils';
 import { CheckCircle2, Clock, Mic, Send, Sparkles, Check } from 'lucide-react';
 
 interface Props {
@@ -247,10 +248,10 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
 
                   <div className="min-w-0 flex-1">
                     <h5 className="text-xs font-semibold text-[#0D2E14] truncate">
-                      What was reason for <span className="font-bold text-[#D93025]">₹{Number(item.amount || 0).toLocaleString('en-IN')}</span> ({item.category})?
+                      What was reason for <span className="font-bold text-[#D93025]">₹{Number(item.amount || 0).toLocaleString('en-IN')}</span>?
                     </h5>
-                    <span className="text-[10px] text-gray-500 font-medium truncate block">
-                      {item.paymentMethod} • {item.date}
+                    <span className="text-[10px] text-gray-500 font-semibold truncate block">
+                      {formatGlobalDate(item.date || item.timestamp)}
                     </span>
                   </div>
                 </div>
