@@ -13,18 +13,10 @@ const PRESET_USERS = [
 ];
 
 export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
-  const [selectedUser, setSelectedUser] = useState(PRESET_USERS[0]);
-  const [usernameInput, setUsernameInput] = useState(PRESET_USERS[0].username);
-  const [passwordInput, setPasswordInput] = useState(PRESET_USERS[0].defaultPass);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  const handleSelectUser = (user: typeof PRESET_USERS[0]) => {
-    setSelectedUser(user);
-    setUsernameInput(user.username);
-    setPasswordInput(user.defaultPass);
-    setErrorMsg(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,38 +69,12 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
           <div className="w-12 h-12 rounded-2xl bg-[#0D2E14] text-white flex items-center justify-center mx-auto shadow-md">
             <Calculator className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-black text-[#0D2E14] tracking-tight">Hisaab Kitab AI</h1>
-          <p className="text-xs text-gray-500 font-medium">Select your account or enter credentials to sign in</p>
-        </div>
-
-        {/* Quick User Selection Pills */}
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block text-center">Select Account</label>
-          <div className="grid grid-cols-3 gap-2">
-            {PRESET_USERS.map(user => (
-              <button
-                key={user.id}
-                type="button"
-                onClick={() => handleSelectUser(user)}
-                className={`py-2.5 px-2 rounded-2xl border text-center transition-all flex flex-col items-center gap-1 ${
-                  selectedUser.id === user.id
-                    ? 'border-[#0D2E14] bg-emerald-50/80 text-[#0D2E14] font-bold shadow-xs ring-2 ring-[#0D2E14]/20'
-                    : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${
-                  selectedUser.id === user.id ? 'bg-[#0D2E14] text-white' : 'bg-gray-200 text-gray-700'
-                }`}>
-                  {user.name[0]}
-                </div>
-                <span className="text-xs">{user.name}</span>
-              </button>
-            ))}
-          </div>
+          <h1 className="font-serif font-black text-2xl text-[#0D2E14] tracking-tight">Hisaab Kitab AI</h1>
+          <p className="text-xs text-gray-500 font-medium">Enter your credentials to access your passbook</p>
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold text-center animate-fadeIn">
               ⚠️ {errorMsg}
@@ -123,7 +89,7 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
                 type="text"
                 value={usernameInput}
                 onChange={e => setUsernameInput(e.target.value)}
-                placeholder="Username (e.g. nandini)"
+                placeholder="Enter your username"
                 required
                 className="w-full bg-[#F3F5F1] border border-[#E2E8E0] rounded-xl py-2.5 pl-9 pr-3 text-xs font-semibold text-[#0D2E14] outline-none focus:border-[#0D2E14] transition-all"
               />
@@ -138,7 +104,7 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
                 type="password"
                 value={passwordInput}
                 onChange={e => setPasswordInput(e.target.value)}
-                placeholder="Password (e.g. nandini9100)"
+                placeholder="Enter your password"
                 required
                 className="w-full bg-[#F3F5F1] border border-[#E2E8E0] rounded-xl py-2.5 pl-9 pr-3 text-xs font-semibold text-[#0D2E14] outline-none focus:border-[#0D2E14] transition-all font-mono"
               />
@@ -164,7 +130,7 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
         {/* Security Badge */}
         <div className="pt-2 text-center border-t border-gray-100 flex items-center justify-center gap-1.5 text-[10px] text-gray-400 font-medium">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Multi-User Isolated Neon Database Buckets</span>
+          <span>Encrypted Multi-User Database Authentication</span>
         </div>
 
       </div>
