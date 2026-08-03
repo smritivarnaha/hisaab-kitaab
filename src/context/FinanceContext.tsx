@@ -83,6 +83,28 @@ const fetchTransactions = async (): Promise<Transaction[] | null> => {
   }
 };
 
+const fetchSettingsFromDb = async (): Promise<Partial<UserSettings> | null> => {
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+};
+
+const saveSettingsToDb = async (s: UserSettings) => {
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(s)
+    });
+  } catch (err) {
+    console.warn('Failed to save settings to Neon:', err);
+  }
+};
+
 const saveTransactionToDb = async (tx: Transaction) => {
   await fetch('/api/transactions', {
     method: 'POST',
@@ -119,30 +141,29 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   });
 
-  const [settings, setSettings] = useState<UserSettings>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      const parsed = stored ? JSON.parse(stored) : {};
-      return { ...DEFAULT_SETTINGS, ...parsed };
-    } catch (e) {
-      return DEFAULT_SETTINGS;
-    }
-  });
+  // Settings start from defaults — will be overwritten by Neon data on mount
+  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
 
   const [aiMemory, setAiMemory] = useState<AIMemoryMap>(() => getAIMemory());
   const [pendingReviewItems, setPendingReviewItems] = useState<Transaction[]>([]);
   const [activeClarification, setActiveClarification] = useState<AIClarificationQuestion | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
 
-  // ── Load transactions from Neon on mount ────────────────────────────────────
+  // ── Load transactions + settings from Neon on mount ─────────────────────────
   useEffect(() => {
     const load = async () => {
+      // Load transactions
       const dbTx = await fetchTransactions();
       if (dbTx !== null) {
         setTransactions(dbTx);
         setDbStatus('ok');
       } else {
         setDbStatus('error');
+      }
+      // Load settings from Neon — overrides local defaults
+      const dbSettings = await fetchSettingsFromDb();
+      if (dbSettings && Object.keys(dbSettings).length > 0) {
+        setSettings(prev => ({ ...prev, ...dbSettings }));
       }
     };
     load();
@@ -175,10 +196,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(chatMessages));
   }, [chatMessages]);
 
+  // Save settings to Neon whenever they change (debounced 1s to avoid hammering)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
     document.documentElement.classList.toggle('dark', settings.theme === 'dark');
     document.documentElement.classList.toggle('light', settings.theme !== 'dark');
+    const timer = setTimeout(() => saveSettingsToDb(settings), 1000);
+    return () => clearTimeout(timer);
   }, [settings]);
 
   const addTransaction = async (tx: Transaction) => {
