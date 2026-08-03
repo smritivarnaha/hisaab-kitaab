@@ -233,10 +233,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const dbMsgs = await fetchMessagesFromDb();
       if (dbMsgs !== null) {
         setChatMessages(prev => {
+          const prevMap = new Map(prev.map(m => [m.id, m]));
+          const merged = dbMsgs.map(dbMsg => {
+            const existing = prevMap.get(dbMsg.id);
+            return {
+              ...dbMsg,
+              pendingReviewItems: existing?.pendingReviewItems || (dbMsg as any).pendingReviewItems,
+              actionSummary: existing?.actionSummary || (dbMsg as any).actionSummary,
+              clarification: existing?.clarification || (dbMsg as any).clarification
+            };
+          });
+
           const prevLatest = prev[prev.length - 1]?.id ?? '';
           const dbLatest = dbMsgs[dbMsgs.length - 1]?.id ?? '';
           if (dbLatest !== prevLatest || prev.length !== dbMsgs.length) {
-            return dbMsgs;
+            return merged;
           }
           return prev;
         });

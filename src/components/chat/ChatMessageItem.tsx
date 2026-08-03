@@ -196,9 +196,18 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
 };
 
 export const ChatMessageItem: React.FC<Props> = ({ message }) => {
-  const { settings } = useFinance();
+  const { settings, transactions } = useFinance();
   const [avatarError, setAvatarError] = useState(false);
   const isUser = message.sender === 'user';
+
+  // Robust pending items resolution:
+  // Use message.pendingReviewItems if available, otherwise check transactions context for unconfirmed (isPending) entries
+  const messagePending = message.pendingReviewItems || [];
+  const contextPending = transactions.filter(t => t.isPending);
+
+  const pendingItems = messagePending.length > 0
+    ? messagePending
+    : (!isUser && contextPending.length > 0 ? contextPending : []);
 
   const formatTime = (ts: any) => {
     const numericTs = typeof ts === 'string' ? parseInt(ts, 10) : ts;
@@ -256,8 +265,6 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
       bubbleStyleClass = 'bg-white border border-[#E2E8E0] text-accent-primary rounded-tl-2xs dark:bg-slate-900 dark:border-slate-800'; // Default 'flat'
     }
   }
-
-  const pendingItems = message.pendingReviewItems || [];
 
   return (
     <div className={`flex items-start max-w-2xl mx-auto w-full ${isUser ? 'flex-row-reverse' : 'flex-row'} ${sizeClasses.container}`}>
