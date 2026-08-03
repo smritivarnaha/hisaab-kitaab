@@ -55,81 +55,10 @@ const DEFAULT_SETTINGS: UserSettings = {
   apiKey: 'AQ.Ab8RN6Ie0wYTm7AqZrmWDg0LJfeu3IP-k9IKFAC8PPlgl7Yv5A-',
   openaiApiKey: '',
   aiProvider: 'gemini',
+  customAIPrompt: '',
 };
 
-const INITIAL_DEMO_TRANSACTIONS: Transaction[] = [
-  {
-    id: 'tx_demo_1',
-    amount: 2200,
-    currency: 'Rs.',
-    type: 'expense',
-    category: 'Fuel',
-    title: 'Petrol at HPCL',
-    merchant: 'HP Petrol Pump',
-    paymentMethod: 'UPI',
-    date: new Date().toISOString().split('T')[0],
-    relativeDateText: 'Today',
-    timestamp: Date.now() - 3600000 * 2,
-    confidenceScore: 98,
-    rawInput: 'Petrol 2200 UPI',
-    shortDisplayTitle: 'Petrol at HPCL',
-    notes: 'Petrol refill for bike',
-    isPending: false
-  },
-  {
-    id: 'tx_demo_2',
-    amount: 500,
-    currency: 'Rs.',
-    type: 'income',
-    category: 'Transfer/Settlement',
-    title: 'Rahul returned cash',
-    person: 'Rahul',
-    paymentMethod: 'UPI',
-    date: new Date().toISOString().split('T')[0],
-    relativeDateText: 'Today',
-    timestamp: Date.now() - 3600000 * 5,
-    confidenceScore: 96,
-    rawInput: 'Rahul returned my 500',
-    shortDisplayTitle: 'Rahul returned cash',
-    notes: 'Rahul returned borrowed cash',
-    isPending: false
-  },
-  {
-    id: 'tx_demo_3',
-    amount: 1800,
-    currency: 'Rs.',
-    type: 'expense',
-    category: 'Grocery',
-    title: 'Blinkit Superstore',
-    merchant: 'Blinkit Superstore',
-    paymentMethod: 'UPI',
-    date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-    relativeDateText: 'Yesterday',
-    timestamp: Date.now() - 86400000 - 10000,
-    confidenceScore: 95,
-    rawInput: 'Kal grocery mein 1800 kharch hue',
-    shortDisplayTitle: 'Blinkit Superstore',
-    notes: 'Weekly household groceries',
-    isPending: false
-  },
-  {
-    id: 'tx_demo_4',
-    amount: 50000,
-    currency: 'Rs.',
-    type: 'income',
-    category: 'Salary',
-    title: 'Monthly Company Salary',
-    paymentMethod: 'Bank Transfer',
-    date: new Date(Date.now() - 86400000 * 3).toISOString().split('T')[0],
-    relativeDateText: '3 days ago',
-    timestamp: Date.now() - 86400000 * 3,
-    confidenceScore: 99,
-    rawInput: 'Salary credited 50000',
-    shortDisplayTitle: 'Monthly Company Salary',
-    notes: 'Monthly company salary',
-    isPending: false
-  }
-];
+
 
 const INITIAL_WELCOME_MESSAGES: ChatMessage[] = [
   {
@@ -191,9 +120,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-      return stored ? JSON.parse(stored) : INITIAL_DEMO_TRANSACTIONS;
+      return stored ? JSON.parse(stored) : [];
     } catch (e) {
-      return INITIAL_DEMO_TRANSACTIONS;
+      return [];
     }
   });
 
@@ -431,9 +360,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const updatedMessages = [...chatMessages, userMsg];
       const useOpenAI = settings.aiProvider === 'openai' && !!settings.openaiApiKey?.trim();
+      const customPrompt = settings.customAIPrompt?.trim() || undefined;
       const agentRes = useOpenAI
         ? await processWithOpenAIAgent(text, transactions, aiMemory, settings.openaiApiKey, audioBlob, updatedMessages)
-        : await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey, audioBlob, updatedMessages);
+        : await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey, audioBlob, updatedMessages, customPrompt);
 
       if (agentRes) {
         applyAgentToolAction(agentRes);

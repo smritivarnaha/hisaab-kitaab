@@ -56,7 +56,8 @@ export async function processWithGeminiAgent(
   memory: AIMemoryMap,
   apiKey?: string,
   audioBlob?: Blob,
-  chatMessages: ChatMessage[] = []
+  chatMessages: ChatMessage[] = [],
+  customAIPrompt?: string
 ): Promise<GeminiAgentResponse | null> {
   const activeKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || 'AQ.Ab8RN6Ie0wYTm7AqZrmWDg0LJfeu3IP-k9IKFAC8PPlgl7Yv5A-';
   if (!activeKey || !activeKey.trim()) return null;
@@ -78,6 +79,7 @@ export async function processWithGeminiAgent(
 You are Hisaab Kitab AI - an autonomous, highly intelligent voice finance agent & accountant for India.
 You manage money ledgers, parse user inputs in English, Hindi, and Hinglish, execute ledger operations (create, delete, edit), and answer complex accounting queries.
 
+${customAIPrompt ? 'CUSTOM OWNER INSTRUCTIONS (follow these with highest priority):\n' + customAIPrompt + '\n' : ''}
 ${audioBlob ? 'The user has sent a voice note containing their command. Listen to it and process it directly.' : ''}
 
 USER'S CURRENT LEDGER TRANSACTIONS (${transactions.length} total):
@@ -126,7 +128,7 @@ CRITICAL RULES:
    - Set action='CREATE_TRANSACTIONS' ONLY when the user is reporting a NEW transaction that just happened (e.g., "Spent 300 on petrol", "Paid 300 to shop", "Lunch 300").
    - Set action='SETTLE_DEBT' when a friend returns money or a loan is paid (e.g., "Rahul returned 500", "Sarthak paid 800"). Specify settleDebtPerson and settleDebtAmount.
    - Set action='UPDATE_TRANSACTION' when the user corrects a previous entry (e.g., "I accidentally entered 250 instead of 2500", "Actually it was 2500"). Look up the matching transaction ID in USER'S CURRENT LEDGER TRANSACTIONS.
-   - Set action='SAVE_MEMORY' when the user shares a personal fact, habit, date, or target (e.g., "My wife's birthday is on 12th July", "I want to save 3 lakh this year"). Specify memoryToSave key and value.
+   - Set action='SAVE_MEMORY' when the user shares a personal fact, habit, date, or target (e.g., "My wife's birthday is on 12th July", "I want to save 3 lakh this year"). Specify memoryToSave.key and memoryToSave.value.
    - If the user asks a question about past spending, requests to find/locate transactions, requests summaries, or asks about balances/history (e.g., "where did I spend 300 rupees?", "show transactions of 300", "did I pay Rohan?", "how much is spent?"), this is a QUERY. Set action='GENERAL_RESPONSE' and search through the provided USER'S CURRENT LEDGER TRANSACTIONS list to give a helpful answer. NEVER create a new transaction for a question, inquiry, search, or query!
 2. TITLE AUTOCORRECTION: Autocorrect the spellings and names of transaction titles/merchants (in Hindi, Hinglish, or English) to a clean, professional, capitalized representation. Only correct the spelling and format it (e.g. "chooran" -> "Churan", "doodh" -> "Milk", "toothbrush softbrush" -> "Toothbrush"). Never append extra descriptive words like "Candy", "Item", or "Shop" to corrected titles.
 3. CATEGORIZATION RULES:

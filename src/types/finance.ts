@@ -115,4 +115,5 @@ export interface UserSettings {
   aiProvider?: 'gemini' | 'openai';
   voiceLanguage: 'en-IN' | 'hi-IN' | 'hinglish';
   autoTTS: boolean;
+  customAIPrompt?: string;
 }
