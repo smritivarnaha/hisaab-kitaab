@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
+import { DEFAULT_OPENAI_KEY } from '../../utils/aiKeys';
 import { 
   Settings, 
   Sun, 
@@ -224,7 +225,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">OpenAI API Key (Paid)</label>
                   <input
                     type="text"
-                    value={draft.openaiApiKey || atob('c2stcHJvai10dFg5WmxMMUhSQ1hxSTk2aXFCcW9kOVRnWl9rWkdRYXhjYlB0YjJReHJiSG9LRnVhTjJOaHVkT0xSMkZ1eDd4UTlHb0ZNdDR0eFRCQmxrRkpuTEM1a0QyNEdwSmZTM3RVaTBQbkVfLVhWYkJBQ0NCODR2M3U3bk5CX1NYTm9aYzV6VV9zbDNJLUhrZlA5SVhYSmVYSSt4TmV3QQ==')}
+                    value={draft.openaiApiKey || DEFAULT_OPENAI_KEY}
                     onChange={e => updateDraft({ openaiApiKey: e.target.value })}
                     placeholder="sk-proj-..."
                     className="w-full bg-slate-50 border border-gray-200 text-xs font-mono text-gray-900 rounded-lg py-2 px-3 outline-none focus:border-[#0D2E14] transition-all"

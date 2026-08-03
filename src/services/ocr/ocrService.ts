@@ -1,4 +1,5 @@
 import { ReceiptData } from '../../types/finance';
+import { getActiveOpenAIKey } from '../../utils/aiKeys';
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -16,8 +17,7 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 export async function processReceiptImage(file: File, openAiApiKey?: string): Promise<ReceiptData> {
-  const defaultKey = (import.meta as any).env?.VITE_OPENAI_API_KEY || atob('c2stcHJvai10dFg5WmxMMUhSQ1hxSTk2aXFCcW9kOVRnWl9rWkdRYXhjYlB0YjJReHJiSG9LRnVhTjJOaHVkT0xSMkZ1eDd4UTlHb0ZNdDR0eFRCQmxrRkpuTEM1a0QyNEdwSmZTM3RVaTBQbkVfLVhWYkJBQ0NCODR2M3U3bk5CX1NYTm9aYzV6VV9zbDNJLUhrZlA5SVhYSmVYSSt4TmV3QQ==');
-  const apiKey = openAiApiKey || defaultKey;
+  const apiKey = getActiveOpenAIKey(openAiApiKey);
 
   try {
     const base64Image = await fileToBase64(file);

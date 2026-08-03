@@ -45,7 +45,7 @@ interface FinanceContextType {
   resetAllData: () => void;
 }
 
-const DEFAULT_OPENAI_KEY = (import.meta as any).env?.VITE_OPENAI_API_KEY || atob('c2stcHJvai10dFg5WmxMMUhSQ1hxSTk2aXFCcW9kOVRnWl9rWkdRYXhjYlB0YjJReHJiSG9LRnVhTjJOaHVkT0xSMkZ1eDd4UTlHb0ZNdDR0eFRCQmxrRkpuTEM1a0QyNEdwSmZTM3RVaTBQbkVfLVhWYkJBQ0NCODR2M3U3bk5CX1NYTm9aYzV6VV9zbDNJLUhrZlA5SVhYSmVYSSt4TmV3QQ==');
+import { DEFAULT_OPENAI_KEY, getActiveOpenAIKey } from '../utils/aiKeys';
 
 const DEFAULT_SETTINGS: UserSettings = {
   autoSaveHighConfidence: false,
@@ -480,7 +480,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // 1. Try configured LLM Agent (Gemini or OpenAI)
     try {
       const updatedMessages = [...chatMessages, userMsg];
-      const activeOpenAIKey = (settings.openaiApiKey && settings.openaiApiKey.trim().length > 10) ? settings.openaiApiKey.trim() : DEFAULT_OPENAI_KEY;
+      const activeOpenAIKey = getActiveOpenAIKey(settings.openaiApiKey);
       const useOpenAI = settings.aiProvider === 'openai' || !settings.aiProvider || !settings.apiKey;
       const customPrompt = settings.customAIPrompt?.trim() || undefined;
 

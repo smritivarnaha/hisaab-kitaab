@@ -44,7 +44,7 @@ export async function transcribeWithWhisper(audioBlob: Blob, apiKey: string): Pr
 
 
 
-const DEFAULT_OPENAI_FALLBACK_KEY = (import.meta as any).env?.VITE_OPENAI_API_KEY || atob('c2stcHJvai10dFg5WmxMMUhSQ1hxSTk2aXFCcW9kOVRnWl9rWkdRYXhjYlB0YjJReHJiSG9LRnVhTjJOaHVkT0xSMkZ1eDd4UTlHb0ZNdDR0eFRCQmxrRkpuTEM1a0QyNEdwSmZTM3RVaTBQbkVfLVhWYkJBQ0NCODR2M3U3bk5CX1NYTm9aYzV6VV9zbDNJLUhrZlA5SVhYSmVYSSt4TmV3QQ==');
+import { getActiveOpenAIKey } from '../../utils/aiKeys';
 
 export async function processWithOpenAIAgent(
   userInput: string,
@@ -54,7 +54,7 @@ export async function processWithOpenAIAgent(
   audioBlob?: Blob,
   chatMessages: ChatMessage[] = []
 ): Promise<GeminiAgentResponse | null> {
-  const activeKey = (apiKey && apiKey.trim().length > 10) ? apiKey.trim() : DEFAULT_OPENAI_FALLBACK_KEY;
+  const activeKey = getActiveOpenAIKey(apiKey);
   if (!activeKey || !activeKey.trim()) return null;
 
   let promptInput = userInput;
