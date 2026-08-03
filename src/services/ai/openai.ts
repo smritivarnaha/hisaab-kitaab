@@ -8,10 +8,14 @@ function blobToFile(blob: Blob, filename: string): File {
 export async function transcribeWithWhisper(audioBlob: Blob, apiKey: string): Promise<string | null> {
   try {
     const formData = new FormData();
-    const file = blobToFile(audioBlob, 'voice_note.wav');
+    // Name the file with .wav extension so Whisper knows the format
+    const file = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
     formData.append('file', file);
     formData.append('model', 'whisper-1');
-    formData.append('language', 'en');
+    // Do NOT set 'language' — let Whisper auto-detect Hindi, English, Hinglish
+    // Add a prompt to guide Whisper toward financial Indian terms
+    formData.append('prompt', 'Indian finance, rupees, UPI, petrol, grocery, salary, Hinglish mixed Hindi English.');
+    formData.append('response_format', 'text');
 
     const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -21,9 +25,14 @@ export async function transcribeWithWhisper(audioBlob: Blob, apiKey: string): Pr
       body: formData
     });
 
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.text || null;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      console.warn('Whisper API error:', res.status, errText);
+      return null;
+    }
+    // When response_format=text, response is plain string
+    const text = await res.text();
+    return text?.trim() || null;
   } catch (err) {
     console.warn('Whisper API transcription error:', err);
     return null;

@@ -3,8 +3,9 @@ import { useFinance } from '../../context/FinanceContext';
 import { ChatMessageItem } from './ChatMessageItem';
 import { VoiceWaveform } from '../voice/VoiceWaveform';
 import { speechService } from '../../services/voice/speechRecognition';
+import { transcribeWithWhisper } from '../../services/ai/openai';
 import { AIReviewModal } from './AIReviewModal';
-import { Mic, Send, Sparkles, Camera, FileText } from 'lucide-react';
+import { Mic, Send, Sparkles, Camera, Loader2 } from 'lucide-react';
 
 interface Props {
   onOpenOCR: () => void;
@@ -23,6 +24,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
 
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
   const [audioLevel, setAudioLevel] = useState(0);
   const [micPermissionError, setMicPermissionError] = useState<string | null>(null);
@@ -58,37 +60,61 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
   const handleToggleVoice = async () => {
     setMicPermissionError(null);
 
-    const useOpenAI = (settings as any).aiProvider === 'openai' && !!(settings as any).openaiApiKey?.trim();
+    // Use Whisper if OpenAI key is set (regardless of aiProvider for text)
+    const openaiKey = (settings as any).openaiApiKey?.trim();
+    const useWhisper = !!openaiKey;
 
     if (isListening) {
-      // Stop listening
       setIsListening(false);
       setAudioLevel(0);
 
-      if (useOpenAI) {
-        // OpenAI mode: stop WAV recorder, send blob to Whisper via processUserInputText
+      if (useWhisper) {
+        // Stop WAV recording, transcribe with Whisper
         const audioBlob = await speechService.stopRecordingRaw();
         speechService.stop();
-        const textFallback = liveTranscript.trim();
-        processUserInputText(textFallback, true, audioBlob || undefined);
+        setLiveTranscript('');
+
+        if (audioBlob) {
+          setIsTranscribing(true);
+          setLiveTranscript('Transcribing with Whisper...');
+          try {
+            const whisperText = await transcribeWithWhisper(audioBlob, openaiKey);
+            setIsTranscribing(false);
+            if (whisperText?.trim()) {
+              setLiveTranscript(whisperText);
+              // Auto-submit with the Whisper transcription
+              setTimeout(() => {
+                processUserInputText(whisperText, true);
+                setLiveTranscript('');
+              }, 500); // brief pause so user sees what was transcribed
+            } else {
+              setLiveTranscript('');
+              setMicPermissionError('Could not transcribe audio. Please speak clearly and try again.');
+            }
+          } catch {
+            setIsTranscribing(false);
+            setLiveTranscript('');
+            setMicPermissionError('Whisper transcription failed. Check your OpenAI key.');
+          }
+        }
       } else {
-        // Gemini / native mode: speech recognition already captured text via onEnd
+        // Native Web Speech API mode — text captured via onEnd callback
         speechService.stop();
+        setLiveTranscript('');
       }
-      setLiveTranscript('');
     } else {
       // Start listening
-      if (useOpenAI) {
-        // OpenAI Whisper mode: record raw WAV audio
+      if (useWhisper) {
+        // Record raw WAV for Whisper
         const started = await speechService.startRecordingRaw((level) => setAudioLevel(level));
         if (started) {
           setIsListening(true);
-          setLiveTranscript('🎙️ Recording... tap Stop when done');
+          setLiveTranscript('🎙️ Listening... tap Stop when done speaking');
         } else {
-          setMicPermissionError('Microphone permission blocked. Please allow mic access in browser settings.');
+          setMicPermissionError('Microphone permission blocked. Allow mic in browser settings.');
         }
       } else {
-        // Gemini / native browser Web Speech API mode
+        // Native Web Speech API (Gemini mode, no OpenAI key)
         const lang = (settings.voiceLanguage === 'hi-IN') ? 'hi-IN' : 'en-IN';
         const started = await speechService.start(
           {
@@ -101,9 +127,9 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
               setIsListening(false);
               setAudioLevel(0);
               if (err.includes('not-allowed') || err.includes('permission')) {
-                setMicPermissionError('Microphone permission blocked. Please allow mic in browser settings.');
+                setMicPermissionError('Microphone permission blocked. Allow mic in browser settings.');
               } else if (!err.includes('no-speech')) {
-                setMicPermissionError(`Voice error: ${err}`);
+                setMicPermissionError(`Voice error: ${err}. Try Chrome/Edge browser.`);
               }
             },
             onEnd: (finalCapturedText) => {
@@ -117,13 +143,13 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
             }
           },
           (level) => setAudioLevel(level),
-          false // Never force raw recording in Gemini mode — use native Web Speech API
+          false
         );
 
         if (started) {
           setIsListening(true);
         } else {
-          setMicPermissionError('Could not start speech recognition. Try Chrome or Edge browser.');
+          setMicPermissionError('Speech recognition not available. Add OpenAI key in Settings for better voice support.');
         }
       }
     }
@@ -209,16 +235,23 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
             {/* Prominent Mic Speak Button */}
             <button
               type="button"
-              onClick={handleToggleVoice}
-              title={isListening ? "Stop listening" : "Tap to Speak"}
+              onClick={isTranscribing ? undefined : handleToggleVoice}
+              disabled={isTranscribing}
+              title={isTranscribing ? 'Transcribing...' : isListening ? 'Stop listening' : 'Tap to Speak'}
               className={`px-4 py-2.5 rounded-full font-extrabold text-xs transition-all shadow-xs flex items-center gap-1.5 active:scale-95 flex-shrink-0 ${
-                isListening
-                  ? 'bg-red-500 text-white qor-mic-pulse'
-                  : 'bg-[#0D2E14] hover:bg-black text-white'
+                isTranscribing
+                  ? 'bg-amber-500 text-white cursor-not-allowed'
+                  : isListening
+                    ? 'bg-red-500 text-white qor-mic-pulse'
+                    : 'bg-[#0D2E14] hover:bg-black text-white'
               }`}
             >
-              <Mic className={`w-4 h-4 text-white ${isListening ? 'animate-bounce' : ''}`} />
-              <span className="text-white">{isListening ? 'Stop' : 'Speak'}</span>
+              {isTranscribing
+                ? <Loader2 className="w-4 h-4 text-white animate-spin" />
+                : <Mic className={`w-4 h-4 text-white ${isListening ? 'animate-bounce' : ''}`} />}
+              <span className="text-white">
+                {isTranscribing ? 'Processing...' : isListening ? 'Stop' : 'Speak'}
+              </span>
             </button>
 
             {/* Input Box */}
@@ -227,7 +260,12 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
                 type="text"
                 value={inputText}
                 onChange={e => setInputText(e.target.value)}
-                placeholder={isListening ? ((settings as any).aiProvider === 'openai' ? "🎙️ Recording WAV for Whisper..." : "🎙️ Listening... speak now") : "Type or speak your finance entry..."}
+                placeholder={
+                  isTranscribing ? '⏳ Transcribing your voice with Whisper...' :
+                  isListening ? (
+                    (settings as any).openaiApiKey?.trim() ? '🎙️ Recording... tap Stop when done' : '🎙️ Listening... speak now'
+                  ) : 'Type here or tap Speak...'
+                }
                 className="w-full bg-[#F3F5F1] border border-[#E2E8E0] rounded-full py-2.5 pl-4 pr-10 text-xs sm:text-sm text-[#0D2E14] placeholder-gray-400 font-semibold outline-none focus:border-[#0D2E14] focus:bg-white transition-all font-outfit"
               />
             </div>
