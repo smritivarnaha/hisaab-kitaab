@@ -1,6 +1,7 @@
 import { AIMemoryMap, Category, PaymentMethod } from '../../types/finance';
 
-const MEMORY_STORAGE_KEY = 'hisaab_kitab_ai_memory';
+// All AI memory is stored in Neon DB via /api/memory
+// No localStorage — shared across all devices
 
 const INITIAL_MEMORY: AIMemoryMap = {
   merchants: {
@@ -34,24 +35,44 @@ const INITIAL_MEMORY: AIMemoryMap = {
   }
 };
 
-export function getAIMemory(): AIMemoryMap {
+// In-memory cache so we don't hit the API on every merchant lookup
+let memoryCache: AIMemoryMap | null = null;
+
+export async function fetchAIMemory(): Promise<AIMemoryMap> {
   try {
-    const data = localStorage.getItem(MEMORY_STORAGE_KEY);
-    if (data) {
-      return JSON.parse(data);
-    }
-  } catch (e) {
-    console.error('Failed to load AI Memory:', e);
+    const res = await fetch('/api/memory');
+    if (!res.ok) return memoryCache || INITIAL_MEMORY;
+    const data = await res.json();
+    const merged: AIMemoryMap = {
+      ...INITIAL_MEMORY,
+      ...data,
+      merchants: { ...INITIAL_MEMORY.merchants, ...(data.merchants || {}) },
+      contacts: { ...INITIAL_MEMORY.contacts, ...(data.contacts || {}) },
+      paymentPreferences: { ...INITIAL_MEMORY.paymentPreferences, ...(data.paymentPreferences || {}) },
+    };
+    memoryCache = merged;
+    return merged;
+  } catch {
+    return memoryCache || INITIAL_MEMORY;
   }
-  return INITIAL_MEMORY;
 }
 
-export function saveAIMemory(memory: AIMemoryMap): void {
+export async function saveAIMemoryToDb(memory: AIMemoryMap): Promise<void> {
+  memoryCache = memory;
   try {
-    localStorage.setItem(MEMORY_STORAGE_KEY, JSON.stringify(memory));
+    await fetch('/api/memory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(memory)
+    });
   } catch (e) {
-    console.error('Failed to save AI Memory:', e);
+    console.warn('Failed to save AI memory to Neon:', e);
   }
+}
+
+// Synchronous getter — returns cache or INITIAL_MEMORY (used before async load completes)
+export function getAIMemory(): AIMemoryMap {
+  return memoryCache || INITIAL_MEMORY;
 }
 
 export function learnMerchantCategory(merchant: string, category: Category): AIMemoryMap {
@@ -59,7 +80,7 @@ export function learnMerchantCategory(merchant: string, category: Category): AIM
   const key = merchant.toLowerCase().trim();
   if (key && category) {
     memory.merchants[key] = category;
-    saveAIMemory(memory);
+    saveAIMemoryToDb(memory); // fire-and-forget to Neon
   }
   return memory;
 }
@@ -69,7 +90,7 @@ export function learnPaymentPreference(categoryOrItem: string, method: PaymentMe
   const key = categoryOrItem.toLowerCase().trim();
   if (key && method) {
     memory.paymentPreferences[key] = method;
-    saveAIMemory(memory);
+    saveAIMemoryToDb(memory);
   }
   return memory;
 }
@@ -78,7 +99,7 @@ export function saveUserFact(key: string, value: string): AIMemoryMap {
   const memory = getAIMemory();
   if (!memory.userFacts) memory.userFacts = {};
   memory.userFacts[key] = value;
-  saveAIMemory(memory);
+  saveAIMemoryToDb(memory);
   return memory;
 }
 
@@ -86,7 +107,7 @@ export function saveGoal(key: string, value: string): AIMemoryMap {
   const memory = getAIMemory();
   if (!memory.goals) memory.goals = {};
   memory.goals[key] = value;
-  saveAIMemory(memory);
+  saveAIMemoryToDb(memory);
   return memory;
 }
 
@@ -94,6 +115,6 @@ export function saveMonthlyBudget(category: string, amount: number): AIMemoryMap
   const memory = getAIMemory();
   if (!memory.monthlyBudgets) memory.monthlyBudgets = {};
   memory.monthlyBudgets[category] = amount;
-  saveAIMemory(memory);
+  saveAIMemoryToDb(memory);
   return memory;
 }

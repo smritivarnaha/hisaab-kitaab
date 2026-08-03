@@ -40,12 +40,7 @@ interface FinanceContextType {
   resetAllData: () => void;
 }
 
-// Only settings and chat messages are stored locally (device-specific preference/history)
-// Transactions live exclusively in Neon DB — shared across all devices
-const STORAGE_KEYS = {
-  MESSAGES: 'hisaab_kitab_chat_messages',
-  SETTINGS: 'hisaab_kitab_settings',
-};
+// ── Everything in Neon DB — zero localStorage ──────────────────────────────
 
 const DEFAULT_SETTINGS: UserSettings = {
   autoSaveHighConfidence: false,
@@ -125,6 +120,39 @@ const deleteTransactionFromDb = async (id: string) => {
   await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' });
 };
 
+// Chat messages helpers
+const fetchMessagesFromDb = async (): Promise<ChatMessage[] | null> => {
+  try {
+    const res = await fetch('/api/messages');
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows.length > 0 ? rows : null;
+  } catch { return null; }
+};
+
+const saveMessageToDb = async (msg: ChatMessage) => {
+  try {
+    await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msg)
+    });
+  } catch (e) { console.warn('Failed to save message:', e); }
+};
+
+const deleteAllMessagesFromDb = async () => {
+  try { await fetch('/api/messages', { method: 'DELETE' }); } catch {}
+};
+
+// AI memory helpers
+const fetchMemoryFromDb = async () => {
+  try {
+    const res = await fetch('/api/memory');
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+};
+
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -132,14 +160,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [dbStatus, setDbStatus] = useState<'loading' | 'ok' | 'error'>('loading');
 
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.MESSAGES);
-      return stored ? JSON.parse(stored) : INITIAL_WELCOME_MESSAGES;
-    } catch (e) {
-      return INITIAL_WELCOME_MESSAGES;
-    }
-  });
+  // All state comes from Neon — zero localStorage
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_WELCOME_MESSAGES);
 
   // Settings start from defaults — will be overwritten by Neon data on mount
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
@@ -149,32 +171,36 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [activeClarification, setActiveClarification] = useState<AIClarificationQuestion | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
 
-  // ── Load transactions + settings from Neon on mount ─────────────────────────
+  // ── Load everything from Neon on mount ──────────────────────────────────────
   useEffect(() => {
     const load = async () => {
-      // Load transactions
+      // Transactions
       const dbTx = await fetchTransactions();
-      if (dbTx !== null) {
-        setTransactions(dbTx);
-        setDbStatus('ok');
-      } else {
-        setDbStatus('error');
-      }
-      // Load settings from Neon — overrides local defaults
+      if (dbTx !== null) { setTransactions(dbTx); setDbStatus('ok'); }
+      else setDbStatus('error');
+
+      // Settings
       const dbSettings = await fetchSettingsFromDb();
-      if (dbSettings && Object.keys(dbSettings).length > 0) {
+      if (dbSettings && Object.keys(dbSettings).length > 0)
         setSettings(prev => ({ ...prev, ...dbSettings }));
-      }
+
+      // Chat messages
+      const dbMsgs = await fetchMessagesFromDb();
+      if (dbMsgs && dbMsgs.length > 0) setChatMessages(dbMsgs);
+
+      // AI memory
+      const dbMemory = await fetchMemoryFromDb();
+      if (dbMemory && Object.keys(dbMemory).length > 0) setAiMemory(dbMemory);
     };
     load();
   }, []);
 
-  // ── Real-time polling every 5s — syncs across all family devices ────────────
+  // ── Real-time polling every 5s — syncs transactions + chat messages ────────
   useEffect(() => {
     const interval = setInterval(async () => {
+      // Poll Transactions
       const dbTx = await fetchTransactions();
       if (dbTx !== null) {
-        // Only update if something actually changed (compare by timestamp of first item)
         setTransactions(prev => {
           const prevLatest = prev[0]?.timestamp ?? 0;
           const dbLatest = dbTx[0]?.timestamp ?? 0;
@@ -186,15 +212,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return prev;
         });
       }
+
+      // Poll Chat Messages
+      const dbMsgs = await fetchMessagesFromDb();
+      if (dbMsgs !== null) {
+        setChatMessages(prev => {
+          const prevLatest = prev[prev.length - 1]?.id ?? '';
+          const dbLatest = dbMsgs[dbMsgs.length - 1]?.id ?? '';
+          if (dbLatest !== prevLatest || prev.length !== dbMsgs.length) {
+            return dbMsgs;
+          }
+          return prev;
+        });
+      }
     }, 5000);
     return () => clearInterval(interval);
   }, []);
-
-
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(chatMessages));
-  }, [chatMessages]);
 
   // Save settings to Neon whenever they change (debounced 1s to avoid hammering)
   useEffect(() => {
@@ -203,6 +236,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const timer = setTimeout(() => saveSettingsToDb(settings), 1000);
     return () => clearTimeout(timer);
   }, [settings]);
+
+  // Save new chat messages to Neon DB on change
+  useEffect(() => {
+    if (chatMessages.length > 0) {
+      const lastMsg = chatMessages[chatMessages.length - 1];
+      saveMessageToDb(lastMsg);
+    }
+  }, [chatMessages]);
 
   const addTransaction = async (tx: Transaction) => {
     setTransactions(prev => [tx, ...prev]);
@@ -295,19 +336,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const resetAllData = async () => {
-    // Delete all from Neon DB
-    if (transactions.length > 0) {
-      await fetch('/api/transactions', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([]) // send empty batch (no-op, but clears local state)
-      });
-      // Delete each from DB
-      await Promise.all(transactions.map(tx => deleteTransactionFromDb(tx.id)));
-    }
+    await Promise.all(transactions.map(tx => deleteTransactionFromDb(tx.id)));
+    await deleteAllMessagesFromDb();
     setTransactions([]);
     setChatMessages(INITIAL_WELCOME_MESSAGES);
-    localStorage.removeItem(STORAGE_KEYS.MESSAGES);
+    saveMessageToDb(INITIAL_WELCOME_MESSAGES[0]);
   };
 
   const processUserInputText = async (text: string, isVoice = false, audioBlob?: Blob) => {
@@ -322,6 +355,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     setChatMessages(prev => [...prev, userMsg]);
+    saveMessageToDb(userMsg); // persist to Neon
     setIsProcessingAI(true);
 
     // Helper: apply all tool actions from any LLM response
