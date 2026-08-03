@@ -179,37 +179,37 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
             <div className="h-44 flex items-end justify-between gap-1.5 overflow-x-auto pb-2 pt-6 px-2 no-scrollbar">
               {sortedDates.map(date => {
                 const dayData = dateMap[date];
-                const heightPercent = Math.max(12, Math.round((dayData.total / maxBarHeight) * 100));
+                const heightPercent = Math.max(15, Math.round((dayData.total / maxBarHeight) * 100));
                 const isSelected = selectedDate === date;
 
                 return (
                   <div
                     key={date}
                     onClick={() => setSelectedDate(isSelected ? null : date)}
-                    className="flex-1 min-w-[38px] flex flex-col items-center gap-1.5 cursor-pointer group transition-all"
+                    className="flex-1 min-w-[44px] flex flex-col items-center gap-1.5 cursor-pointer group transition-all"
                   >
                     {/* Amount Tooltip over Bar */}
-                    <span className={`text-[9px] font-extrabold transition-all group-hover:scale-110 ${
-                      isSelected ? 'text-[#0D2E14] font-black' : 'text-gray-500'
+                    <span className={`text-[10px] font-extrabold transition-all group-hover:scale-110 ${
+                      isSelected ? 'text-[#0D2E14] font-black' : 'text-gray-600'
                     }`}>
-                      ₹{dayData.total > 1000 ? `${(dayData.total / 1000).toFixed(1)}k` : dayData.total}
+                      ₹{dayData.total >= 1000 ? `${(dayData.total / 1000).toFixed(1)}k` : dayData.total}
                     </span>
 
-                    {/* Bar Container */}
-                    <div className="w-full flex-1 flex items-end justify-center">
+                    {/* Bar Track Container with explicit height */}
+                    <div className="h-28 sm:h-32 w-full flex items-end justify-center bg-emerald-50/60 rounded-xl p-1 border border-emerald-100/80">
                       <div
-                        className={`w-full max-w-[28px] rounded-t-lg transition-all duration-300 ${
+                        className={`w-full max-w-[24px] rounded-t-lg transition-all duration-300 ${
                           isSelected
-                            ? 'bg-[#0D2E14] shadow-md scale-105'
-                            : 'bg-[#93E044] hover:bg-[#0D2E14]/80'
+                            ? 'bg-[#0D2E14] shadow-md ring-2 ring-emerald-500/30'
+                            : 'bg-[#93E044] hover:bg-[#0D2E14]'
                         }`}
                         style={{ height: `${heightPercent}%` }}
                       />
                     </div>
 
                     {/* Date Label on X-Axis */}
-                    <span className={`text-[9px] font-bold tracking-tight text-center truncate w-full ${
-                      isSelected ? 'text-[#0D2E14] font-extrabold' : 'text-gray-400'
+                    <span className={`text-[10px] font-bold tracking-tight text-center truncate w-full ${
+                      isSelected ? 'text-[#0D2E14] font-extrabold' : 'text-gray-500'
                     }`}>
                       {formatGlobalDate(date).split(' ').slice(0, 2).join(' ')}
                     </span>
