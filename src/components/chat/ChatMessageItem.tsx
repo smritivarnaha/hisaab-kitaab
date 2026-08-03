@@ -1,12 +1,14 @@
 import React from 'react';
 import { ChatMessage } from '../../types/finance';
 import { Bot, User, CheckCircle2 } from 'lucide-react';
+import { useFinance } from '../../context/FinanceContext';
 
 interface Props {
   message: ChatMessage;
 }
 
 export const ChatMessageItem: React.FC<Props> = ({ message }) => {
+  const { settings } = useFinance();
   const isUser = message.sender === 'user';
 
   const formatTime = (ts: any) => {
@@ -32,14 +34,28 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
     });
   };
 
+  const customAvatarUrl = isUser ? settings.userAvatarUrl : settings.botAvatarUrl;
+
   return (
     <div className={`flex items-start gap-2.5 my-3.5 max-w-2xl mx-auto w-full ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
       {/* Avatar */}
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 shadow-2xs ${
-        isUser ? 'bg-[#93E044] text-[#0D2E14]' : 'bg-[#0D2E14] text-white'
-      }`}>
-        {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-      </div>
+      {customAvatarUrl ? (
+        <img
+          src={customAvatarUrl}
+          alt={isUser ? 'User' : 'Assistant'}
+          className="w-8 h-8 rounded-full object-cover flex-shrink-0 shadow-2xs"
+          onError={(e) => {
+            // Fallback if image fails to load
+            (e.target as any).style.display = 'none';
+          }}
+        />
+      ) : (
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 shadow-2xs ${
+          isUser ? 'bg-[#93E044] text-[#0D2E14]' : 'bg-[#0D2E14] text-white'
+        }`}>
+          {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+        </div>
+      )}
 
       {/* Bubble Container */}
       <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[75%]`}>

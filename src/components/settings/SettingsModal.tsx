@@ -135,6 +135,37 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
             <p className="text-[10px] text-gray-400">These instructions are sent to the AI with every request and override defaults.</p>
           </section>
 
+          {/* ── PROFILE AVATARS ── */}
+          <section className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-800">Profile Avatars</span>
+            </div>
+            
+            {/* User Avatar */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-gray-700">User Profile Picture URL</label>
+              <input
+                type="text"
+                value={(draft as any).userAvatarUrl || ''}
+                onChange={e => updateDraft({ userAvatarUrl: e.target.value } as any)}
+                placeholder="https://example.com/user.png"
+                className="w-full bg-gray-50 border border-gray-200 text-xs text-gray-900 rounded-xl py-2 px-3 outline-none focus:border-[#0D2E14] focus:bg-white placeholder-gray-400"
+              />
+            </div>
+
+            {/* Bot Avatar */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-gray-700">Assistant Bot Picture URL</label>
+              <input
+                type="text"
+                value={(draft as any).botAvatarUrl || ''}
+                onChange={e => updateDraft({ botAvatarUrl: e.target.value } as any)}
+                placeholder="https://example.com/bot.png"
+                className="w-full bg-gray-50 border border-gray-200 text-xs text-gray-900 rounded-xl py-2 px-3 outline-none focus:border-[#0D2E14] focus:bg-white placeholder-gray-400"
+              />
+            </div>
+          </section>
+
           {/* ── VOICE LANGUAGE ── */}
           <section className="bg-white border border-gray-200 rounded-2xl p-4 space-y-2">
             <div className="flex items-center gap-2">

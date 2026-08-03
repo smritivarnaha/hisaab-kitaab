@@ -116,4 +116,6 @@ export interface UserSettings {
   voiceLanguage: 'en-IN' | 'hi-IN' | 'hinglish';
   autoTTS: boolean;
   customAIPrompt?: string;
+  botAvatarUrl?: string;
+  userAvatarUrl?: string;
 }
