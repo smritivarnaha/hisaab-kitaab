@@ -25,15 +25,15 @@ export function generateInsights(transactions: Transaction[]): AIInsight[] {
   // Calculate totals
   const totalExpense = transactions
     .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const totalLent = transactions
     .filter(t => t.type === 'lent')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const totalIncome = transactions
     .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   // 1. Pending Lent Ledger Insight
   const lentPending = transactions.filter(t => t.type === 'lent' && t.person);
@@ -42,7 +42,7 @@ export function generateInsights(transactions: Transaction[]): AIInsight[] {
     insights.push({
       id: `ins_lent_${topDebtor.id}`,
       type: 'warning',
-      title: `${topDebtor.person} owes you ₹${topDebtor.amount}`,
+      title: `${topDebtor.person} owes you ₹${Number(topDebtor.amount || 0)}`,
       description: `Logged on ${topDebtor.date}. Tap to send a gentle reminder.`,
       actionText: 'Send Reminder'
     });
@@ -53,7 +53,7 @@ export function generateInsights(transactions: Transaction[]): AIInsight[] {
   transactions
     .filter(t => t.type === 'expense')
     .forEach(t => {
-      categoryMap[t.category] = (categoryMap[t.category] || 0) + t.amount;
+      categoryMap[t.category] = (categoryMap[t.category] || 0) + Number(t.amount || 0);
     });
 
   const sortedCategories = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);

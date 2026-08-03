@@ -11,8 +11,8 @@ export const DebtLentLedger: React.FC<Props> = ({ transactions, onSettle }) => {
   const lentItems = transactions.filter(t => t.type === 'lent' || (t.type === 'expense' && t.person));
   const borrowedItems = transactions.filter(t => t.type === 'borrowed');
 
-  const totalLent = lentItems.reduce((sum, t) => sum + t.amount, 0);
-  const totalBorrowed = borrowedItems.reduce((sum, t) => sum + t.amount, 0);
+  const totalLent = lentItems.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const totalBorrowed = borrowedItems.reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   return (
     <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8E0] space-y-3.5 font-outfit shadow-2xs">
@@ -32,13 +32,13 @@ export const DebtLentLedger: React.FC<Props> = ({ transactions, onSettle }) => {
       <div className="grid grid-cols-2 gap-2">
         <div className="p-3 rounded-2xl bg-[#FAFCF9] border border-[#E2E8E0]">
           <span className="text-[10px] font-bold text-gray-500 uppercase block">You Lent Out</span>
-          <span className="text-sm sm:text-base font-bold text-green-700 block mt-0.5">₹{totalLent.toLocaleString('en-IN')}</span>
+          <span className="text-sm sm:text-base font-bold text-green-700 block mt-0.5">₹{Number(totalLent || 0).toLocaleString('en-IN')}</span>
           <span className="text-[10px] text-gray-500 font-medium">Pending collection</span>
         </div>
 
         <div className="p-3 rounded-2xl bg-[#FAFCF9] border border-[#E2E8E0]">
           <span className="text-[10px] font-bold text-gray-500 uppercase block">You Borrowed</span>
-          <span className="text-sm sm:text-base font-bold text-[#0D2E14] block mt-0.5">₹{totalBorrowed.toLocaleString('en-IN')}</span>
+          <span className="text-sm sm:text-base font-bold text-[#0D2E14] block mt-0.5">₹{Number(totalBorrowed || 0).toLocaleString('en-IN')}</span>
           <span className="text-[10px] text-gray-500 font-medium">To be paid back</span>
         </div>
       </div>
@@ -55,7 +55,7 @@ export const DebtLentLedger: React.FC<Props> = ({ transactions, onSettle }) => {
               </div>
             </div>
             <div className="text-right">
-              <span className="font-bold text-green-700 block text-xs">₹{item.amount}</span>
+              <span className="font-bold text-green-700 block text-xs">₹{Number(item.amount || 0).toLocaleString('en-IN')}</span>
               {onSettle && (
                 <button
                   onClick={() => onSettle(item.id)}
@@ -78,7 +78,7 @@ export const DebtLentLedger: React.FC<Props> = ({ transactions, onSettle }) => {
               </div>
             </div>
             <div className="text-right">
-              <span className="font-bold text-[#0D2E14] block text-xs">₹{item.amount}</span>
+              <span className="font-bold text-[#0D2E14] block text-xs">₹{Number(item.amount || 0).toLocaleString('en-IN')}</span>
             </div>
           </div>
         ))}
