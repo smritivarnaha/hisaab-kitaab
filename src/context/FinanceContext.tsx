@@ -693,13 +693,14 @@ function handleNaturalLanguageQuery(query: string, transactions: Transaction[]):
     let totalExp = 0;
 
     transactions.forEach(t => {
-      if (t.type === 'income') totalInc += t.amount;
-      else totalExp += t.amount;
+      const amt = Number(t.amount || 0);
+      if (t.type === 'income') totalInc += amt;
+      else totalExp += amt;
 
       if (!categoryTotals[t.category]) {
         categoryTotals[t.category] = { total: 0, count: 0, type: t.type };
       }
-      categoryTotals[t.category].total += t.amount;
+      categoryTotals[t.category].total += amt;
       categoryTotals[t.category].count += 1;
     });
 
@@ -708,23 +709,23 @@ function handleNaturalLanguageQuery(query: string, transactions: Transaction[]):
     report += `| :--- | :--- | :--- | :--- |\n`;
 
     Object.entries(categoryTotals).forEach(([cat, data]) => {
-      report += `| ${cat} | ${data.type} | Rs. ${data.total.toLocaleString('en-IN')} | ${data.count} |\n`;
+      report += `| ${cat} | ${data.type} | Rs. ${Number(data.total || 0).toLocaleString('en-IN')} | ${data.count} |\n`;
     });
 
-    report += `\n• **Total Income**: Rs. ${totalInc.toLocaleString('en-IN')}\n`;
-    report += `• **Total Expenses**: Rs. ${totalExp.toLocaleString('en-IN')}\n`;
-    report += `• **Current Net Balance**: Rs. ${(totalInc - totalExp).toLocaleString('en-IN')}`;
+    report += `\n• **Total Income**: Rs. ${Number(totalInc || 0).toLocaleString('en-IN')}\n`;
+    report += `• **Total Expenses**: Rs. ${Number(totalExp || 0).toLocaleString('en-IN')}\n`;
+    report += `• **Current Net Balance**: Rs. ${Number(totalInc - totalExp).toLocaleString('en-IN')}`;
 
     return report;
   }
 
   // Savings & Advice
   if (/advice|saving|tip|budget|how to save|reduce expense/i.test(lower)) {
-    const totalExp = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-    const foodExp = transactions.filter(t => t.category === 'Food & Drinks' && t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-    let tip = `💡 **AI Financial Advice**: Your total spending is **Rs. ${totalExp.toLocaleString('en-IN')}**.`;
+    const totalExp = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
+    const foodExp = transactions.filter(t => t.category === 'Food & Drinks' && t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
+    let tip = `💡 **AI Financial Advice**: Your total spending is **Rs. ${Number(totalExp || 0).toLocaleString('en-IN')}**.`;
     if (foodExp > 2000) {
-      tip += ` You spent **Rs. ${foodExp.toLocaleString('en-IN')}** on Food & Dining. Cutting down 15% on dining out saves **Rs. ${Math.round(foodExp * 0.15).toLocaleString('en-IN')}** monthly!`;
+      tip += ` You spent **Rs. ${Number(foodExp || 0).toLocaleString('en-IN')}** on Food & Dining. Cutting down 15% on dining out saves **Rs. ${Math.round(foodExp * 0.15).toLocaleString('en-IN')}** monthly!`;
     } else {
       tip += ` Track every small cash and UPI payment daily to maintain 100% financial clarity!`;
     }
@@ -734,22 +735,22 @@ function handleNaturalLanguageQuery(query: string, transactions: Transaction[]):
   // Food & Drinks
   if (lower.includes('food') || lower.includes('dinner') || lower.includes('swiggy') || lower.includes('zomato') || lower.includes('restaurant')) {
     const foodTx = transactions.filter(t => t.category === 'Food & Drinks' && t.type === 'expense');
-    const total = foodTx.reduce((s, t) => s + t.amount, 0);
-    return `You have spent **Rs. ${total.toLocaleString('en-IN')}** on Food & Drinks across ${foodTx.length} transactions.`;
+    const total = foodTx.reduce((s, t) => s + Number(t.amount || 0), 0);
+    return `You have spent **Rs. ${Number(total || 0).toLocaleString('en-IN')}** on Food & Drinks across ${foodTx.length} transactions.`;
   }
 
   // Fuel / Petrol
   if (lower.includes('petrol') || lower.includes('fuel') || lower.includes('diesel')) {
     const fuelTx = transactions.filter(t => t.category === 'Fuel' && t.type === 'expense');
-    const total = fuelTx.reduce((s, t) => s + t.amount, 0);
-    return `Total spent on Petrol/Fuel is **Rs. ${total.toLocaleString('en-IN')}** (${fuelTx.length} refills).`;
+    const total = fuelTx.reduce((s, t) => s + Number(t.amount || 0), 0);
+    return `Total spent on Petrol/Fuel is **Rs. ${Number(total || 0).toLocaleString('en-IN')}** (${fuelTx.length} refills).`;
   }
 
   // Grocery
   if (lower.includes('grocery') || lower.includes('blinkit') || lower.includes('zepto') || lower.includes('milk')) {
     const groceryTx = transactions.filter(t => t.category === 'Grocery' && t.type === 'expense');
-    const total = groceryTx.reduce((s, t) => s + t.amount, 0);
-    return `Total spent on Household Groceries is **Rs. ${total.toLocaleString('en-IN')}** (${groceryTx.length} orders).`;
+    const total = groceryTx.reduce((s, t) => s + Number(t.amount || 0), 0);
+    return `Total spent on Household Groceries is **Rs. ${Number(total || 0).toLocaleString('en-IN')}** (${groceryTx.length} orders).`;
   }
 
   // Person / Friend Loans (Nandini, Rahul, etc.)
@@ -758,12 +759,12 @@ function handleNaturalLanguageQuery(query: string, transactions: Transaction[]):
     const pName = personMatch[1];
     const pTx = transactions.filter(t => (t.person?.toLowerCase().includes(pName) || t.title?.toLowerCase().includes(pName)));
     if (!pTx.length) return `No pending ledger entries found for ${pName.charAt(0).toUpperCase() + pName.slice(1)}.`;
-    const totalAmount = pTx.reduce((s, t) => s + t.amount, 0);
-    return `Ledger for **${pName.charAt(0).toUpperCase() + pName.slice(1)}**:\n• Total Entries: ${pTx.length}\n• Total Amount: Rs. ${totalAmount.toLocaleString('en-IN')}`;
+    const totalAmount = pTx.reduce((s, t) => s + Number(t.amount || 0), 0);
+    return `Ledger for **${pName.charAt(0).toUpperCase() + pName.slice(1)}**:\n• Total Entries: ${pTx.length}\n• Total Amount: Rs. ${Number(totalAmount || 0).toLocaleString('en-IN')}`;
   }
 
   // Summary & Cashflow
-  const totalExp = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const totalInc = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  return `📊 **Financial Summary**:\n• Total Income: Rs. ${totalInc.toLocaleString('en-IN')}\n• Total Expenses: Rs. ${totalExp.toLocaleString('en-IN')}\n• Current Net Balance: Rs. ${(totalInc - totalExp).toLocaleString('en-IN')}`;
+  const totalExp = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
+  const totalInc = transactions.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0);
+  return `📊 **Financial Summary**:\n• Total Income: Rs. ${Number(totalInc || 0).toLocaleString('en-IN')}\n• Total Expenses: Rs. ${Number(totalExp || 0).toLocaleString('en-IN')}\n• Current Net Balance: Rs. ${Number(totalInc - totalExp).toLocaleString('en-IN')}`;
 }

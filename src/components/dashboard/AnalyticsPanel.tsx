@@ -56,11 +56,12 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
       if (!categoryTotals[t.category]) {
         categoryTotals[t.category] = { total: 0, count: 0 };
       }
-      categoryTotals[t.category].total += t.amount;
+      categoryTotals[t.category].total += Number(t.amount || 0);
       categoryTotals[t.category].count += 1;
 
-      if (t.amount > maxExpense) {
-        maxExpense = t.amount;
+      const amt = Number(t.amount || 0);
+      if (amt > maxExpense) {
+        maxExpense = amt;
         maxExpenseTitle = t.title || t.category;
       }
     }

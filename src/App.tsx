@@ -6,6 +6,7 @@ import { DashboardOverview } from './components/dashboard/DashboardOverview';
 import { ReceiptScannerModal } from './components/ocr/ReceiptScannerModal';
 import { StatementImporterModal } from './components/import/StatementImporterModal';
 import { SettingsModal } from './components/settings/SettingsModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { MessageSquare, X, Bot } from 'lucide-react';
 
 export const AppContent: React.FC = () => {
@@ -99,10 +100,13 @@ export const AppContent: React.FC = () => {
 
 export function App() {
   return (
-    <FinanceProvider>
-      <AppContent />
-    </FinanceProvider>
+    <ErrorBoundary>
+      <FinanceProvider>
+        <AppContent />
+      </FinanceProvider>
+    </ErrorBoundary>
   );
 }
 
 export default App;
+

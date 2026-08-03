@@ -28,20 +28,7 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
     return t.isPending || title.includes('reason missing') || note.includes('imported') || note.includes('sms') || !t.title;
   });
 
-  if (!pendingItems.length) {
-    return (
-      <div className="p-4 rounded-3xl font-outfit mb-3 bg-[#E4ECE2] border border-[#c4d6c1] shadow-2xs">
-        <div className="flex items-center gap-2 text-[#0D2E14] font-extrabold text-xs uppercase tracking-wider mb-1">
-          <CheckCircle2 className="w-4 h-4 text-[#0D2E14]" />
-          <span>AI Daily Audit Complete</span>
-        </div>
-        <h4 className="text-sm sm:text-base font-extrabold text-[#0D2E14]">All Transactions Reconciled!</h4>
-        <p className="text-xs text-gray-700 font-medium mt-0.5">
-          100% of today's money movement has clear reasons and categories assigned.
-        </p>
-      </div>
-    );
-  }
+
 
   const quickReasonChips = [
     'Dinner / Food',
@@ -156,6 +143,21 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
     e.preventDefault();
     processBatchScript(batchVoiceText);
   };
+
+  if (!pendingItems.length) {
+    return (
+      <div className="p-4 rounded-3xl font-outfit mb-3 bg-[#E4ECE2] border border-[#c4d6c1] shadow-2xs">
+        <div className="flex items-center gap-2 text-[#0D2E14] font-extrabold text-xs uppercase tracking-wider mb-1">
+          <CheckCircle2 className="w-4 h-4 text-[#0D2E14]" />
+          <span>AI Daily Audit Complete</span>
+        </div>
+        <h4 className="text-sm sm:text-base font-extrabold text-[#0D2E14]">All Transactions Reconciled!</h4>
+        <p className="text-xs text-gray-700 font-medium mt-0.5">
+          100% of today's money movement has clear reasons and categories assigned.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-5 rounded-3xl border border-[#C8E0C4] bg-[#F0F7EE] shadow-2xs font-outfit mb-3 sm:mb-4 space-y-3">
