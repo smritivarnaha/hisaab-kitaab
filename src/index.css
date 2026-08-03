@@ -26,6 +26,10 @@
   }
 }
 
+.font-inter {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+}
+
 /* Accent override utility classes */
 .bg-accent-primary { background-color: var(--accent-primary) !important; }
 .text-accent-primary { color: var(--accent-primary) !important; }

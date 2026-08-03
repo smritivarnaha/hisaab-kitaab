@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppUser } from '../../types/finance';
-import { UserCheck, Lock, ArrowRight, ShieldCheck, Calculator } from 'lucide-react';
+import { Lock, ArrowRight, ShieldCheck, Calculator, User } from 'lucide-react';
 
 interface Props {
   onLoginSuccess: (user: AppUser) => void;
@@ -61,52 +61,59 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F3F5F1] text-[#0D2E14] font-outfit flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-[#E2E8E0] shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6">
+    <div className="min-h-screen w-full bg-slate-50/70 font-inter flex items-center justify-center p-4 antialiased relative overflow-hidden">
+      {/* Soft Ambient Background Glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* MNC Enterprise Card Container */}
+      <div className="w-full max-w-[400px] bg-white rounded-2xl border border-slate-200/90 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.08)] overflow-hidden p-7 sm:p-8 space-y-6 relative z-10 font-inter">
 
         {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-[#0D2E14] text-white flex items-center justify-center mx-auto shadow-md">
-            <Calculator className="w-6 h-6" />
+        <div className="space-y-1.5">
+          <div className="w-10 h-10 rounded-xl bg-[#0D2E14] text-white flex items-center justify-center shadow-2xs mb-4">
+            <Calculator className="w-5 h-5 text-white" />
           </div>
-          <h1 className="font-serif font-black text-2xl text-[#0D2E14] tracking-tight">Hisaab Kitab AI</h1>
-          <p className="text-xs text-gray-500 font-medium">Enter your credentials to access your passbook</p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight font-inter">Sign in to Hisaab Kitab</h1>
+          <p className="text-xs text-slate-500 font-normal leading-relaxed">Enter your credentials to manage your financial ledger</p>
         </div>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        {/* Form Container */}
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1 font-inter">
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold text-center animate-fadeIn">
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200/80 text-red-700 text-xs font-medium text-center animate-fadeIn font-inter">
               ⚠️ {errorMsg}
             </div>
           )}
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-700 block">Username</label>
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-semibold text-slate-700 block font-inter">Username</label>
             <div className="relative">
-              <UserCheck className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={usernameInput}
                 onChange={e => setUsernameInput(e.target.value)}
-                placeholder="Enter your username"
+                placeholder="Enter username"
                 required
-                className="w-full bg-[#F3F5F1] border border-[#E2E8E0] rounded-xl py-2.5 pl-9 pr-3 text-xs font-semibold text-[#0D2E14] outline-none focus:border-[#0D2E14] transition-all"
+                className="w-full bg-white border border-slate-300 rounded-lg py-2.5 pl-9 pr-3.5 text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D2E14] focus:ring-4 focus:ring-[#0D2E14]/10 transition-all font-inter shadow-2xs"
               />
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-gray-700 block">Password</label>
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-semibold text-slate-700 flex items-center justify-between font-inter">
+              <span>Password</span>
+            </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 value={passwordInput}
                 onChange={e => setPasswordInput(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="Enter password"
                 required
-                className="w-full bg-[#F3F5F1] border border-[#E2E8E0] rounded-xl py-2.5 pl-9 pr-3 text-xs font-semibold text-[#0D2E14] outline-none focus:border-[#0D2E14] transition-all font-mono"
+                className="w-full bg-white border border-slate-300 rounded-lg py-2.5 pl-9 pr-3.5 text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D2E14] focus:ring-4 focus:ring-[#0D2E14]/10 transition-all font-mono shadow-2xs"
               />
             </div>
           </div>
@@ -114,23 +121,23 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 rounded-xl bg-[#0D2E14] hover:bg-black text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all disabled:opacity-50"
+            className="w-full py-2.5 px-4 rounded-lg bg-[#0D2E14] hover:bg-[#12441d] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-2xs hover:shadow active:scale-[0.99] transition-all disabled:opacity-50 font-inter cursor-pointer mt-2"
           >
             {isLoading ? (
-              <span>Signing in...</span>
+              <span>Authenticating...</span>
             ) : (
               <>
-                <span>Sign In to Passbook</span>
-                <ArrowRight className="w-4 h-4 text-white" />
+                <span>Sign In</span>
+                <ArrowRight className="w-3.5 h-3.5 text-white" />
               </>
             )}
           </button>
         </form>
 
-        {/* Security Badge */}
-        <div className="pt-2 text-center border-t border-gray-100 flex items-center justify-center gap-1.5 text-[10px] text-gray-400 font-medium">
+        {/* MNC Security Footer */}
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-medium font-inter">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Encrypted Multi-User Database Authentication</span>
+          <span>256-bit Encrypted Multi-Tenant Authentication</span>
         </div>
 
       </div>
