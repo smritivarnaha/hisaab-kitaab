@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChatMessage, Transaction, Category, CATEGORIES_LIST, PaymentMethod } from '../../types/finance';
+import { ChatMessage, Transaction } from '../../types/finance';
 import { Bot, User, CheckCircle2, Check, Trash2 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 
@@ -7,12 +7,11 @@ interface Props {
   message: ChatMessage;
 }
 
+// Single Transaction Confirmation Card (Spelling & Details Editor)
 const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
   const { updateTransaction, deleteTransaction } = useFinance();
   const [title, setTitle] = useState(item.title === 'Reason Missing' ? '' : item.title);
   const [amount, setAmount] = useState(String(item.amount || ''));
-  const [category, setCategory] = useState<Category>(item.category);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(item.paymentMethod || 'UPI');
   const [isConfirmed, setIsConfirmed] = useState(!item.isPending);
   const [isDiscarded, setIsDiscarded] = useState(false);
 
@@ -22,8 +21,6 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
     updateTransaction(item.id, {
       title: title.trim() || 'Expense',
       amount: Number(amount) || 0,
-      category,
-      paymentMethod,
       isPending: false // Confirmed and added to Passbook!
     });
     setIsConfirmed(true);
@@ -35,90 +32,163 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
   };
 
   return (
-    <div className="mt-3 p-3 bg-white/95 dark:bg-slate-800/95 rounded-xl border border-amber-200 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-extrabold uppercase text-amber-700 tracking-wider flex items-center gap-1">
-          ✏️ Verify Spelling & Details Before Saving
+    <div className="mt-2.5 p-3 bg-white/95 dark:bg-slate-800/95 rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit">
+      {/* Clean Un-congested Header */}
+      <div className="flex items-center justify-between gap-2 border-b border-amber-100 pb-1.5">
+        <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
+          ✏️ Verify & Edit Entry
         </span>
-        <span className="text-[9px] text-gray-400 font-semibold">{item.date}</span>
+        <span className="text-[9px] text-gray-400 font-medium flex-shrink-0">{item.date}</span>
       </div>
 
       {!isConfirmed ? (
         <div className="space-y-2">
-          {/* Title / Reason Field */}
+          {/* Editable Description Input */}
           <div>
-            <label className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Spelling / Description</label>
+            <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Title / Spelling</label>
             <input
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="Correct title or spelling..."
-              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-gray-900 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
+              placeholder="Edit title or correct spelling..."
+              className="w-full bg-slate-50 border border-gray-200 text-xs font-semibold text-gray-900 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
             />
           </div>
 
-          {/* Amount & Category */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Amount (₹)</label>
-              <input
-                type="number"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                className="w-full bg-slate-50 border border-gray-200 text-xs font-extrabold text-emerald-700 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
-              />
-            </div>
-            <div>
-              <label className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Category</label>
-              <select
-                value={category}
-                onChange={e => setCategory(e.target.value as Category)}
-                className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-gray-900 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
-              >
-                {CATEGORIES_LIST.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Payment Method */}
+          {/* Editable Amount Input */}
           <div>
-            <label className="text-[9px] font-bold text-gray-500 uppercase block mb-0.5">Payment Method</label>
-            <select
-              value={paymentMethod}
-              onChange={e => setPaymentMethod(e.target.value as PaymentMethod)}
-              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-gray-900 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
-            >
-              <option value="UPI">UPI</option>
-              <option value="Cash">Cash</option>
-              <option value="Credit Card">Credit Card</option>
-              <option value="Debit Card">Debit Card</option>
-              <option value="Bank Transfer">Bank Transfer</option>
-            </select>
+            <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Amount (₹)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-emerald-700 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
+            />
           </div>
 
-          {/* Confirm & Discard Buttons */}
-          <div className="flex items-center gap-2 pt-1">
+          {/* Confirm & Discard Action Buttons */}
+          <div className="flex items-center gap-1.5 pt-1">
             <button
               onClick={handleConfirm}
-              className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+              className="flex-1 py-1.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1 shadow-2xs active:scale-95 transition-all"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Yes, Confirm & Add to Passbook</span>
             </button>
             <button
               onClick={handleDiscard}
-              className="py-2 px-2.5 border border-gray-200 text-gray-500 hover:text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 transition-colors"
+              className="py-1.5 px-2.5 border border-gray-200 text-gray-500 hover:text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors"
             >
               Discard
             </button>
           </div>
         </div>
       ) : (
-        <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5">
+        <div className="p-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5">
           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           <span>Confirmed & Added to Passbook!</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Tabular Editable Form for Multiple Entries
+const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ items }) => {
+  const { confirmPendingItemsBatch } = useFinance();
+  const [drafts, setDrafts] = useState<Transaction[]>(items);
+  const [isConfirmed, setIsConfirmed] = useState(false);
+
+  const handleUpdate = (id: string, field: 'title' | 'amount', value: any) => {
+    setDrafts(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const handleDeleteRow = (id: string) => {
+    setDrafts(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleConfirmAll = () => {
+    const ready = drafts.map(item => ({
+      ...item,
+      title: item.title.trim() || 'Expense',
+      amount: Number(item.amount) || 0,
+      isPending: false
+    }));
+    confirmPendingItemsBatch(ready);
+    setIsConfirmed(true);
+  };
+
+  if (drafts.length === 0) return null;
+
+  return (
+    <div className="mt-2.5 p-3 bg-white/95 dark:bg-slate-800/95 rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit">
+      <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
+        <span className="text-xs font-bold text-amber-800 flex items-center gap-1">
+          ✏️ Verify All {drafts.length} Entries Below
+        </span>
+      </div>
+
+      {!isConfirmed ? (
+        <div className="space-y-2">
+          {/* Tabular Table Form */}
+          <div className="overflow-x-auto border border-gray-200 rounded-lg bg-slate-50">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-100/80 text-[9px] uppercase font-bold text-gray-500">
+                  <th className="p-1.5 w-6">#</th>
+                  <th className="p-1.5">Description / Title</th>
+                  <th className="p-1.5 w-24">Amount (₹)</th>
+                  <th className="p-1.5 text-center w-8">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {drafts.map((row, idx) => (
+                  <tr key={row.id} className="border-b border-gray-100 bg-white">
+                    <td className="p-1.5 text-[10px] font-semibold text-gray-400">{idx + 1}</td>
+                    <td className="p-1">
+                      <input
+                        type="text"
+                        value={row.title === 'Reason Missing' ? '' : row.title}
+                        onChange={e => handleUpdate(row.id, 'title', e.target.value)}
+                        placeholder="Title / description..."
+                        className="w-full text-xs font-semibold text-gray-900 bg-gray-50 border border-gray-200 rounded px-2 py-1 outline-none focus:border-emerald-600"
+                      />
+                    </td>
+                    <td className="p-1">
+                      <input
+                        type="number"
+                        value={row.amount}
+                        onChange={e => handleUpdate(row.id, 'amount', e.target.value)}
+                        className="w-full text-xs font-bold text-emerald-700 bg-gray-50 border border-gray-200 rounded px-2 py-1 outline-none focus:border-emerald-600"
+                      />
+                    </td>
+                    <td className="p-1 text-center">
+                      <button
+                        onClick={() => handleDeleteRow(row.id)}
+                        className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
+                        title="Remove row"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <button
+            onClick={handleConfirmAll}
+            className="w-full py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all mt-2"
+          >
+            <Check className="w-4 h-4" />
+            <span>Yes, Confirm All & Add to Passbook</span>
+          </button>
+        </div>
+      ) : (
+        <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>All {drafts.length} Entries Confirmed & Added!</span>
         </div>
       )}
     </div>
@@ -187,6 +257,8 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
     }
   }
 
+  const pendingItems = message.pendingReviewItems || [];
+
   return (
     <div className={`flex items-start max-w-2xl mx-auto w-full ${isUser ? 'flex-row-reverse' : 'flex-row'} ${sizeClasses.container}`}>
       {/* Avatar */}
@@ -210,13 +282,13 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
         <div className={`font-outfit shadow-2xs ${fontSizeClass} ${sizeClasses.bubble} ${bubbleStyleClass}`}>
           {renderFormattedText(message.text)}
 
-          {/* Inline Editable Confirmation Cards */}
-          {message.pendingReviewItems && message.pendingReviewItems.length > 0 && (
-            <div className="space-y-2 mt-2">
-              {message.pendingReviewItems.map(item => (
-                <InlineTransactionEditor key={item.id} item={item} />
-              ))}
-            </div>
+          {/* Inline Confirmation Editor Card */}
+          {pendingItems.length === 1 && (
+            <InlineTransactionEditor item={pendingItems[0]} />
+          )}
+
+          {pendingItems.length > 1 && (
+            <MultiInlineTransactionEditor items={pendingItems} />
           )}
 
           {/* Action Summary Pill */}

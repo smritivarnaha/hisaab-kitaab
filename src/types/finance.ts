@@ -123,4 +123,5 @@ export interface UserSettings {
   fontSize?: 'sm' | 'base' | 'lg';
   chatBubbleStyle?: 'glass' | 'flat' | 'bordered';
   chatBubbleSize?: 'compact' | 'normal' | 'spacious';
+  floatingBubbleSize?: 'sm' | 'md' | 'lg';
 }

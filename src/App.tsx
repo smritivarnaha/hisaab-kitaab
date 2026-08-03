@@ -7,7 +7,7 @@ import { ReceiptScannerModal } from './components/ocr/ReceiptScannerModal';
 import { StatementImporterModal } from './components/import/StatementImporterModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import ErrorBoundary from './components/ErrorBoundary';
-import { MessageSquare, X, Bot } from 'lucide-react';
+import { MessageSquare, X, Bot, Calculator } from 'lucide-react';
 
 const ACCENT_COLORS = {
   emerald: { primary: '#0D2E14', hover: '#12441d', light: '#F0F7EE', activeBg: '#E4ECE2', lime: '#93E044' },
@@ -38,6 +38,10 @@ export const AppContent: React.FC = () => {
   }, [settings.accentColor]);
 
   const botAvatar = settings.botAvatarUrl;
+  const bubbleSizeClass = 
+    settings.floatingBubbleSize === 'sm' ? 'w-10 h-10' :
+    settings.floatingBubbleSize === 'lg' ? 'w-16 h-16' :
+    'w-14 h-14';
 
   return (
     <div className="min-h-screen w-full bg-[#F3F5F1] text-[#0D2E14] font-outfit antialiased flex flex-col justify-between">
@@ -59,8 +63,8 @@ export const AppContent: React.FC = () => {
         {!isChatOpen && (
           <button
             onClick={() => setIsChatOpen(true)}
-            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105 overflow-hidden border-2 border-white"
-            title="Chat Accountant"
+            className={`fixed bottom-6 right-6 z-50 ${bubbleSizeClass} rounded-full bg-accent-primary text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105 overflow-hidden border-2 border-white`}
+            title={settings.aiAccountantName || 'My Accountant'}
           >
             {botAvatar && !botAvatarError ? (
               <img
@@ -85,8 +89,8 @@ export const AppContent: React.FC = () => {
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white flex-shrink-0">
             <div>
               <h4 className="font-extrabold text-sm text-[#0D2E14] flex items-center gap-1.5 capitalize">
-                <MessageSquare className="w-4 h-4 text-[#0D2E14]" />
-                {settings.aiAccountantName || 'AI Accountant'}
+                <Calculator className="w-4 h-4 text-emerald-700" />
+                {settings.aiAccountantName || 'My Accountant'}
               </h4>
               <p className="text-[10px] text-gray-400 mt-0.5">Enter transaction or ask summary</p>
             </div>

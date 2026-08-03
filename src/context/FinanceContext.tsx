@@ -55,11 +55,12 @@ const DEFAULT_SETTINGS: UserSettings = {
   customAIPrompt: '',
   botAvatarUrl: '',
   userAvatarUrl: '',
-  aiAccountantName: 'AI Accountant',
+  aiAccountantName: 'My Accountant',
   accentColor: 'emerald',
   fontSize: 'base',
   chatBubbleStyle: 'flat',
   chatBubbleSize: 'normal',
+  floatingBubbleSize: 'md',
 };
 
 
