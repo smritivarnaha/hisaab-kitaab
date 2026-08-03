@@ -14,6 +14,7 @@ export const AppContent: React.FC = () => {
   const [isOCROpen, setIsOCROpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [botAvatarError, setBotAvatarError] = useState(false);
 
   const botAvatar = settings.botAvatarUrl;
 
@@ -37,17 +38,15 @@ export const AppContent: React.FC = () => {
         {!isChatOpen && (
           <button
             onClick={() => setIsChatOpen(true)}
-            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105"
+            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105 overflow-hidden border-2 border-white"
             title="Chat Accountant"
           >
-            {botAvatar ? (
+            {botAvatar && !botAvatarError ? (
               <img
                 src={botAvatar}
                 alt="Bot"
-                className="w-14 h-14 rounded-full object-cover shadow-md"
-                onError={(e) => {
-                  (e.target as any).style.display = 'none';
-                }}
+                className="w-full h-full object-cover"
+                onError={() => setBotAvatarError(true)}
               />
             ) : (
               <Bot className="w-6 h-6 text-white" />
@@ -64,9 +63,9 @@ export const AppContent: React.FC = () => {
           {/* Mini Drawer Header */}
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white flex-shrink-0">
             <div>
-              <h4 className="font-extrabold text-sm text-[#0D2E14] flex items-center gap-1.5">
+              <h4 className="font-extrabold text-sm text-[#0D2E14] flex items-center gap-1.5 capitalize">
                 <MessageSquare className="w-4 h-4 text-[#0D2E14]" />
-                AI Accountant
+                {settings.aiAccountantName || 'AI Accountant'}
               </h4>
               <p className="text-[10px] text-gray-400 mt-0.5">Enter transaction or ask summary</p>
             </div>

@@ -118,4 +118,5 @@ export interface UserSettings {
   customAIPrompt?: string;
   botAvatarUrl?: string;
   userAvatarUrl?: string;
+  aiAccountantName?: string;
 }

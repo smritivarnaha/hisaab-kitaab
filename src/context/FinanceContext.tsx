@@ -53,6 +53,9 @@ const DEFAULT_SETTINGS: UserSettings = {
   openaiApiKey: '',
   aiProvider: 'gemini',
   customAIPrompt: '',
+  botAvatarUrl: '',
+  userAvatarUrl: '',
+  aiAccountantName: 'AI Accountant',
 };
 
 

@@ -3,7 +3,6 @@ import { useFinance } from '../../context/FinanceContext';
 import { ChatMessageItem } from './ChatMessageItem';
 import { transcribeWithWhisper } from '../../services/ai/openai';
 import { speechService } from '../../services/voice/speechRecognition';
-import { VoiceWaveform } from '../voice/VoiceWaveform';
 import { Mic, Send, Camera, Sparkles, Loader2 } from 'lucide-react';
 
 interface Props {
@@ -165,8 +164,6 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
       <div className="absolute bottom-4 inset-x-0 z-30 px-4">
         <div className="max-w-3xl mx-auto bg-white border border-[#E2E8E0] rounded-3xl p-2.5 shadow-xl backdrop-blur-xl space-y-1.5">
           
-          <VoiceWaveform isListening={isListening} audioLevel={audioLevel} liveTranscript={liveTranscript} />
-
           <form onSubmit={handleSubmit} className="flex items-center gap-2">
             {/* Attachment/OCR Actions on Left */}
             <button
