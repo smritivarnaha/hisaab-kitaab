@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { Transaction } from '../../types/finance';
 import { formatGlobalDate } from '../../utils/dateUtils';
+import { CategoryIcon } from '../common/CategoryIcon';
 import { 
-  TrendingUp, 
-  TrendingDown, 
   Calendar, 
   Package, 
   Clock, 
   BarChart2, 
   ShoppingBag,
-  Filter,
-  CheckCircle2
+  ChevronDown,
+  ChevronUp,
+  Layers
 } from 'lucide-react';
 
 interface Props {
@@ -22,6 +22,13 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
 
   const [dateFilter, setDateFilter] = useState<'all' | '7days' | 'month'>('all');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
+  // Track expanded dates in accordion view
+  const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
+
+  const toggleDateExpand = (date: string) => {
+    setExpandedDates(prev => ({ ...prev, [date]: !prev[date] }));
+  };
 
   // Group transactions by date string YYYY-MM-DD
   const groupTransactionsByDate = () => {
@@ -56,8 +63,8 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
       map[d].items.push(t);
     });
 
-    // Sort dates ascending for timeline X-axis
-    const sortedDates = Object.keys(map).sort((a, b) => a.localeCompare(b));
+    // Sort dates descending for newest first in daily bunches
+    const sortedDates = Object.keys(map).sort((a, b) => b.localeCompare(a));
     return { map, sortedDates };
   };
 
@@ -79,7 +86,8 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
 
   const maxBarHeight = peakAmount > 0 ? peakAmount : 1;
 
-  // Filtered dates to display in timeline list
+  // Filtered dates to display in timeline list (reverse for chart timeline X-axis)
+  const chartSortedDates = [...sortedDates].sort((a, b) => a.localeCompare(b));
   const datesToDisplay = selectedDate ? [selectedDate] : sortedDates;
 
   return (
@@ -174,10 +182,10 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
         </div>
 
         {/* X-Axis Timeline Bar Chart */}
-        {sortedDates.length > 0 ? (
-          <div className="pt-4 border-t border-gray-100 space-y-2">
+        {chartSortedDates.length > 0 ? (
+          <div className="pt-2 border-t border-gray-100 space-y-2">
             <div className="h-44 flex items-end justify-between gap-1.5 overflow-x-auto pb-2 pt-6 px-2 no-scrollbar">
-              {sortedDates.map(date => {
+              {chartSortedDates.map(date => {
                 const dayData = dateMap[date];
                 const heightPercent = Math.max(15, Math.round((dayData.total / maxBarHeight) * 100));
                 const isSelected = selectedDate === date;
@@ -185,7 +193,11 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                 return (
                   <div
                     key={date}
-                    onClick={() => setSelectedDate(isSelected ? null : date)}
+                    onClick={() => {
+                      setSelectedDate(isSelected ? null : date);
+                      // Auto expand date when clicked from bar chart
+                      setExpandedDates(prev => ({ ...prev, [date]: true }));
+                    }}
                     className="flex-1 min-w-[44px] flex flex-col items-center gap-1.5 cursor-pointer group transition-all"
                   >
                     {/* Amount Tooltip over Bar */}
@@ -225,76 +237,140 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
         )}
       </div>
 
-      {/* 2. Detailed Itemized Material Matrix per Date */}
+      {/* 2. Daily Bunches with Overlapping Category Avatar Chips & Click-to-Expand Accordion */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8E0] shadow-2xs space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-xs sm:text-sm text-[#0D2E14] flex items-center gap-1.5">
             <ShoppingBag className="w-4 h-4 text-[#0D2E14]" />
-            Itemized Material & Price Matrix (Mota Mota Hisaab)
+            Daily Spend Bunches (Mota Mota Hisaab)
           </h3>
           <span className="text-[10px] text-gray-400 font-bold">
-            {datesToDisplay.length} Date {datesToDisplay.length === 1 ? 'Entry' : 'Entries'}
+            {datesToDisplay.length} Date {datesToDisplay.length === 1 ? 'Bunch' : 'Bunches'} • Click to view breakdown
           </span>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {datesToDisplay.map(date => {
             const data = dateMap[date];
             if (!data) return null;
 
+            const isExpanded = !!expandedDates[date] || selectedDate === date;
+
+            // Extract unique categories for overlapping circular chips
+            const uniqueCategories = Array.from(new Set(data.items.map(i => i.category)));
+            const visibleChips = uniqueCategories.slice(0, 4);
+            const hiddenCount = uniqueCategories.length - visibleChips.length;
+
             return (
-              <div key={date} className="border border-gray-200 rounded-2xl overflow-hidden bg-slate-50/60 shadow-2xs">
-                {/* Date Row Header */}
-                <div className="px-3.5 py-2.5 bg-white border-b border-gray-200 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-[#0D2E14]" />
-                    <span className="text-xs font-extrabold text-[#0D2E14]">
-                      {formatGlobalDate(date)}
-                    </span>
-                    <span className="text-[10px] font-bold text-gray-400">
-                      ({data.items.length} {data.items.length === 1 ? 'item' : 'items'})
-                    </span>
+              <div 
+                key={date} 
+                className={`border rounded-2xl overflow-hidden transition-all duration-200 ${
+                  isExpanded ? 'border-[#0D2E14] shadow-md bg-white' : 'border-gray-200 bg-white hover:border-emerald-600/50 shadow-2xs'
+                }`}
+              >
+                {/* Daily Bunch Header Card (Clickable) */}
+                <div 
+                  onClick={() => toggleDateExpand(date)}
+                  className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/80 transition-colors"
+                >
+                  {/* Left: Date Badge + Overlapping Circular Chips */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div>
+                      <span className="text-xs sm:text-sm font-extrabold text-[#0D2E14] block">
+                        {formatGlobalDate(date)}
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-bold block">
+                        {data.items.length} {data.items.length === 1 ? 'item' : 'items'}
+                      </span>
+                    </div>
+
+                    {/* Overlapping Circular Category Chips */}
+                    <div className="flex items-center pl-1">
+                      {visibleChips.map((cat, idx) => (
+                        <div 
+                          key={cat} 
+                          className="relative -ml-2.5 first:ml-0 rounded-full border-2 border-white bg-white shadow-2xs overflow-hidden flex items-center justify-center"
+                          title={cat}
+                        >
+                          <CategoryIcon category={cat} size="sm" />
+                        </div>
+                      ))}
+                      {hiddenCount > 0 && (
+                        <div className="w-6 h-6 rounded-full bg-[#0D2E14] text-white text-[9px] font-bold border-2 border-white flex items-center justify-center -ml-2.5 shadow-2xs">
+                          +{hiddenCount}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-xs font-black text-red-600">
-                    Daily Subtotal: ₹{data.total.toLocaleString('en-IN')}
-                  </span>
+
+                  {/* Right: Daily Subtotal + Expand/Collapse Chevron */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="text-right">
+                      <span className="text-xs sm:text-sm font-black text-red-600 block">
+                        ₹{data.total.toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[9px] font-bold text-emerald-700 block">
+                        {isExpanded ? 'Click to collapse' : 'Click for items'}
+                      </span>
+                    </div>
+
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                      isExpanded ? 'bg-[#0D2E14] text-white' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Table of Materials & Prices */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-gray-200 bg-gray-100/70 text-[9px] uppercase font-bold text-gray-500">
-                        <th className="p-2 w-6 text-center">#</th>
-                        <th className="p-2">Material / Item Title</th>
-                        <th className="p-2">Category</th>
-                        <th className="p-2">Mode</th>
-                        <th className="p-2 text-right">Price (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.items.map((item, idx) => (
-                        <tr key={item.id} className="border-b border-gray-100 bg-white hover:bg-emerald-50/40 transition-colors">
-                          <td className="p-2 text-[10px] font-semibold text-gray-400 text-center">{idx + 1}</td>
-                          <td className="p-2 font-bold text-gray-900">
-                            {item.title || item.notes || 'Expense'}
-                          </td>
-                          <td className="p-2">
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">
-                              {item.category}
-                            </span>
-                          </td>
-                          <td className="p-2 text-[10px] font-medium text-gray-500 uppercase">
-                            {item.paymentMethod || 'UPI'}
-                          </td>
-                          <td className="p-2 text-right font-extrabold text-red-600">
-                            ₹{Number(item.amount || 0).toLocaleString('en-IN')}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {/* Expanded Itemized Table Breakdown */}
+                {isExpanded && (
+                  <div className="border-t border-gray-100 bg-slate-50/60 p-3 space-y-2 animate-fadeIn">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-[#0D2E14] px-1">
+                      <span className="flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5 text-[#0D2E14]" />
+                        Itemized Material Breakdown
+                      </span>
+                      <span className="text-gray-400 font-semibold text-[10px]">
+                        Exact Prices & Details
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-2xs">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-200 bg-gray-100/70 text-[9px] uppercase font-bold text-gray-500">
+                            <th className="p-2 w-6 text-center">#</th>
+                            <th className="p-2">Material / Item Title</th>
+                            <th className="p-2">Category</th>
+                            <th className="p-2">Mode</th>
+                            <th className="p-2 text-right">Price (₹)</th>
+                          </tr>
+                        </thead>
+                          <tbody>
+                          {data.items.map((item, idx) => (
+                            <tr key={item.id} className="border-b border-gray-100 bg-white hover:bg-emerald-50/40 transition-colors">
+                              <td className="p-2 text-[10px] font-semibold text-gray-400 text-center">{idx + 1}</td>
+                              <td className="p-2 font-bold text-gray-900">
+                                {item.title || item.notes || 'Expense'}
+                              </td>
+                              <td className="p-2">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 inline-flex items-center gap-1">
+                                  {item.category}
+                                </span>
+                              </td>
+                              <td className="p-2 text-[10px] font-medium text-gray-500 uppercase">
+                                {item.paymentMethod || 'UPI'}
+                              </td>
+                              <td className="p-2 text-right font-extrabold text-red-600">
+                                ₹{Number(item.amount || 0).toLocaleString('en-IN')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
