@@ -164,7 +164,10 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenImport }) => {
   ];
 
   const openaiKey = (settings as any).openaiApiKey?.trim();
-  const useWhisper = !!openaiKey;
+  // Whisper is only used on mobile where browser Speech API is unreliable.
+  // Desktop uses the browser's native Speech Recognition API (fast, free, real-time).
+  const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const useWhisper = isMobile && !!openaiKey;
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F1] relative overflow-hidden font-outfit">

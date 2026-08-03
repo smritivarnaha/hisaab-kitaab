@@ -34,9 +34,10 @@ export class VoiceRecognitionService {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       this.recognition = new SpeechRecognition();
-      // On mobile continuous=true causes the "restart loop" issue.
-      // Use continuous=false so recognition fires once cleanly and ends.
-      this.recognition.continuous = false;
+      // On mobile, continuous=true causes buggy loops.
+      // On desktop, continuous=true allows natural pauses while speaking.
+      const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      this.recognition.continuous = !isMobile;
       this.recognition.interimResults = true;
     }
   }
