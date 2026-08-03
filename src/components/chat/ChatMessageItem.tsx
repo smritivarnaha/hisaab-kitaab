@@ -33,7 +33,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
   };
 
   return (
-    <div className="mt-2.5 p-3 bg-white/95 dark:bg-slate-800/95 rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit">
+    <div className="mt-2.5 p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit">
       {/* Clean Un-congested Header */}
       <div className="flex items-center justify-between gap-2 border-b border-amber-100 pb-1.5">
         <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
@@ -68,7 +68,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
           </div>
 
           {/* Confirm & Discard Action Buttons */}
-          <div className="flex items-center gap-1.5 pt-1">
+          <div className="flex gap-2 pt-1">
             <button
               onClick={handleConfirm}
               className="flex-1 py-1.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1 shadow-2xs active:scale-95 transition-all"
@@ -122,7 +122,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
   if (drafts.length === 0) return null;
 
   return (
-    <div className="mt-2.5 p-3 bg-white/95 dark:bg-slate-800/95 rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit">
+    <div className="mt-2.5 p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit">
       <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
         <span className="text-xs font-bold text-amber-800 flex items-center gap-1">
           ✏️ Verify All {drafts.length} Entries Below
@@ -221,10 +221,10 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
     const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|\n)/g);
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={index} className="font-black text-[#0D2E14] dark:text-[#93E044]">{part.slice(2, -2)}</strong>;
+        return <strong key={index} className="font-extrabold text-[#0D2E14]">{part.slice(2, -2)}</strong>;
       }
       if (part.startsWith('*') && part.endsWith('*')) {
-        return <em key={index} className="italic text-slate-700 dark:text-slate-200">{part.slice(1, -1)}</em>;
+        return <em key={index} className="italic text-slate-700">{part.slice(1, -1)}</em>;
       }
       if (part === '\n') {
         return <br key={index} />;
@@ -253,17 +253,18 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
     if (settings.chatBubbleStyle === 'glass') {
       bubbleStyleClass = 'bg-[#0D2E14]/90 backdrop-blur-xs text-white rounded-tr-2xs border border-white/20 shadow-xs';
     } else if (settings.chatBubbleStyle === 'bordered') {
-      bubbleStyleClass = 'bg-transparent border border-[#0D2E14] text-slate-900 dark:text-slate-100 rounded-tr-2xs';
+      bubbleStyleClass = 'bg-transparent border border-[#0D2E14] text-slate-900 rounded-tr-2xs';
     } else {
       bubbleStyleClass = 'bg-[#0D2E14] text-white rounded-tr-2xs shadow-xs'; // Default 'flat'
     }
   } else {
+    // Light Assistant Bubble everywhere
     if (settings.chatBubbleStyle === 'glass') {
-      bubbleStyleClass = 'bg-white/80 backdrop-blur-xs border border-slate-200 text-slate-800 rounded-tl-2xs shadow-xs dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-100';
+      bubbleStyleClass = 'bg-white/90 backdrop-blur-xs border border-slate-200 text-slate-900 rounded-tl-2xs shadow-xs';
     } else if (settings.chatBubbleStyle === 'bordered') {
-      bubbleStyleClass = 'bg-transparent border-2 border-slate-300 text-slate-800 rounded-tl-2xs dark:border-slate-700 dark:text-slate-100';
+      bubbleStyleClass = 'bg-white border-2 border-slate-200 text-slate-900 rounded-tl-2xs';
     } else {
-      bubbleStyleClass = 'bg-white border border-[#E2E8E0] text-slate-800 rounded-tl-2xs shadow-2xs dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100'; // Default 'flat'
+      bubbleStyleClass = 'bg-white border border-[#E2E8E0] text-slate-900 rounded-tl-2xs shadow-2xs'; // Default 'flat'
     }
   }
 
