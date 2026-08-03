@@ -179,7 +179,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
             </button>
 
             {/* Input Box with Inside-Right Controls (Mic + Send) */}
-            <div className="flex-1 relative flex items-center bg-[#F3F5F1] border border-[#E2E8E0] rounded-full focus-within:border-[#0D2E14] focus-within:bg-white transition-all pr-2">
+            <div className="flex-1 flex items-center bg-[#F3F5F1] border border-[#E2E8E0] rounded-full focus-within:border-[#0D2E14] focus-within:bg-white transition-all px-3 py-1.5 gap-2">
               <input
                 type="text"
                 value={inputText}
@@ -188,11 +188,11 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
                   isTranscribing ? '⏳ Transcribing voice with Whisper...' :
                   isListening ? '🎙️ Listening... speak now' : 'Type or ask anything...'
                 }
-                className="w-full bg-transparent py-2.5 pl-4 pr-16 text-xs sm:text-sm text-[#0D2E14] placeholder-gray-400 font-semibold outline-none font-outfit"
+                className="flex-1 bg-transparent text-xs sm:text-sm text-[#0D2E14] placeholder-gray-400 font-semibold outline-none font-outfit"
               />
 
               {/* Controls inside the input bar on the right side */}
-              <div className="absolute right-2 flex items-center gap-1">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 {/* Clean Mic Icon Only */}
                 <button
                   type="button"
@@ -220,7 +220,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
                     type="submit"
                     className="w-7 h-7 rounded-full bg-[#0D2E14] hover:bg-black text-white flex items-center justify-center transition-all"
                   >
-                    <Send className="w-3 h-3 text-white" />
+                    <Send className="w-3.5 h-3.5 text-white" />
                   </button>
                 )}
               </div>

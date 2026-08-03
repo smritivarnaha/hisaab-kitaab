@@ -33,27 +33,27 @@ export const AppContent: React.FC = () => {
           <DashboardOverview />
         </main>
 
-        {/* Floating Chat Bubble Widget (Bottom-Right) */}
-        <button
-          onClick={() => setIsChatOpen(!isChatOpen)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105"
-          title="Chat Accountant"
-        >
-          {isChatOpen ? (
-            <X className="w-6 h-6 text-white" />
-          ) : botAvatar ? (
-            <img
-              src={botAvatar}
-              alt="Bot"
-              className="w-14 h-14 rounded-full object-cover shadow-md"
-              onError={(e) => {
-                (e.target as any).style.display = 'none';
-              }}
-            />
-          ) : (
-            <Bot className="w-6 h-6 text-white" />
-          )}
-        </button>
+        {/* Floating Chat Bubble Widget (Bottom-Right) — hidden when chat is open */}
+        {!isChatOpen && (
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105"
+            title="Chat Accountant"
+          >
+            {botAvatar ? (
+              <img
+                src={botAvatar}
+                alt="Bot"
+                className="w-14 h-14 rounded-full object-cover shadow-md"
+                onError={(e) => {
+                  (e.target as any).style.display = 'none';
+                }}
+              />
+            ) : (
+              <Bot className="w-6 h-6 text-white" />
+            )}
+          </button>
+        )}
 
         {/* Sliding Chat Accountant Drawer Panel (Right Side) */}
         <div
