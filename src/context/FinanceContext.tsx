@@ -480,9 +480,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // 1. Try configured LLM Agent (Gemini or OpenAI)
     try {
       const updatedMessages = [...chatMessages, userMsg];
-      const useOpenAI = settings.aiProvider === 'openai' && !!(settings.openaiApiKey || DEFAULT_OPENAI_KEY)?.trim();
+      const activeOpenAIKey = (settings.openaiApiKey && settings.openaiApiKey.trim().length > 10) ? settings.openaiApiKey.trim() : DEFAULT_OPENAI_KEY;
+      const useOpenAI = settings.aiProvider === 'openai' || !settings.aiProvider || !settings.apiKey;
       const customPrompt = settings.customAIPrompt?.trim() || undefined;
-      const activeOpenAIKey = settings.openaiApiKey || DEFAULT_OPENAI_KEY;
 
       const agentRes = useOpenAI
         ? await processWithOpenAIAgent(text, transactions, aiMemory, activeOpenAIKey, audioBlob, updatedMessages)
