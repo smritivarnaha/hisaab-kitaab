@@ -311,6 +311,15 @@ export function parseSingleInput(input: string, memory: AIMemoryMap = DEFAULT_ME
     isPending = true; // Only mark pending if reason/name is missing!
   }
 
+  // Filter out grammatical filler words, prepositions, or generic text from title
+  const cleanTitleLower = title.toLowerCase().trim();
+  const isFiller = /^(and|but|or|for|to|the|a|an|of|in|on|at|by|with|from|spent|spent rupees|rupees|rupee|rs|inr|cash|upi|today|yesterday|aaj|kal|parso|amount|reason missing|expense|income|others|other)$/i.test(cleanTitleLower);
+  
+  if (isFiller || cleanTitleLower.length <= 1) {
+    title = 'Reason Missing';
+    isPending = true;
+  }
+
   title = autocorrectTitleSpelling(title);
 
   return {
