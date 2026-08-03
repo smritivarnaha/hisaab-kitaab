@@ -7,21 +7,25 @@ function blobToFile(blob: Blob, filename: string): File {
 
 export async function transcribeWithWhisper(audioBlob: Blob, apiKey: string): Promise<string | null> {
   try {
+    // Derive file extension from actual MIME type
+    const mimeType = audioBlob.type || 'audio/webm';
+    const ext = mimeType.includes('mp4') ? 'mp4'
+              : mimeType.includes('ogg') ? 'ogg'
+              : mimeType.includes('wav') ? 'wav'
+              : 'webm';
+
     const formData = new FormData();
-    // Name the file with .wav extension so Whisper knows the format
-    const file = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
+    const file = new File([audioBlob], `recording.${ext}`, { type: mimeType });
     formData.append('file', file);
     formData.append('model', 'whisper-1');
-    // Do NOT set 'language' — let Whisper auto-detect Hindi, English, Hinglish
-    // Add a prompt to guide Whisper toward financial Indian terms
-    formData.append('prompt', 'Indian finance, rupees, UPI, petrol, grocery, salary, Hinglish mixed Hindi English.');
+    // No 'language' param — Whisper auto-detects Hindi/Hinglish/English
+    // Prompt guides Whisper toward Indian financial vocabulary
+    formData.append('prompt', 'Indian finance: rupees, UPI, petrol, grocery, salary, Hinglish.');
     formData.append('response_format', 'text');
 
     const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey.trim()}`
-      },
+      headers: { 'Authorization': `Bearer ${apiKey.trim()}` },
       body: formData
     });
 
@@ -30,14 +34,15 @@ export async function transcribeWithWhisper(audioBlob: Blob, apiKey: string): Pr
       console.warn('Whisper API error:', res.status, errText);
       return null;
     }
-    // When response_format=text, response is plain string
     const text = await res.text();
     return text?.trim() || null;
   } catch (err) {
-    console.warn('Whisper API transcription error:', err);
+    console.warn('Whisper transcription error:', err);
     return null;
   }
 }
+
+
 
 export async function processWithOpenAIAgent(
   userInput: string,
