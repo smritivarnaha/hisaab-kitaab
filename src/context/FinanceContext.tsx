@@ -22,6 +22,7 @@ interface FinanceContextType {
   pendingReviewItems: Transaction[];
   activeClarification: AIClarificationQuestion | null;
   isProcessingAI: boolean;
+  dbStatus: 'loading' | 'ok' | 'error';
   
   // Actions
   addTransaction: (tx: Transaction) => void;
@@ -39,8 +40,9 @@ interface FinanceContextType {
   resetAllData: () => void;
 }
 
+// Only settings and chat messages are stored locally (device-specific preference/history)
+// Transactions live exclusively in Neon DB — shared across all devices
 const STORAGE_KEYS = {
-  TRANSACTIONS: 'hisaab_kitab_transactions',
   MESSAGES: 'hisaab_kitab_chat_messages',
   SETTINGS: 'hisaab_kitab_settings',
 };
@@ -69,62 +71,44 @@ const INITIAL_WELCOME_MESSAGES: ChatMessage[] = [
   }
 ];
 
-const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
-
+// ─── Neon DB API helpers ─────────────────────────────────────────────────────
 const fetchTransactions = async (): Promise<Transaction[] | null> => {
   try {
     const res = await fetch('/api/transactions');
-    if (!res.ok) throw new Error('Failed to fetch transactions');
+    if (!res.ok) throw new Error(`DB fetch failed: ${res.status}`);
     return await res.json();
   } catch (err) {
-    console.warn('Backend database API not available, using local storage:', err);
+    console.warn('Neon DB fetch error:', err);
     return null;
   }
 };
 
 const saveTransactionToDb = async (tx: Transaction) => {
-  try {
-    await fetch('/api/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tx)
-    });
-  } catch (err) {
-    console.error('Failed to save transaction to database:', err);
-  }
+  await fetch('/api/transactions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(tx)
+  });
 };
 
 const saveTransactionsBatchToDb = async (txList: Transaction[]) => {
-  try {
-    await fetch('/api/transactions', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(txList)
-    });
-  } catch (err) {
-    console.error('Failed to save batch to database:', err);
-  }
+  await fetch('/api/transactions', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(txList)
+  });
 };
 
 const deleteTransactionFromDb = async (id: string) => {
-  try {
-    await fetch(`/api/transactions?id=${id}`, {
-      method: 'DELETE'
-    });
-  } catch (err) {
-    console.error('Failed to delete transaction from database:', err);
-  }
+  await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' });
 };
 
+const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
+
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-      return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  // Transactions come exclusively from Neon DB — no localStorage
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [dbStatus, setDbStatus] = useState<'loading' | 'ok' | 'error'>('loading');
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
     try {
@@ -150,20 +134,42 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [activeClarification, setActiveClarification] = useState<AIClarificationQuestion | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
 
-  // Sync with DB on mount
+  // ── Load transactions from Neon on mount ────────────────────────────────────
   useEffect(() => {
-    const loadFromDb = async () => {
+    const load = async () => {
       const dbTx = await fetchTransactions();
-      if (dbTx && dbTx.length > 0) {
+      if (dbTx !== null) {
         setTransactions(dbTx);
+        setDbStatus('ok');
+      } else {
+        setDbStatus('error');
       }
     };
-    loadFromDb();
+    load();
   }, []);
 
+  // ── Real-time polling every 5s — syncs across all family devices ────────────
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
-  }, [transactions]);
+    const interval = setInterval(async () => {
+      const dbTx = await fetchTransactions();
+      if (dbTx !== null) {
+        // Only update if something actually changed (compare by timestamp of first item)
+        setTransactions(prev => {
+          const prevLatest = prev[0]?.timestamp ?? 0;
+          const dbLatest = dbTx[0]?.timestamp ?? 0;
+          const prevCount = prev.length;
+          const dbCount = dbTx.length;
+          if (dbLatest !== prevLatest || dbCount !== prevCount) {
+            return dbTx;
+          }
+          return prev;
+        });
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(chatMessages));
@@ -171,13 +177,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
-    if (settings.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+    document.documentElement.classList.toggle('light', settings.theme !== 'dark');
   }, [settings]);
 
   const addTransaction = (tx: Transaction) => {
@@ -261,15 +262,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     confirmPendingItemsBatch(updatedPending);
   };
 
-  const resetAllData = () => {
-    // Clear state
+  const resetAllData = async () => {
+    // Delete all from Neon DB
+    if (transactions.length > 0) {
+      await fetch('/api/transactions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([]) // send empty batch (no-op, but clears local state)
+      });
+      // Delete each from DB
+      await Promise.all(transactions.map(tx => deleteTransactionFromDb(tx.id)));
+    }
     setTransactions([]);
     setChatMessages(INITIAL_WELCOME_MESSAGES);
-    localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(STORAGE_KEYS.MESSAGES);
-
-    // Async clear DB records
-    transactions.forEach(tx => deleteTransactionFromDb(tx.id));
   };
 
   const processUserInputText = async (text: string, isVoice = false, audioBlob?: Blob) => {
@@ -561,6 +567,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       pendingReviewItems,
       activeClarification,
       isProcessingAI,
+      dbStatus,
       addTransaction,
       addTransactionsBatch,
       updateTransaction,

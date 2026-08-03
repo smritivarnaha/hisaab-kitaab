@@ -1,5 +1,6 @@
 import React from 'react';
-import { Camera, FileText, Settings, Bot, LayoutDashboard } from 'lucide-react';
+import { Camera, FileText, Settings, Bot, LayoutDashboard, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { useFinance } from '../../context/FinanceContext';
 
 interface Props {
   activeTab: 'chat' | 'dashboard';
@@ -16,6 +17,8 @@ export const Header: React.FC<Props> = ({
   onOpenImport,
   onOpenSettings
 }) => {
+  const { dbStatus } = useFinance();
+
   return (
     <header className="px-3 sm:px-5 py-2.5 bg-[#F3F5F1] border-b border-[#E2E8E0] flex items-center justify-between sticky top-0 z-30 font-outfit shadow-2xs">
       {/* Brand Title */}
@@ -24,8 +27,27 @@ export const Header: React.FC<Props> = ({
           ⇥
         </div>
         <div className="leading-tight">
-          <h1 className="font-extrabold text-[#0D2E14] text-base tracking-tight font-outfit flex items-center gap-1">
+          <h1 className="font-extrabold text-[#0D2E14] text-base tracking-tight font-outfit flex items-center gap-1.5">
             HisaabKitab <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-[#93E044] text-[#0D2E14]">AI</span>
+            {/* Live DB sync status dot */}
+            {dbStatus === 'loading' && (
+              <span title="Connecting to database..." className="flex items-center gap-1 text-[9px] font-bold text-amber-500">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span className="hidden sm:inline">syncing</span>
+              </span>
+            )}
+            {dbStatus === 'ok' && (
+              <span title="Live sync active — data shared across all devices" className="flex items-center gap-1 text-[9px] font-bold text-emerald-600">
+                <Wifi className="w-3 h-3" />
+                <span className="hidden sm:inline">live</span>
+              </span>
+            )}
+            {dbStatus === 'error' && (
+              <span title="Database unreachable — check Vercel env vars" className="flex items-center gap-1 text-[9px] font-bold text-red-500">
+                <WifiOff className="w-3 h-3" />
+                <span className="hidden sm:inline">offline</span>
+              </span>
+            )}
           </h1>
         </div>
       </div>
