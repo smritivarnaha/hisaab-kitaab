@@ -37,7 +37,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'GET') {
       const rows = await sql`SELECT * FROM chat_messages ORDER BY timestamp ASC LIMIT 200`;
-      return res.status(200).json(rows);
+      const parsed = rows.map((row: any) => ({
+        ...row,
+        timestamp: Number(row.timestamp)
+      }));
+      return res.status(200).json(parsed);
     }
 
     if (req.method === 'POST') {

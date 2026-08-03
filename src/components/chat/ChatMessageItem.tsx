@@ -9,9 +9,10 @@ interface Props {
 export const ChatMessageItem: React.FC<Props> = ({ message }) => {
   const isUser = message.sender === 'user';
 
-  const formatTime = (ts: number) => {
-    const date = new Date(ts);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (ts: any) => {
+    const numericTs = typeof ts === 'string' ? parseInt(ts, 10) : ts;
+    const date = new Date(numericTs);
+    return isNaN(date.getTime()) ? '' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   // Simple Markdown parser for **bold** and *italics*
