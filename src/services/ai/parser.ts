@@ -344,23 +344,24 @@ export function parseSingleInput(input: string, memory: AIMemoryMap = DEFAULT_ME
   };
 }
 
-export function parseMultiInput(input: string, memory: AIMemoryMap = DEFAULT_MEMORY): Transaction[] {
-  const text = input.trim();
-  if (!text) return [];
+export function parseMultiInput(text: string, memory: AIMemoryMap = DEFAULT_MEMORY): Transaction[] {
+  if (!text || !text.trim()) return [];
 
-  let lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  // Split by newlines, commas, 'and', 'fir', 'then'
+  let parts = text.split(/\n+|,|\b(?:and|fir|then|and then|after that|\.)\b/i).map(l => l.trim()).filter(Boolean);
 
-  if (lines.length === 1) {
-    if (/\b(?:fir|then|and then|after that|\.)\b/i.test(text)) {
-      lines = text.split(/\b(?:fir|then|and then|after that|\.)\b/i).map(l => l.trim()).filter(Boolean);
+  // If still a single combined line, extract distinct quantity-name or name-quantity pairs e.g. "30 banana 50 aloo 30 kismis 50 for adrak 80 apple"
+  if (parts.length === 1) {
+    const multiMatches = text.match(/(?:(?:\d+(?:\.\d+)?\s*(?:rs|rupees|k)?\s*(?:for\s+)?[\w\s]+)|(?:[\w\s]+\s*\d+(?:\.\d+)?\s*(?:rs|rupees|k)?))/gi);
+    if (multiMatches && multiMatches.length > 1) {
+      parts = multiMatches.map(p => p.trim()).filter(Boolean);
     }
   }
 
   const results: Transaction[] = [];
-
-  for (const line of lines) {
-    if (!line) continue;
-    const tx = parseSingleInput(line, memory);
+  for (const part of parts) {
+    if (!part) continue;
+    const tx = parseSingleInput(part, memory);
     if (tx.amount > 0) {
       results.push(tx);
     }

@@ -111,6 +111,14 @@ Return ONLY a valid JSON object matching this schema:
 }
 
 CRITICAL RULES:
+0. MULTI-ITEM EXTRACTION RULE:
+   - When the user lists multiple items or expenses in a single message or voice note (for example: 30 banana, 50 aloo, 30 kismis, 50 for adrak, 80 apple or 200 petrol, 150 swiggy, 50 milk), you MUST extract EVERY SINGLE ITEM as a DISTINCT, SEPARATE object inside the transactionsToCreate array!
+   - Do NOT merge them into one single item or calculate a single sum!
+   - Create item 1: title Banana, amount 30, category Grocery
+   - Create item 2: title Aloo, amount 50, category Grocery
+   - Create item 3: title Kismis, amount 30, category Grocery
+   - Create item 4: title Adrak, amount 50, category Grocery
+   - Create item 5: title Apple, amount 80, category Grocery
 1. LOGGING vs QUERYING:
    - Set action='CREATE_TRANSACTIONS' ONLY when the user is reporting a NEW transaction that just happened.
    - If the user asks a question, requests summaries, or asks about balances/history, set action='GENERAL_RESPONSE' and answer from the transactions list. NEVER create a new transaction for a question!
