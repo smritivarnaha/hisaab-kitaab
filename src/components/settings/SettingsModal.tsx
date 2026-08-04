@@ -209,7 +209,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
 
                 <div className="pt-1">
                   <a
-                    href="https://github.com/smritivarnaha/hisaab-kitaab/releases/download/v1.0.0/app-debug.apk"
+                    href="https://github.com/smritivarnaha/hisaab-kitaab/releases/download/v1.0.0/HisaabKitab.apk"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full py-3 px-4 bg-[#93E044] hover:bg-[#82cb3b] text-[#0D2E14] font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 text-center"

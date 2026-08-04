@@ -42,12 +42,13 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/HisaabKitab.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: HisaabKitab-Android-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/HisaabKitab.apk
           if-no-files-found: error
 
       - name: Publish Public Direct APK Release
@@ -56,6 +57,8 @@ jobs:
           tag_name: v1.0.0
           name: Hisaab Kitab Android App v1.0.0
           body: "Direct 1-click download link for Hisaab Kitab Android APK."
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: |
+            android/app/build/outputs/apk/debug/HisaabKitab.apk
+            android/app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
