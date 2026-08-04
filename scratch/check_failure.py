@@ -1,8 +1,10 @@
 import urllib.request
 import json
+import sys
 
+run_id = sys.argv[1] if len(sys.argv) > 1 else "30932330950"
 try:
-    url = "https://api.github.com/repos/smritivarnaha/hisaab-kitaab/actions/runs/30931089340/jobs"
+    url = f"https://api.github.com/repos/smritivarnaha/hisaab-kitaab/actions/runs/{run_id}/jobs"
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     with urllib.request.urlopen(req) as response:
         data = json.loads(response.read().decode())
