@@ -52,13 +52,8 @@ jobs:
           if-no-files-found: error
 
       - name: Publish Public Direct APK Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v1.0.0
-          name: Hisaab Kitab Android App v1.0.0
-          body: "Direct 1-click download link for Hisaab Kitab Android APK."
-          files: |
-            android/app/build/outputs/apk/debug/HisaabKitab.apk
-            android/app/build/outputs/apk/debug/app-debug.apk
+        run: |
+          gh release delete v1.0.0 --yes || true
+          gh release create v1.0.0 android/app/build/outputs/apk/debug/HisaabKitab.apk android/app/build/outputs/apk/debug/app-debug.apk --title "Hisaab Kitab Android App v1.0.0" --notes "Direct 1-click single APK file download."
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
