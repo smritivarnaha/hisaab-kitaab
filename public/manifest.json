@@ -1,0 +1,25 @@
+{
+  "short_name": "Hisaab Kitab",
+  "name": "Hisaab Kitab AI - Personal Finance",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0D2E14",
+  "theme_color": "#0D2E14",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "description": "AI-Powered Smart Personal Finance Accountant & Passbook"
+}
