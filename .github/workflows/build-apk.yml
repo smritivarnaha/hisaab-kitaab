@@ -38,13 +38,13 @@ jobs:
 
       - name: Sync Capacitor Android Assets
         run: |
-          npx cap sync android --verbose
+          npx cap sync android --verbose > sync_log.txt 2>&1 || (cat sync_log.txt && exit 1)
 
       - name: Build Debug Android APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon > gradle_log.txt 2>&1 || (cat gradle_log.txt && exit 1)
           cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/HisaabKitab.apk
 
       - name: Upload APK Artifact
