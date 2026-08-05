@@ -19,11 +19,15 @@ async function ensureTable(sql: ReturnType<typeof neon>) {
       "timestamp" BIGINT NOT NULL,
       "isVoice" BOOLEAN DEFAULT FALSE,
       "audioLevel" NUMERIC,
-      "userId" TEXT NOT NULL DEFAULT 'nandini'
+      "userId" TEXT NOT NULL DEFAULT 'nandini',
+      "mode" TEXT DEFAULT 'personal',
+      "senderName" TEXT
     )
   `;
   try {
     await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
+    await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "mode" TEXT DEFAULT 'personal'`;
+    await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "senderName" TEXT`;
   } catch {}
 }
 
@@ -49,7 +53,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
       const parsed = rows.map((row: any) => ({
         ...row,
-        timestamp: Number(row.timestamp)
+        timestamp: Number(row.timestamp),
+        mode: row.mode || 'personal',
+        senderName: row.senderName || null
       }));
       return res.status(200).json(parsed);
     }
@@ -61,9 +67,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!m?.id) return Promise.resolve();
         const msgUserId = m.userId || userId;
         return sql`
-          INSERT INTO chat_messages ("id","sender","text","timestamp","isVoice","audioLevel","userId")
-          VALUES (${m.id}, ${m.sender}, ${m.text}, ${m.timestamp}, ${m.isVoice || false}, ${m.audioLevel || null}, ${msgUserId})
-          ON CONFLICT ("id") DO UPDATE SET "text" = EXCLUDED."text"
+          INSERT INTO chat_messages ("id","sender","text","timestamp","isVoice","audioLevel","userId","mode","senderName")
+          VALUES (${m.id}, ${m.sender}, ${m.text}, ${m.timestamp}, ${m.isVoice || false}, ${m.audioLevel || null}, ${msgUserId}, ${m.mode || 'personal'}, ${m.senderName || null})
+          ON CONFLICT ("id") DO UPDATE SET "text" = EXCLUDED."text", "mode" = EXCLUDED."mode", "senderName" = EXCLUDED."senderName"
         `;
       }));
       return res.status(200).json({ success: true });

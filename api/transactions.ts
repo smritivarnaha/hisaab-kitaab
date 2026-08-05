@@ -32,13 +32,17 @@ async function ensureTableExists(sql: ReturnType<typeof neon>) {
       "notes" TEXT,
       "isPending" BOOLEAN NOT NULL DEFAULT FALSE,
       "person" TEXT,
-      "userId" TEXT NOT NULL DEFAULT 'nandini'
+      "userId" TEXT NOT NULL DEFAULT 'nandini',
+      "mode" TEXT DEFAULT 'personal',
+      "enteredBy" TEXT
     )
   `;
   try {
     await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "isPending" BOOLEAN NOT NULL DEFAULT FALSE`;
     await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "person" TEXT`;
     await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
+    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "mode" TEXT DEFAULT 'personal'`;
+    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "enteredBy" TEXT`;
   } catch (err) {
     console.warn("Alter table error:", err);
   }
@@ -72,7 +76,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         amount: Number(row.amount),
         confidenceScore: row.confidenceScore != null ? Number(row.confidenceScore) : null,
         timestamp: Number(row.timestamp),
-        isPending: Boolean(row.isPending)
+        isPending: Boolean(row.isPending),
+        mode: row.mode || 'personal',
+        enteredBy: row.enteredBy || null
       }));
       return res.status(200).json(parsed);
     }
@@ -88,14 +94,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         INSERT INTO transactions (
           "id","amount","currency","type","category","title","merchant",
           "paymentMethod","date","relativeDateText","timestamp","confidenceScore",
-          "rawInput","shortDisplayTitle","notes","isPending","person","userId"
+          "rawInput","shortDisplayTitle","notes","isPending","person","userId","mode","enteredBy"
         ) VALUES (
           ${body.id}, ${body.amount}, ${body.currency || '₹'}, ${body.type},
           ${body.category}, ${body.title}, ${body.merchant || null},
           ${body.paymentMethod || 'UPI'}, ${body.date}, ${body.relativeDateText || null},
           ${body.timestamp}, ${body.confidenceScore || null}, ${body.rawInput || null},
           ${body.shortDisplayTitle || null}, ${body.notes || null},
-          ${body.isPending || false}, ${body.person || null}, ${txUserId}
+          ${body.isPending || false}, ${body.person || null}, ${txUserId}, ${body.mode || 'personal'}, ${body.enteredBy || null}
         )
         ON CONFLICT ("id") DO UPDATE SET
           "amount" = EXCLUDED."amount",
@@ -114,7 +120,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           "notes" = EXCLUDED."notes",
           "isPending" = EXCLUDED."isPending",
           "person" = EXCLUDED."person",
-          "userId" = EXCLUDED."userId"
+          "userId" = EXCLUDED."userId",
+          "mode" = EXCLUDED."mode",
+          "enteredBy" = EXCLUDED."enteredBy"
       `;
       return res.status(200).json({ success: true, id: body.id });
     }
@@ -131,14 +139,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           INSERT INTO transactions (
             "id","amount","currency","type","category","title","merchant",
             "paymentMethod","date","relativeDateText","timestamp","confidenceScore",
-            "rawInput","shortDisplayTitle","notes","isPending","person","userId"
+            "rawInput","shortDisplayTitle","notes","isPending","person","userId","mode","enteredBy"
           ) VALUES (
             ${body.id}, ${body.amount}, ${body.currency || '₹'}, ${body.type},
             ${body.category}, ${body.title}, ${body.merchant || null},
             ${body.paymentMethod || 'UPI'}, ${body.date}, ${body.relativeDateText || null},
             ${body.timestamp}, ${body.confidenceScore || null}, ${body.rawInput || null},
             ${body.shortDisplayTitle || null}, ${body.notes || null},
-            ${body.isPending || false}, ${body.person || null}, ${txUserId}
+            ${body.isPending || false}, ${body.person || null}, ${txUserId}, ${body.mode || 'personal'}, ${body.enteredBy || null}
           )
           ON CONFLICT ("id") DO UPDATE SET
             "amount" = EXCLUDED."amount",
@@ -147,7 +155,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             "title" = EXCLUDED."title",
             "timestamp" = EXCLUDED."timestamp",
             "isPending" = EXCLUDED."isPending",
-            "userId" = EXCLUDED."userId"
+            "userId" = EXCLUDED."userId",
+            "mode" = EXCLUDED."mode",
+            "enteredBy" = EXCLUDED."enteredBy"
         `;
       }));
       return res.status(200).json({ success: true, count: list.length });
