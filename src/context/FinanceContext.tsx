@@ -602,14 +602,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // 1. Try configured LLM Agent (Gemini or OpenAI)
     try {
-      const updatedMessages = [...chatMessages, userMsg];
+      const modeFilteredTx = transactions.filter(t => !t.isPending && (accountMode === 'business' ? t.mode === 'business' : t.mode !== 'business'));
       const activeOpenAIKey = getActiveOpenAIKey(settings.openaiApiKey);
       const useOpenAI = settings.aiProvider === 'openai' || !settings.aiProvider || !settings.apiKey;
       const customPrompt = settings.customAIPrompt?.trim() || undefined;
 
       const agentRes = useOpenAI
-        ? await processWithOpenAIAgent(text, transactions, aiMemory, activeOpenAIKey, audioBlob, updatedMessages)
-        : await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey, audioBlob, updatedMessages, customPrompt);
+        ? await processWithOpenAIAgent(text, modeFilteredTx, aiMemory, activeOpenAIKey, audioBlob, [...filteredChatMessages, userMsg])
+        : await processWithGeminiAgent(text, modeFilteredTx, aiMemory, settings.apiKey, audioBlob, [...filteredChatMessages, userMsg], customPrompt);
 
       const isConnectionError = 
         agentRes?.responseText?.includes('Connection Error') || 
