@@ -6,6 +6,7 @@ import { DashboardOverview } from './components/dashboard/DashboardOverview';
 import { ReceiptScannerModal } from './components/ocr/ReceiptScannerModal';
 import { StatementImporterModal } from './components/import/StatementImporterModal';
 import { SettingsModal } from './components/settings/SettingsModal';
+import { ExportDataModal } from './components/common/ExportDataModal';
 import { LoginPage } from './components/auth/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { X, Bot, Calculator } from 'lucide-react';
@@ -20,11 +21,12 @@ const ACCENT_COLORS = {
 };
 
 export const AppContent: React.FC = () => {
-  const { settings, currentUser, login } = useFinance();
+  const { settings, currentUser, login, transactions } = useFinance();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOCROpen, setIsOCROpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
   const [botAvatarError, setBotAvatarError] = useState(false);
 
   useEffect(() => {
@@ -56,6 +58,7 @@ export const AppContent: React.FC = () => {
         {/* Top Header Navbar */}
         <Header
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenExport={() => setIsExportOpen(true)}
         />
 
         {/* Main View Area — Dashboard by default */}
@@ -131,6 +134,13 @@ export const AppContent: React.FC = () => {
         {isSettingsOpen && (
           <SettingsModal onClose={() => setIsSettingsOpen(false)} />
         )}
+
+        {/* Export Data Modal */}
+        <ExportDataModal
+          isOpen={isExportOpen}
+          onClose={() => setIsExportOpen(false)}
+          transactions={transactions}
+        />
       </div>
     </div>
   );

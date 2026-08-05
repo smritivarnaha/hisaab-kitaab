@@ -1,13 +1,15 @@
 import React from 'react';
-import { Camera, FileText, Settings, Wifi, WifiOff, Loader2, LogOut, User } from 'lucide-react';
+import { Camera, FileText, Settings, Wifi, WifiOff, Loader2, LogOut, User, FileSpreadsheet } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 
 interface Props {
   onOpenSettings: () => void;
+  onOpenExport?: () => void;
 }
 
 export const Header: React.FC<Props> = ({
-  onOpenSettings
+  onOpenSettings,
+  onOpenExport
 }) => {
   const { dbStatus, currentUser, logout } = useFinance();
 
@@ -38,6 +40,17 @@ export const Header: React.FC<Props> = ({
 
       {/* Top Action Controls */}
       <div className="flex items-center gap-1.5">
+        {/* Export Data Symbol Button */}
+        {onOpenExport && (
+          <button
+            onClick={onOpenExport}
+            title="Export Data to Excel Sheet"
+            className="w-8 h-8 rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xs active:scale-95 hover:bg-emerald-900 transition-all"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+          </button>
+        )}
+
         <button
           onClick={onOpenSettings}
           title="Settings"
