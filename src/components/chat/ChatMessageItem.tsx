@@ -103,7 +103,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
             className="flex-1 py-1.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1 shadow-2xs active:scale-95 transition-all"
           >
             <Check className="w-3.5 h-3.5" />
-            <span>Confirm & Add to Passbook</span>
+            <span>Confirm & Add</span>
           </button>
           <button
             onClick={handleDiscard}
@@ -223,7 +223,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
           className="w-full py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all mt-2"
         >
           <Check className="w-4 h-4" />
-          <span>Confirm All & Add to Passbook</span>
+          <span>Confirm & Add</span>
         </button>
       </div>
     </div>
