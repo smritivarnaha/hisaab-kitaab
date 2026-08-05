@@ -3,7 +3,7 @@ import { Transaction } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
 import { speechService } from '../../services/voice/speechRecognition';
 import { formatGlobalDate } from '../../utils/dateUtils';
-import { CheckCircle2, Clock, Mic, Send, Sparkles, Check, Edit2 } from 'lucide-react';
+import { CheckCircle2, Clock, Mic, Send, Sparkles, Check, Edit2, Trash2 } from 'lucide-react';
 import { TransactionEditModal } from '../common/TransactionEditModal';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
 }
 
 export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
-  const { updateTransaction, confirmPendingItemsBatch } = useFinance();
+  const { updateTransaction, deleteTransaction, confirmPendingItemsBatch } = useFinance();
   const [batchVoiceText, setBatchVoiceText] = useState('');
   const [rowInputs, setRowInputs] = useState<Record<string, string>>({});
   const [isListening, setIsListening] = useState(false);
@@ -296,6 +296,15 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
                 >
                   <Check className="w-3 h-3 text-white" />
                   <span>Save</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => deleteTransaction(item.id)}
+                  className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all active:scale-95 flex-shrink-0"
+                  title="Discard / Delete pending entry"
+                >
+                  <Trash2 className="w-3 h-3" />
                 </button>
               </div>
 

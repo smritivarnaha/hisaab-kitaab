@@ -8,7 +8,7 @@ import { CategoryIcon } from '../common/CategoryIcon';
 import { PaymentMethodIcon } from '../common/PaymentMethodIcon';
 import { AnalyticsPanel } from './AnalyticsPanel';
 import { TransactionEditModal } from '../common/TransactionEditModal';
-import { formatGlobalDate } from '../../utils/dateUtils';
+import { formatGlobalDate, sortTransactionsLatestFirst } from '../../utils/dateUtils';
 import { 
   Search, 
   ArrowUpRight,
@@ -16,7 +16,7 @@ import {
   BarChart3,
   History,
   User,
-  Edit2
+  ChevronRight
 } from 'lucide-react';
 
 export const DashboardOverview: React.FC = () => {
@@ -39,8 +39,8 @@ export const DashboardOverview: React.FC = () => {
 
   const periodRange = getCurrentPeriodRange();
 
-  // Only show finalized (non-pending) transactions in Passbook History
-  const finalizedTransactions = transactions.filter(t => !t.isPending);
+  // Only show finalized (non-pending) transactions in Passbook History, sorted by latest date entries first
+  const finalizedTransactions = sortTransactionsLatestFirst(transactions.filter(t => !t.isPending));
 
   const totalExpense = finalizedTransactions
     .filter(t => t.type === 'expense')
@@ -273,7 +273,6 @@ export const DashboardOverview: React.FC = () => {
                               <h4 className="text-xs font-bold text-[#0D2E14] font-outfit leading-tight truncate group-hover:text-emerald-900">
                                 {tx.title || tx.category} {tx.person ? `(${tx.person})` : ''}
                               </h4>
-                              <Edit2 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                               {hasSpecialNotes && (
                                 <button
                                   onClick={(e) => {
@@ -296,16 +295,18 @@ export const DashboardOverview: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Right: Amount */}
-                        <div className="text-right flex-shrink-0">
-                          <span
-                            className={`text-xs sm:text-sm font-bold font-outfit block ${
-                              isCredit ? 'text-green-700' : 'text-[#D93025]'
-                            }`}
-                          >
-                            {isCredit ? '+' : '-'}₹{Number(tx.amount || 0).toLocaleString('en-IN')}
-                          </span>
-                          <span className="text-[9px] text-gray-400 group-hover:text-emerald-700 font-medium transition-colors">Click to edit</span>
+                        {/* Right: Amount + Faded PhonePe-style Chevron Arrow */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="text-right">
+                            <span
+                              className={`text-xs sm:text-sm font-bold font-outfit block ${
+                                isCredit ? 'text-green-700' : 'text-[#D93025]'
+                              }`}
+                            >
+                              {isCredit ? '+' : '-'}₹{Number(tx.amount || 0).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#0D2E14] transition-colors flex-shrink-0" />
                         </div>
                       </div>
 

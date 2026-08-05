@@ -43,3 +43,21 @@ function formatDateToCustom(d: Date): string {
   const year = String(d.getFullYear()).slice(-2); // "26"
   return `${day} ${month} ${year}`;
 }
+
+export function sortTransactionsLatestFirst<T extends { date?: string; timestamp?: number }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const getTime = (item: T) => {
+      if (item.date) {
+        const parts = item.date.split('T')[0].split('-');
+        if (parts.length === 3) {
+          return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)).getTime();
+        }
+      }
+      return item.timestamp || 0;
+    };
+    const timeA = getTime(a);
+    const timeB = getTime(b);
+    if (timeA !== timeB) return timeB - timeA;
+    return (b.timestamp || 0) - (a.timestamp || 0);
+  });
+}
