@@ -55,23 +55,35 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
         <span className="text-[9px] text-gray-500 font-semibold flex-shrink-0">{formatGlobalDate(item.date || item.timestamp)}</span>
       </div>
 
-      <div className="space-y-2">
-        {/* Compact Entry Type Dropdown */}
-        <div>
-          <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Entry Type</label>
-          <select
-            value={type}
-            onChange={e => setType(e.target.value as Transaction['type'])}
-            className={`w-full text-xs font-bold rounded-lg p-2 outline-none border cursor-pointer ${getTypeStyle(type)}`}
-          >
-            <option value="expense">Spent 🔴</option>
-            <option value="income">Income 🟢</option>
-            <option value="lent">Lent 🤝</option>
-            <option value="borrowed">Borrowed 🤝</option>
-          </select>
+      <div className="space-y-2.5">
+        {/* Row 1: 2-Column Row with Entry Type Dropdown (Left) & Amount (Right) */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Entry Type</label>
+            <select
+              value={type}
+              onChange={e => setType(e.target.value as Transaction['type'])}
+              className={`w-full text-xs font-bold rounded-lg p-2 outline-none border cursor-pointer ${getTypeStyle(type)}`}
+            >
+              <option value="expense">Spent 🔴</option>
+              <option value="income">Income 🟢</option>
+              <option value="lent">Lent 🤝</option>
+              <option value="borrowed">Borrowed 🤝</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Amount (₹)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-emerald-700 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all text-right"
+            />
+          </div>
         </div>
 
-        {/* Editable Title Input */}
+        {/* Row 2: Editable Title Input */}
         <div>
           <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Title</label>
           <input
@@ -83,7 +95,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
           />
         </div>
 
-        {/* Optional Notes / Remark Input */}
+        {/* Row 3: Optional Notes / Remark Input */}
         <div>
           <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Notes / Remark (Optional)</label>
           <input
@@ -95,18 +107,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
           />
         </div>
 
-        {/* Editable Amount Input */}
-        <div>
-          <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Amount (₹)</label>
-          <input
-            type="number"
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-emerald-700 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
-          />
-        </div>
-
-        {/* Confirm & Discard Action Buttons */}
+        {/* Row 4: Confirm & Discard Action Buttons */}
         <div className="flex gap-2 pt-1">
           <button
             onClick={handleConfirm}
@@ -410,8 +411,8 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
       )}
 
       {/* Bubble Container */}
-      <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[75%]`}>
-        <div className={`font-outfit shadow-2xs ${fontSizeClass} ${sizeClasses.bubble} ${bubbleStyleClass}`}>
+      <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[90%] sm:max-w-[80%] min-w-0`}>
+        <div className={`font-outfit shadow-2xs ${fontSizeClass} ${sizeClasses.bubble} ${bubbleStyleClass} w-full max-w-full overflow-hidden`}>
           {renderFormattedText(message.text)}
 
           {/* Inline Confirmation Editor Card */}
