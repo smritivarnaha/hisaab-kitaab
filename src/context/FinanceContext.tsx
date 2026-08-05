@@ -432,7 +432,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setChatMessages(prev => [...prev, userMsg]);
     saveMessageToDb(userMsg, activeUserId);
 
-    const applyAgentToolAction = (agentRes: any) => {
+    const applyAgentToolAction = (agentRes: any): Transaction[] => {
       if (agentRes.action === 'CREATE_TRANSACTIONS' && agentRes.transactionsToCreate?.length) {
         const newTxList: Transaction[] = agentRes.transactionsToCreate.map((t: any, idx: number) => ({
           id: `tx_${Date.now()}_${idx}`,
@@ -454,6 +454,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         addTransactionsBatch(newTxList);
         setPendingReviewItems(prev => [...prev, ...newTxList]);
+        return newTxList;
       } else if (agentRes.action === 'DELETE_TRANSACTION' && agentRes.transactionIdToDelete) {
         deleteTransaction(agentRes.transactionIdToDelete);
       } else if (agentRes.action === 'UPDATE_TRANSACTION' && agentRes.transactionToUpdate?.id) {
@@ -475,6 +476,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setAiMemory(getAIMemory());
         saveMemoryToDb(getAIMemory(), activeUserId);
       }
+      return [];
     };
 
     // 1. Try configured LLM Agent (Gemini or OpenAI)
@@ -494,13 +496,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         agentRes?.responseText?.includes('Service Notice');
 
       if (agentRes && !isConnectionError) {
-        applyAgentToolAction(agentRes);
+        const createdItems = applyAgentToolAction(agentRes);
 
         const aiMsg: ChatMessage = {
           id: `msg_ai_${Date.now()}`,
           sender: 'assistant',
           text: agentRes.responseText,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          pendingReviewItems: createdItems.length ? createdItems : undefined
         };
         setChatMessages(prev => [...prev, aiMsg]);
         saveMessageToDb(aiMsg, activeUserId);
