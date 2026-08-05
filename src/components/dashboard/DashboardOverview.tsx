@@ -135,7 +135,7 @@ export const DashboardOverview: React.FC = () => {
             </div>
           </div>
 
-          {/* Single White Card Container: 4 Horizontal Rows with Vertical Divider Line & Unbolded Large Numbers */}
+          {/* Single White Card Container: 4 Horizontal Rows with Vertical Divider Line & Bold Numbers */}
           <div className="pt-2 sm:pt-3 border-t border-gray-800/80">
             <div className="bg-white text-[#0D2E14] p-3.5 sm:p-4 rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100">
               {/* 1. Income Row */}
@@ -145,9 +145,9 @@ export const DashboardOverview: React.FC = () => {
                 </div>
                 <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-20 h-6 bg-gray-200 animate-pulse rounded-md"></span>
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-medium text-green-700 text-base sm:text-lg tracking-tight">₹{totalIncome.toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-green-700 text-sm sm:text-base tracking-tight">₹{totalIncome.toLocaleString('en-IN')}</span>
                   )}
                 </div>
               </div>
@@ -159,9 +159,9 @@ export const DashboardOverview: React.FC = () => {
                 </div>
                 <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-20 h-6 bg-gray-200 animate-pulse rounded-md"></span>
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-medium text-[#D93025] text-base sm:text-lg tracking-tight">₹{totalExpense.toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-[#D93025] text-sm sm:text-base tracking-tight">₹{totalExpense.toLocaleString('en-IN')}</span>
                   )}
                 </div>
               </div>
@@ -173,9 +173,9 @@ export const DashboardOverview: React.FC = () => {
                 </div>
                 <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-20 h-6 bg-gray-200 animate-pulse rounded-md"></span>
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-medium text-amber-700 text-base sm:text-lg tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-amber-700 text-sm sm:text-base tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
                   )}
                 </div>
               </div>
@@ -187,9 +187,9 @@ export const DashboardOverview: React.FC = () => {
                 </div>
                 <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-20 h-6 bg-gray-200 animate-pulse rounded-md"></span>
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-medium text-[#0D2E14] text-base sm:text-lg tracking-tight">
+                    <span className="font-bold text-[#0D2E14] text-sm sm:text-base tracking-tight">
                       {currentBalance >= 0 ? '+ ' : '- '}₹{Math.abs(currentBalance).toLocaleString('en-IN')}
                     </span>
                   )}
@@ -334,7 +334,7 @@ export const DashboardOverview: React.FC = () => {
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <div className="text-right">
                             <span
-                              className={`text-base sm:text-lg font-medium font-outfit block ${
+                              className={`text-lg sm:text-xl font-bold font-outfit block ${
                                 isCredit ? 'text-green-700' : 'text-[#D93025]'
                               }`}
                             >
