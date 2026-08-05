@@ -78,7 +78,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
               type="number"
               value={amount}
               onChange={e => setAmount(e.target.value)}
-              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-emerald-700 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all text-right"
+              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-emerald-700 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all text-center"
             />
           </div>
         </div>
@@ -171,7 +171,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
   if (isConfirmed || drafts.length === 0) return null;
 
   return (
-    <div className="mt-2.5 p-3 bg-white rounded-2xl border border-amber-200/90 shadow-xs space-y-3 text-left text-gray-900 font-outfit animate-fadeIn max-w-full">
+    <div className="mt-2.5 p-3 bg-white rounded-2xl border border-amber-200/90 shadow-xs space-y-3 text-left text-gray-900 font-outfit animate-fadeIn max-w-full overflow-hidden">
       {/* Clean Header */}
       <div className="flex items-center justify-between border-b border-amber-100 pb-2">
         <span className="text-xs font-extrabold text-amber-800 flex items-center gap-1.5">
@@ -182,16 +182,19 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
       {/* Itemized Stacked Cards (Spacious, Fully Responsive Everywhere) */}
       <div className="space-y-2.5">
         {drafts.map((row, idx) => (
-          <div key={row.id} className="p-2.5 bg-slate-50 border border-gray-200/90 rounded-xl space-y-2">
-            {/* Top Bar: #1 • Type Dropdown • Amount • Trash */}
-            <div className="flex items-center gap-1.5 justify-between">
-              <span className="text-[10px] font-black text-gray-400 w-5">#{idx + 1}</span>
+          <div key={row.id} className="p-2.5 bg-slate-50 border border-gray-200/90 rounded-xl space-y-2 overflow-hidden">
+            {/* Top Bar: #1 badge • Type Select • Amount (Centered) • Trash */}
+            <div className="flex items-center gap-1.5 justify-between w-full min-w-0">
+              {/* Darker Numbering Badge */}
+              <span className="text-[11px] font-black text-slate-800 bg-slate-200/80 px-1.5 py-0.5 rounded-md flex-shrink-0">
+                #{idx + 1}
+              </span>
 
               {/* Type Select Dropdown */}
               <select
                 value={row.type || 'expense'}
                 onChange={e => handleUpdate(row.id, 'type', e.target.value)}
-                className={`text-[10px] font-extrabold rounded-lg px-2 py-1 outline-none border cursor-pointer ${getTypeStyle(row.type || 'expense')}`}
+                className={`text-[10px] font-extrabold rounded-lg px-1.5 py-1 outline-none border cursor-pointer flex-1 min-w-0 max-w-[105px] ${getTypeStyle(row.type || 'expense')}`}
               >
                 <option value="expense">Spent 🔴</option>
                 <option value="income">Income 🟢</option>
@@ -199,25 +202,25 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
                 <option value="borrowed">Borrowed 🤝</option>
               </select>
 
-              {/* Amount Input */}
-              <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-0.5 ml-auto">
-                <span className="text-xs font-bold text-gray-400">₹</span>
+              {/* Amount Input Box (Centered Text) */}
+              <div className="flex items-center justify-center gap-0.5 bg-white border border-gray-200 rounded-lg px-1.5 py-0.5 flex-1 min-w-0 max-w-[90px]">
+                <span className="text-xs font-bold text-gray-400 flex-shrink-0">₹</span>
                 <input
                   type="number"
                   value={row.amount}
                   onChange={e => handleUpdate(row.id, 'amount', e.target.value)}
                   placeholder="0"
-                  className="w-16 sm:w-20 text-xs font-black text-emerald-700 outline-none text-right"
+                  className="w-full text-xs font-black text-emerald-700 outline-none text-center bg-transparent"
                 />
               </div>
 
               {/* Delete Button */}
               <button
                 onClick={() => handleDeleteRow(row.id)}
-                className="p-1.5 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 flex-shrink-0 transition-colors"
+                className="p-1.5 text-red-500 hover:text-red-700 rounded-lg hover:bg-red-50 flex-shrink-0 transition-colors"
                 title="Remove entry"
               >
-                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                <Trash2 className="w-4 h-4 text-red-500" />
               </button>
             </div>
 
