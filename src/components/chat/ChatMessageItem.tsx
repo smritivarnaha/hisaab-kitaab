@@ -16,7 +16,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
   const [isConfirmed, setIsConfirmed] = useState(!item.isPending);
   const [isDiscarded, setIsDiscarded] = useState(false);
 
-  if (isDiscarded) return null;
+  if (isDiscarded || isConfirmed || !item.isPending) return null;
 
   const handleConfirm = () => {
     updateTransaction(item.id, {
@@ -33,8 +33,8 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
   };
 
   return (
-    <div className="mt-2.5 p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit">
-      {/* Clean Un-congested Header */}
+    <div className="mt-2.5 p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit animate-fadeIn">
+      {/* Clean Header */}
       <div className="flex items-center justify-between gap-2 border-b border-amber-100 pb-1.5">
         <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
           ✏️ Verify & Edit Entry
@@ -42,54 +42,47 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
         <span className="text-[9px] text-gray-500 font-semibold flex-shrink-0">{formatGlobalDate(item.date || item.timestamp)}</span>
       </div>
 
-      {!isConfirmed ? (
-        <div className="space-y-2">
-          {/* Editable Description Input */}
-          <div>
-            <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Title / Spelling</label>
-            <input
-              type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="Edit title or correct spelling..."
-              className="w-full bg-slate-50 border border-gray-200 text-xs font-semibold text-gray-900 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
-            />
-          </div>
-
-          {/* Editable Amount Input */}
-          <div>
-            <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Amount (₹)</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-emerald-700 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
-            />
-          </div>
-
-          {/* Confirm & Discard Action Buttons */}
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleConfirm}
-              className="flex-1 py-1.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1 shadow-2xs active:scale-95 transition-all"
-            >
-              <Check className="w-3.5 h-3.5" />
-              <span>Yes, Confirm & Add to Passbook</span>
-            </button>
-            <button
-              onClick={handleDiscard}
-              className="py-1.5 px-2.5 border border-gray-200 text-gray-500 hover:text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors"
-            >
-              Discard
-            </button>
-          </div>
+      <div className="space-y-2">
+        {/* Editable Description Input */}
+        <div>
+          <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Title / Spelling</label>
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Edit title or correct spelling..."
+            className="w-full bg-slate-50 border border-gray-200 text-xs font-semibold text-gray-900 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
+          />
         </div>
-      ) : (
-        <div className="p-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <span>Confirmed & Added to Passbook!</span>
+
+        {/* Editable Amount Input */}
+        <div>
+          <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Amount (₹)</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-emerald-700 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
+          />
         </div>
-      )}
+
+        {/* Confirm & Discard Action Buttons */}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={handleConfirm}
+            className="flex-1 py-1.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1 shadow-2xs active:scale-95 transition-all"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Confirm & Add to Passbook</span>
+          </button>
+          <button
+            onClick={handleDiscard}
+            className="py-1.5 px-2.5 border border-gray-200 text-gray-500 hover:text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors"
+          >
+            Discard
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -119,79 +112,72 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
     setIsConfirmed(true);
   };
 
-  if (drafts.length === 0) return null;
+  if (isConfirmed || drafts.length === 0) return null;
 
   return (
-    <div className="mt-2.5 p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit">
+    <div className="mt-2.5 p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit animate-fadeIn">
       <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
         <span className="text-xs font-bold text-amber-800 flex items-center gap-1">
           ✏️ Verify All {drafts.length} Entries Below
         </span>
       </div>
 
-      {!isConfirmed ? (
-        <div className="space-y-2">
-          {/* Tabular Table Form */}
-          <div className="overflow-x-auto border border-gray-200 rounded-lg bg-slate-50">
-            <table className="w-full text-left text-[11px] border-collapse">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-100/80 text-[8px] sm:text-[9px] uppercase font-bold text-gray-500">
-                  <th className="p-1 w-4 text-center">#</th>
-                  <th className="p-1">Description / Title</th>
-                  <th className="p-1 w-16 sm:w-20 text-right">Amount (₹)</th>
-                  <th className="p-1 text-center w-6">Action</th>
+      <div className="space-y-2">
+        {/* Tabular Table Form */}
+        <div className="overflow-x-auto border border-gray-200 rounded-lg bg-slate-50">
+          <table className="w-full text-left text-[11px] border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-100/80 text-[8px] sm:text-[9px] uppercase font-bold text-gray-500">
+                <th className="p-1 w-4 text-center">#</th>
+                <th className="p-1">Description / Title</th>
+                <th className="p-1 w-16 sm:w-20 text-right">Amount (₹)</th>
+                <th className="p-1 text-center w-6">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {drafts.map((row, idx) => (
+                <tr key={row.id} className="border-b border-gray-100 bg-white">
+                  <td className="p-1 text-[9px] font-semibold text-gray-400 text-center">{idx + 1}</td>
+                  <td className="p-1">
+                    <input
+                      type="text"
+                      value={row.title === 'Reason Missing' ? '' : row.title}
+                      onChange={e => handleUpdate(row.id, 'title', e.target.value)}
+                      placeholder="Title / description..."
+                      className="w-full text-[10px] sm:text-xs font-semibold text-gray-900 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 outline-none focus:border-emerald-600 truncate"
+                    />
+                  </td>
+                  <td className="p-1 text-right">
+                    <input
+                      type="number"
+                      value={row.amount}
+                      onChange={e => handleUpdate(row.id, 'amount', e.target.value)}
+                      className="w-16 sm:w-20 text-[10px] sm:text-xs font-bold text-emerald-700 bg-gray-50 border border-gray-200 rounded px-1 py-0.5 outline-none focus:border-emerald-600 text-right"
+                    />
+                  </td>
+                  <td className="p-1 text-center">
+                    <button
+                      onClick={() => handleDeleteRow(row.id)}
+                      className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
+                      title="Remove row"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {drafts.map((row, idx) => (
-                  <tr key={row.id} className="border-b border-gray-100 bg-white">
-                    <td className="p-1 text-[9px] font-semibold text-gray-400 text-center">{idx + 1}</td>
-                    <td className="p-1">
-                      <input
-                        type="text"
-                        value={row.title === 'Reason Missing' ? '' : row.title}
-                        onChange={e => handleUpdate(row.id, 'title', e.target.value)}
-                        placeholder="Title / description..."
-                        className="w-full text-[10px] sm:text-xs font-semibold text-gray-900 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 outline-none focus:border-emerald-600 truncate"
-                      />
-                    </td>
-                    <td className="p-1 text-right">
-                      <input
-                        type="number"
-                        value={row.amount}
-                        onChange={e => handleUpdate(row.id, 'amount', e.target.value)}
-                        className="w-16 sm:w-20 text-[10px] sm:text-xs font-bold text-emerald-700 bg-gray-50 border border-gray-200 rounded px-1 py-0.5 outline-none focus:border-emerald-600 text-right"
-                      />
-                    </td>
-                    <td className="p-1 text-center">
-                      <button
-                        onClick={() => handleDeleteRow(row.id)}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
-                        title="Remove row"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          <button
-            onClick={handleConfirmAll}
-            className="w-full py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all mt-2"
-          >
-            <Check className="w-4 h-4" />
-            <span>Yes, Confirm All & Add to Passbook</span>
-          </button>
-        </div>
-      ) : (
-        <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <span>All {drafts.length} Entries Confirmed & Added!</span>
-        </div>
-      )}
+        <button
+          onClick={handleConfirmAll}
+          className="w-full py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all mt-2"
+        >
+          <Check className="w-4 h-4" />
+          <span>Confirm All & Add to Passbook</span>
+        </button>
+      </div>
     </div>
   );
 };
@@ -201,14 +187,12 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
   const [avatarError, setAvatarError] = useState(false);
   const isUser = message.sender === 'user';
 
-  // Robust pending items resolution:
-  // Use message.pendingReviewItems if available, otherwise check transactions context for unconfirmed (isPending) entries
+  // Only render pending items attached specifically to THIS message that are still pending in transactions state
   const messagePending = message.pendingReviewItems || [];
-  const contextPending = transactions.filter(t => t.isPending);
-
-  const pendingItems = messagePending.length > 0
-    ? messagePending
-    : (!isUser && contextPending.length > 0 ? contextPending : []);
+  const pendingItems = messagePending.filter(item => {
+    const liveTx = transactions.find(t => t.id === item.id);
+    return liveTx ? liveTx.isPending : item.isPending;
+  });
 
   const formatTime = (ts: any) => {
     const numericTs = typeof ts === 'string' ? parseInt(ts, 10) : ts;

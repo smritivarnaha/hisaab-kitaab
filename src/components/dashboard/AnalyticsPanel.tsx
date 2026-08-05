@@ -169,7 +169,7 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
             <BarChart2 className="w-4 h-4 text-[#0D2E14]" />
-            Daily Spend Timeline (X-Axis: Dates | Y-Axis: Daily Totals)
+            Daily Spend Timeline
           </h3>
           {selectedDate && (
             <button

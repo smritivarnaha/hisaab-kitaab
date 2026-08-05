@@ -150,15 +150,40 @@ CRITICAL RULES:
       })
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      const errMsg = errJson?.error?.message || res.statusText;
+      console.warn('OpenAI API Error:', res.status, errMsg);
+
+      if (res.status === 401) {
+        return {
+          action: 'GENERAL_RESPONSE',
+          responseText: `⚠️ **OpenAI API Key Invalid (401)**\n\nThe current OpenAI API key was rejected by OpenAI. Please enter a valid working OpenAI API key in **Settings (⚙️) → AI Settings**.`
+        };
+      }
+      if (res.status === 429) {
+        return {
+          action: 'GENERAL_RESPONSE',
+          responseText: `⚠️ **OpenAI Quota Exceeded (429)**\n\nYour OpenAI account billing quota or rate limit has been exceeded. Please check billing on OpenAI or add a new key in **Settings (⚙️)**.`
+        };
+      }
+
+      return {
+        action: 'GENERAL_RESPONSE',
+        responseText: `⚠️ **OpenAI Service Notice (${res.status})**\n\n${errMsg}`
+      };
+    }
     const data = await res.json();
     const content = data?.choices?.[0]?.message?.content;
     if (!content) return null;
 
     const parsed = JSON.parse(content);
     return parsed as GeminiAgentResponse;
-  } catch (err) {
+  } catch (err: any) {
     console.error('OpenAI Agent processing exception:', err);
-    return null;
+    return {
+      action: 'GENERAL_RESPONSE',
+      responseText: `⚠️ **Connection Error**: ${err.message || 'Could not reach OpenAI API'}`
+    };
   }
 }

@@ -512,9 +512,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Fallback local engine
     setTimeout(() => {
+      const lower = text.toLowerCase().trim();
       const parsedItems = parseMultiInput(text, aiMemory).map(tx => ({ ...tx, isPending: true, userId: activeUserId }));
+      
       if (!parsedItems.length) {
-        const responseText = `I couldn't detect an amount in your input. Try saying e.g. *"Petrol 2200"* or *"Spent 23 for Nandini"*`;
+        let responseText = `I couldn't detect an amount in your input. Try saying e.g. *"Petrol 2200"* or *"Spent 23 for Nandini"*`;
+
+        if (/hello|hi|namaste|hey|who are you/i.test(lower)) {
+          responseText = `Namaste! 🙏 I am your Funds Log Accountant. You can dictate expenses like *"Spent 500 for Grocery"* or ask me about your balances!`;
+        } else if (/total|spent|summary|balance|expenses|income/i.test(lower)) {
+          const totalSpent = transactions.filter(t => !t.isPending && (t.type === 'expense' || t.type === 'lent')).reduce((sum, t) => sum + Number(t.amount || 0), 0);
+          const totalInc = transactions.filter(t => !t.isPending && t.type === 'income').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+          responseText = `📊 **Funds Log Summary**:\n• Total Income: **₹${totalInc.toLocaleString('en-IN')}**\n• Total Spent: **₹${totalSpent.toLocaleString('en-IN')}**\n• Total Recorded Entries: **${transactions.length}**`;
+        }
+
         const aiMsg: ChatMessage = {
           id: `msg_ai_${Date.now()}`,
           sender: 'assistant',

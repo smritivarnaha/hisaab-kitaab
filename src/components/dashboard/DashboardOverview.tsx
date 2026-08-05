@@ -334,7 +334,6 @@ export const DashboardOverview: React.FC = () => {
 
         {/* Right 1-Column */}
         <div className="space-y-3 sm:space-y-4">
-          <InsightsCard transactions={transactions} />
           <DebtLentLedger transactions={transactions} onSettle={handleSettle} />
         </div>
       </div>
