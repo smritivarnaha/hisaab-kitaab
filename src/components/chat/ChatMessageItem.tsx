@@ -10,7 +10,7 @@ interface Props {
 
 // Single Transaction Confirmation Card (Spelling & Details Editor)
 const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
-  const { updateTransaction, deleteTransaction } = useFinance();
+  const { updateTransaction, deleteTransaction, accountMode } = useFinance();
   const [title, setTitle] = useState(item.title === 'Reason Missing' ? '' : item.title);
   const [amount, setAmount] = useState(String(item.amount || ''));
   const [type, setType] = useState<Transaction['type']>(item.type || 'expense');
@@ -67,8 +67,8 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
             >
               <option value="expense">Spent 🔴</option>
               <option value="income">Income 🟢</option>
-              <option value="lent">Lent 🤝</option>
-              <option value="borrowed">Borrowed 🤝</option>
+              {accountMode !== 'business' && <option value="lent">Lent 🤝</option>}
+              {accountMode !== 'business' && <option value="borrowed">Borrowed 🤝</option>}
             </select>
           </div>
 
@@ -130,7 +130,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
 
 // Tabular & Card Editable Form for Multiple Entries
 const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ items }) => {
-  const { confirmPendingItemsBatch, deleteTransaction } = useFinance();
+  const { confirmPendingItemsBatch, deleteTransaction, accountMode } = useFinance();
   const [drafts, setDrafts] = useState<Transaction[]>(items);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
@@ -198,8 +198,8 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
               >
                 <option value="expense">Spent 🔴</option>
                 <option value="income">Income 🟢</option>
-                <option value="lent">Lent 🤝</option>
-                <option value="borrowed">Borrowed 🤝</option>
+                {accountMode !== 'business' && <option value="lent">Lent 🤝</option>}
+                {accountMode !== 'business' && <option value="borrowed">Borrowed 🤝</option>}
               </select>
 
               {/* Amount Input Box (Centered Text) */}

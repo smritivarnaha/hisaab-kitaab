@@ -4,6 +4,7 @@ import { useFinance } from '../../context/FinanceContext';
 import { DebtLentLedger } from './DebtLentLedger';
 import { InsightsCard } from './InsightsCard';
 import { DailyReconciliationCard } from './DailyReconciliationCard';
+import { BusinessPartnerSummaryCard } from './BusinessPartnerSummaryCard';
 import { CategoryIcon } from '../common/CategoryIcon';
 import { PaymentMethodIcon } from '../common/PaymentMethodIcon';
 import { AnalyticsPanel } from './AnalyticsPanel';
@@ -21,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export const DashboardOverview: React.FC = () => {
-  const { transactions, updateTransaction, currentUser, dbStatus } = useFinance();
+  const { transactions, updateTransaction, currentUser, dbStatus, accountMode } = useFinance();
   const [searchTerm, setSearchTerm] = useState('');
   const [txTypeFilter, setTxTypeFilter] = useState<'all' | 'debit' | 'credit'>('all');
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
@@ -40,8 +41,9 @@ export const DashboardOverview: React.FC = () => {
 
   const periodRange = getCurrentPeriodRange();
 
-  // Only show finalized (non-pending) transactions in Passbook History, sorted by latest date entries first
-  const finalizedTransactions = sortTransactionsLatestFirst(transactions.filter(t => !t.isPending));
+  // Mode Filter: Personal vs Business
+  const modeFiltered = transactions.filter(t => !t.isPending && (accountMode === 'business' ? t.mode === 'business' : t.mode !== 'business'));
+  const finalizedTransactions = sortTransactionsLatestFirst(modeFiltered);
 
   const totalExpense = finalizedTransactions
     .filter(t => t.type === 'expense')
@@ -95,9 +97,12 @@ export const DashboardOverview: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 sm:py-4 pb-28 sm:pb-12 no-scrollbar bg-[#F3F5F1] font-outfit">
+    <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 sm:py-4 pb-28 sm:pb-12 no-scrollbar bg-[#F3F5F1] font-outfit space-y-3 sm:space-y-4 max-w-4xl mx-auto">
+      {/* Shared Business Partner 50-50 Settlement Overview */}
+      {accountMode === 'business' && <BusinessPartnerSummaryCard />}
+
       {/* 1. Proportional Top Summary Card with Spreading Bottom-Left Green Gradient & Grid Overlay */}
-      <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3.5 sm:p-5 rounded-3xl shadow-md mb-3 sm:mb-4 border border-[#1b4e27] max-w-4xl mx-auto">
+      <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3.5 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] max-w-4xl mx-auto">
         {/* Spreading Bottom-Left Green Gradient Layer */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#93E044]/25 via-[#14471f]/50 to-[#0D2E14] pointer-events-none" />
 
@@ -304,10 +309,19 @@ export const DashboardOverview: React.FC = () => {
                           <CategoryIcon category={tx.category} size="sm" />
 
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <h4 className="text-xs font-bold text-[#0D2E14] font-outfit leading-tight truncate group-hover:text-emerald-900">
                                 {tx.title || tx.category} {tx.person ? `(${tx.person})` : ''}
                               </h4>
+                              {accountMode === 'business' && (
+                                <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-full border ${
+                                  (tx.enteredBy || '').toLowerCase().includes('sarthak')
+                                    ? 'bg-indigo-100 text-indigo-900 border-indigo-200'
+                                    : 'bg-emerald-100 text-emerald-900 border-emerald-200'
+                                }`}>
+                                  👤 {tx.enteredBy || 'Praveen'}
+                                </span>
+                              )}
                               {hasSpecialNotes && (
                                 <button
                                   onClick={(e) => {

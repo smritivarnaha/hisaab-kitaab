@@ -52,6 +52,9 @@ export interface Transaction {
   location?: string;
   tags?: string[];
   isPending?: boolean;
+  mode?: 'personal' | 'business';
+  enteredBy?: string; // 'Praveen' | 'Sarthak'
+  userId?: string;
 }
 
 export interface ClarificationOption {

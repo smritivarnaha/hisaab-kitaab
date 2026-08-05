@@ -15,6 +15,23 @@ import { speakText } from '../services/voice/speechRecognition';
 import { processWithGeminiAgent } from '../services/ai/gemini';
 import { processWithOpenAIAgent } from '../services/ai/openai';
 
+interface BusinessSettlement {
+  totalIncome: number;
+  totalExpense: number;
+  netProfit: number;
+  fairSharePerPartner: number;
+  praveenIncome: number;
+  praveenExpense: number;
+  praveenCashHeld: number;
+  sarthakIncome: number;
+  sarthakExpense: number;
+  sarthakCashHeld: number;
+  settlementText: string;
+  payerName?: string;
+  payeeName?: string;
+  amountDue: number;
+}
+
 interface FinanceContextType {
   currentUser: AppUser | null;
   transactions: Transaction[];
@@ -25,8 +42,11 @@ interface FinanceContextType {
   activeClarification: AIClarificationQuestion | null;
   isProcessingAI: boolean;
   dbStatus: 'loading' | 'ok' | 'error';
+  accountMode: 'personal' | 'business';
+  businessSettlement: BusinessSettlement;
   
   // Actions
+  setAccountMode: (mode: 'personal' | 'business') => void;
   login: (user: AppUser) => void;
   logout: () => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
@@ -347,8 +367,89 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const [accountMode, setAccountMode] = useState<'personal' | 'business'>('personal');
+
+  // Compute 50-50 Business Settlement
+  const businessSettlement = React.useMemo<BusinessSettlement>(() => {
+    const bTxList = transactions.filter(t => t.mode === 'business' && !t.isPending);
+
+    let totalIncome = 0;
+    let totalExpense = 0;
+    let praveenIncome = 0;
+    let praveenExpense = 0;
+    let sarthakIncome = 0;
+    let sarthakExpense = 0;
+
+    bTxList.forEach(t => {
+      const amt = Number(t.amount || 0);
+      const isPraveen = (t.enteredBy || '').toLowerCase().includes('praveen') || (!t.enteredBy && currentUser?.name?.toLowerCase().includes('praveen'));
+      
+      if (t.type === 'income') {
+        totalIncome += amt;
+        if (isPraveen) praveenIncome += amt;
+        else sarthakIncome += amt;
+      } else if (t.type === 'expense') {
+        totalExpense += amt;
+        if (isPraveen) praveenExpense += amt;
+        else sarthakExpense += amt;
+      }
+    });
+
+    const netProfit = totalIncome - totalExpense;
+    const fairSharePerPartner = netProfit / 2;
+
+    const praveenCashHeld = praveenIncome - praveenExpense;
+    const sarthakCashHeld = sarthakIncome - sarthakExpense;
+
+    const praveenDue = fairSharePerPartner - praveenCashHeld;
+    const sarthakDue = fairSharePerPartner - sarthakCashHeld;
+
+    let settlementText = 'No transactions recorded yet in Business Mode.';
+    let payerName: string | undefined = undefined;
+    let payeeName: string | undefined = undefined;
+    let amountDue = 0;
+
+    if (bTxList.length > 0) {
+      if (Math.abs(praveenDue) < 1) {
+        settlementText = '✅ 50-50 Profit is perfectly balanced between Praveen & Sarthak!';
+      } else if (praveenDue > 0) {
+        payerName = 'Sarthak';
+        payeeName = 'Praveen';
+        amountDue = Math.round(praveenDue);
+        settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen for equal 50-50 profit`;
+      } else {
+        payerName = 'Praveen';
+        payeeName = 'Sarthak';
+        amountDue = Math.round(sarthakDue);
+        settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak for equal 50-50 profit`;
+      }
+    }
+
+    return {
+      totalIncome,
+      totalExpense,
+      netProfit,
+      fairSharePerPartner,
+      praveenIncome,
+      praveenExpense,
+      praveenCashHeld,
+      sarthakIncome,
+      sarthakExpense,
+      sarthakCashHeld,
+      settlementText,
+      payerName,
+      payeeName,
+      amountDue
+    };
+  }, [transactions, currentUser]);
+
   const addTransaction = (tx: Transaction) => {
-    const enriched = { ...tx, userId: activeUserId };
+    const enriched: Transaction = {
+      ...tx,
+      userId: activeUserId,
+      mode: tx.mode || accountMode,
+      enteredBy: tx.enteredBy || currentUser?.name || 'Praveen'
+    };
     setTransactions(prev => [enriched, ...prev]);
     saveTransactionToDb(enriched, activeUserId);
 
@@ -359,7 +460,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const addTransactionsBatch = (txList: Transaction[]) => {
-    const enrichedList = txList.map(tx => ({ ...tx, userId: activeUserId }));
+    const enrichedList: Transaction[] = txList.map(tx => ({
+      ...tx,
+      userId: activeUserId,
+      mode: tx.mode || accountMode,
+      enteredBy: tx.enteredBy || currentUser?.name || 'Praveen'
+    }));
     setTransactions(prev => [...enrichedList, ...prev]);
     saveTransactionsBatchToDb(enrichedList, activeUserId);
 
@@ -433,12 +539,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     saveMessageToDb(userMsg, activeUserId);
 
     const applyAgentToolAction = (agentRes: any): Transaction[] => {
-      if (agentRes.action === 'CREATE_TRANSACTIONS' && agentRes.transactionsToCreate?.length) {
+      if (agentRes.action === 'CREATE_TRANSACTIONS' && agentRes.transactionsToCreate && agentRes.transactionsToCreate.length > 0) {
         const newTxList: Transaction[] = agentRes.transactionsToCreate.map((t: any, idx: number) => ({
-          id: `tx_${Date.now()}_${idx}`,
+          id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
           amount: Number(t.amount || 0),
           currency: '₹',
-          type: t.type || 'expense',
+          type: accountMode === 'business' ? (t.type === 'income' ? 'income' : 'expense') : (t.type || 'expense'),
           category: (t.category as Category) || 'Others',
           title: t.title || 'Expense',
           merchant: t.merchant,
@@ -449,7 +555,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           confidenceScore: 95,
           isPending: true,
           person: t.person,
-          userId: activeUserId
+          mode: accountMode,
+          enteredBy: currentUser?.name || 'Praveen'
         }));
 
         addTransactionsBatch(newTxList);
@@ -630,6 +737,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       activeClarification,
       isProcessingAI,
       dbStatus,
+      accountMode,
+      setAccountMode,
+      businessSettlement,
       login,
       logout,
       changePassword,
