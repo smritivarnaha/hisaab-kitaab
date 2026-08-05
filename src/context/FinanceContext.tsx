@@ -532,7 +532,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       sender: 'user',
       text: text || '🎤 Spoken Voice Command',
       timestamp: Date.now(),
-      isVoice
+      isVoice,
+      mode: accountMode,
+      senderName: currentUser?.name || 'Praveen'
     };
 
     setChatMessages(prev => [...prev, userMsg]);
@@ -610,7 +612,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           sender: 'assistant',
           text: agentRes.responseText,
           timestamp: Date.now(),
-          pendingReviewItems: createdItems.length ? createdItems : undefined
+          pendingReviewItems: createdItems.length ? createdItems : undefined,
+          mode: accountMode
         };
         setChatMessages(prev => [...prev, aiMsg]);
         saveMessageToDb(aiMsg, activeUserId);
@@ -726,11 +729,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const filteredChatMessages = React.useMemo(() => {
+    const list = chatMessages.filter(m => accountMode === 'business' ? m.mode === 'business' : m.mode !== 'business');
+    if (accountMode === 'business' && list.length === 0) {
+      return [
+        {
+          id: 'welcome_business_msg',
+          sender: 'assistant',
+          text: `Namaste! 🏢 Welcome to your **Shared Business Accountant**. Entries logged here by **Praveen** or **Sarthak** are strictly attributed to your shared 50-50 Business Ledger.`,
+          timestamp: Date.now(),
+          mode: 'business'
+        } as ChatMessage
+      ];
+    }
+    return list;
+  }, [chatMessages, accountMode]);
+
   return (
     <FinanceContext.Provider value={{
       currentUser,
       transactions,
-      chatMessages,
+      chatMessages: filteredChatMessages,
       aiMemory,
       settings,
       pendingReviewItems,

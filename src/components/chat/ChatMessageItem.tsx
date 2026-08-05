@@ -356,6 +356,11 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
 
       {/* Bubble Container */}
       <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[90%] sm:max-w-[80%] min-w-0`}>
+        {isUser && message.senderName && (
+          <span className="text-[9px] font-black text-emerald-800 mb-0.5 px-2 py-0.5 bg-emerald-50 rounded-full border border-emerald-200">
+            👤 {message.senderName}
+          </span>
+        )}
         <div className={`font-outfit shadow-2xs ${fontSizeClass} ${sizeClasses.bubble} ${bubbleStyleClass} w-full max-w-full overflow-hidden`}>
           {renderFormattedText(message.text)}
 
