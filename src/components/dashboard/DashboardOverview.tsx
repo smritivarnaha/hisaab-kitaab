@@ -385,7 +385,7 @@ export const DashboardOverview: React.FC = () => {
               </div>
             </div>
           ) : (
-            <AnalyticsPanel transactions={transactions} />
+            <AnalyticsPanel transactions={finalizedTransactions} />
           )}
         </div>
 
