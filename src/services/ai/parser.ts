@@ -348,6 +348,19 @@ export function parseSingleInput(input: string, memory: AIMemoryMap = DEFAULT_ME
 export function parseMultiInput(text: string, memory: AIMemoryMap = DEFAULT_MEMORY): Transaction[] {
   if (!text || !text.trim()) return [];
 
+  const lowerText = text.toLowerCase().trim();
+  let inheritType: TransactionType | null = null;
+  
+  if (/^(?:lent out|lent to|lent|loaned|gave to)\b/i.test(lowerText)) {
+    inheritType = 'lent';
+  } else if (/^(?:borrowed from|taken from|took from|borrowed)\b/i.test(lowerText)) {
+    inheritType = 'borrowed';
+  } else if (/^(?:received from|got from|income from|credited)\b/i.test(lowerText)) {
+    inheritType = 'income';
+  } else if (/^(?:spent on|paid for|bought|spent)\b/i.test(lowerText)) {
+    inheritType = 'expense';
+  }
+
   // Split by newlines, commas, 'and', 'fir', 'then'
   let parts = text.split(/\n+|,|\b(?:and|fir|then|and then|after that|\.)\b/i).map(l => l.trim()).filter(Boolean);
 
@@ -362,7 +375,15 @@ export function parseMultiInput(text: string, memory: AIMemoryMap = DEFAULT_MEMO
   const results: Transaction[] = [];
   for (const part of parts) {
     if (!part) continue;
-    const tx = parseSingleInput(part, memory);
+
+    // Strip prefix action words from each part to get pure item name and amount
+    let cleanPart = part.replace(/^(?:lent out|lent to|lent|loaned|gave to|borrowed from|taken from|took from|borrowed|received from|got from|income from|spent on|paid for|bought|spent)\s*/i, '').trim();
+    if (!cleanPart) continue;
+
+    const tx = parseSingleInput(cleanPart, memory);
+    if (inheritType) {
+      tx.type = inheritType;
+    }
     if (tx.amount > 0) {
       results.push(tx);
     }
