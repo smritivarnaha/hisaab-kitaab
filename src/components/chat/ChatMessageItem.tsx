@@ -13,6 +13,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
   const { updateTransaction, deleteTransaction } = useFinance();
   const [title, setTitle] = useState(item.title === 'Reason Missing' ? '' : item.title);
   const [amount, setAmount] = useState(String(item.amount || ''));
+  const [type, setType] = useState<Transaction['type']>(item.type || 'expense');
   const [isConfirmed, setIsConfirmed] = useState(!item.isPending);
   const [isDiscarded, setIsDiscarded] = useState(false);
 
@@ -20,8 +21,9 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
 
   const handleConfirm = () => {
     updateTransaction(item.id, {
-      title: title.trim() || 'Expense',
+      title: title.trim() || (type === 'income' ? 'Income' : type === 'lent' ? 'Lent Money' : 'Expense'),
       amount: Number(amount) || 0,
+      type,
       isPending: false // Confirmed and added to Passbook!
     });
     setIsConfirmed(true);
@@ -30,6 +32,15 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
   const handleDiscard = () => {
     deleteTransaction(item.id);
     setIsDiscarded(true);
+  };
+
+  const getTypeStyle = (t: string) => {
+    switch (t) {
+      case 'income': return 'bg-green-100 text-green-800 border-green-200';
+      case 'lent': return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'borrowed': return 'bg-purple-100 text-purple-800 border-purple-200';
+      default: return 'bg-red-100 text-red-800 border-red-200';
+    }
   };
 
   return (
@@ -43,6 +54,25 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
       </div>
 
       <div className="space-y-2">
+        {/* Type Badge & Selector */}
+        <div>
+          <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Entry Type</label>
+          <div className="flex gap-1.5">
+            {(['expense', 'income', 'lent', 'borrowed'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setType(t)}
+                className={`px-2 py-1 rounded-md text-[10px] font-bold capitalize border transition-all ${
+                  type === t ? getTypeStyle(t) + ' ring-1 ring-emerald-600' : 'bg-slate-50 text-gray-500 border-gray-200'
+                }`}
+              >
+                {t === 'expense' ? 'Spent 🔴' : t === 'income' ? 'Income 🟢' : t === 'lent' ? 'Lent 🤝' : 'Borrowed 🤝'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Editable Description Input */}
         <div>
           <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Title / Spelling</label>
@@ -93,7 +123,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
   const [drafts, setDrafts] = useState<Transaction[]>(items);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
-  const handleUpdate = (id: string, field: 'title' | 'amount', value: any) => {
+  const handleUpdate = (id: string, field: 'title' | 'amount' | 'type', value: any) => {
     setDrafts(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
@@ -129,6 +159,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
             <thead>
               <tr className="border-b border-gray-200 bg-gray-100/80 text-[8px] sm:text-[9px] uppercase font-bold text-gray-500">
                 <th className="p-1 w-4 text-center">#</th>
+                <th className="p-1 w-16">Type</th>
                 <th className="p-1">Description / Title</th>
                 <th className="p-1 w-16 sm:w-20 text-right">Amount (₹)</th>
                 <th className="p-1 text-center w-6">Action</th>
@@ -138,6 +169,23 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
               {drafts.map((row, idx) => (
                 <tr key={row.id} className="border-b border-gray-100 bg-white">
                   <td className="p-1 text-[9px] font-semibold text-gray-400 text-center">{idx + 1}</td>
+                  <td className="p-1">
+                    <select
+                      value={row.type || 'expense'}
+                      onChange={e => handleUpdate(row.id, 'type', e.target.value)}
+                      className={`text-[9px] font-extrabold rounded px-1 py-0.5 outline-none border cursor-pointer ${
+                        row.type === 'income' ? 'bg-green-100 text-green-800 border-green-200' :
+                        row.type === 'lent' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                        row.type === 'borrowed' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                        'bg-red-100 text-red-800 border-red-200'
+                      }`}
+                    >
+                      <option value="expense">Spent 🔴</option>
+                      <option value="income">Income 🟢</option>
+                      <option value="lent">Lent 🤝</option>
+                      <option value="borrowed">Borrowed 🤝</option>
+                    </select>
+                  </td>
                   <td className="p-1">
                     <input
                       type="text"
