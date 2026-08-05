@@ -220,8 +220,9 @@ function parseTransactionTypeAndEntity(text: string): {
   }
 
   if (/lent|diye|diya|gave to|paid to|ko diye|ko cash/i.test(lower) && !/shop|store|petrol|grocery|bill|swiggy|zomato/i.test(lower)) {
-    const personMatch = text.match(/([A-Z][a-z]+)\s+ko/i) || text.match(/(?:to|gave)\s+([A-Z][a-z]+)/i);
-    const person = personMatch ? personMatch[1] : extractName(text);
+    const personMatch = text.match(/lent\s+([A-Za-z]+)/i) || text.match(/([A-Za-z]+)\s+ko/i) || text.match(/(?:to|gave)\s+([A-Za-z]+)/i);
+    const rawName = personMatch ? personMatch[1] : extractName(text);
+    const person = rawName ? rawName.charAt(0).toUpperCase() + rawName.slice(1) : undefined;
     return { type: 'lent', person, extractedReason: person ? `Lent to ${person}` : 'Lent Money', confidenceBoost: 25 };
   }
 

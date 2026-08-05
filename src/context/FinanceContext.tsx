@@ -488,7 +488,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ? await processWithOpenAIAgent(text, transactions, aiMemory, activeOpenAIKey, audioBlob, updatedMessages)
         : await processWithGeminiAgent(text, transactions, aiMemory, settings.apiKey, audioBlob, updatedMessages, customPrompt);
 
-      if (agentRes) {
+      const isConnectionError = 
+        agentRes?.responseText?.includes('Connection Error') || 
+        agentRes?.responseText?.includes('Failed to fetch') ||
+        agentRes?.responseText?.includes('Service Notice');
+
+      if (agentRes && !isConnectionError) {
         applyAgentToolAction(agentRes);
 
         const aiMsg: ChatMessage = {
