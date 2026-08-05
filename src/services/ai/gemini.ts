@@ -125,14 +125,23 @@ Return ONLY a valid JSON object matching this schema (do NOT include markdown co
 
 CRITICAL RULES:
 0. MULTI-ITEM EXTRACTION RULE:
-   - When the user lists multiple items or expenses in a single message or voice note (for example: 30 banana, 50 aloo, 30 kismis, 50 for adrak, 80 apple or 200 petrol, 150 swiggy, 50 milk), you MUST extract EVERY SINGLE ITEM as a DISTINCT, SEPARATE object inside the transactionsToCreate array!
+   - When the user lists multiple items or expenses in a single message or voice note (for example: 30 banana, 50 aloo, 30 kismis or 200 petrol, 150 swiggy, 50 milk), you MUST extract EVERY SINGLE ITEM as a DISTINCT, SEPARATE object inside the transactionsToCreate array!
    - Do NOT merge them into one single item or calculate a single sum!
-   - Create item 1: title Banana, amount 30, category Grocery
-   - Create item 2: title Aloo, amount 50, category Grocery
-   - Create item 3: title Kismis, amount 30, category Grocery
-   - Create item 4: title Adrak, amount 50, category Grocery
-   - Create item 5: title Apple, amount 80, category Grocery
-   - Capitalize and clean up spellings for each item title nicely!
+
+0b. PREFIX ACTION VERB INHERITANCE (CRITICAL FOR LENT/BORROWED):
+   - When an input starts with or contains action phrases like "Lent out", "Lent to", "Gave to", "Given to", "Loaned", ALL items listed in that command MUST inherit type = "lent"!
+     Example: "Lent out Amazon 600rs, galaxy drape 1200, jio coupon 150"
+     -> Item 1: title "Amazon", amount 600, type "lent"
+     -> Item 2: title "Galaxy Drape", amount 1200, type "lent"
+     -> Item 3: title "Jio Coupon", amount 150, type "lent"
+     (NEVER set type to "expense", and NEVER set title to "Lent To Out" or "1200"!)
+   - When an input starts with "Borrowed from", "Taken from", "Took from", ALL items listed MUST inherit type = "borrowed"!
+   - When an input starts with "Received from", "Got from", "Income from", ALL items listed MUST inherit type = "income"!
+   - When an input starts with "Spent on", "Paid for", "Bought", ALL items listed MUST inherit type = "expense"!
+
+0c. ACTION WORDS ARE NOT TITLES & NO NUMBERS AS TITLE:
+   - Action phrases like "Lent out", "Paid for", "Spent on" describe the ACTION. NEVER use them as the item title! (e.g. title = "Lent To Out" is FORBIDDEN). Extract the true item/party name!
+   - Amounts MUST go into the amount field, NEVER the title field! (e.g. title = "1200" is FORBIDDEN). For "galaxy drape 1200", title MUST be "Galaxy Drape" and amount MUST be 1200.
 1. LOGGING vs QUERYING vs ACTIONS:
    - Set action='CREATE_TRANSACTIONS' ONLY when the user is reporting a NEW transaction that just happened (e.g., "Spent 300 on petrol", "Paid 300 to shop", "Lunch 300").
    - Set action='SETTLE_DEBT' when a friend returns money or a loan is paid (e.g., "Rahul returned 500", "Sarthak paid 800"). Specify settleDebtPerson and settleDebtAmount.
