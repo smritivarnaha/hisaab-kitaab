@@ -190,7 +190,7 @@ export const DashboardOverview: React.FC = () => {
                     <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
                     <span className="font-black text-[#0D2E14] text-sm sm:text-base tracking-tight">
-                      {currentBalance >= 0 ? '+' : '-'}₹{Math.abs(currentBalance).toLocaleString('en-IN')}
+                      {currentBalance >= 0 ? '+ ' : '- '}₹{Math.abs(currentBalance).toLocaleString('en-IN')}
                     </span>
                   )}
                 </div>
@@ -338,7 +338,7 @@ export const DashboardOverview: React.FC = () => {
                                 isCredit ? 'text-green-700' : 'text-[#D93025]'
                               }`}
                             >
-                              {isCredit ? '+' : '-'}₹{Number(tx.amount || 0).toLocaleString('en-IN')}
+                              ₹{Number(tx.amount || 0).toLocaleString('en-IN')}
                             </span>
                           </div>
                           <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#0D2E14] transition-colors flex-shrink-0" />
