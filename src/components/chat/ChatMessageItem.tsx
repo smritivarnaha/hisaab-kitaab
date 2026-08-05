@@ -56,23 +56,19 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
       </div>
 
       <div className="space-y-2">
-        {/* Type Badge & Selector */}
+        {/* Compact Entry Type Dropdown */}
         <div>
           <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Entry Type</label>
-          <div className="flex flex-wrap gap-1.5">
-            {(['expense', 'income', 'lent', 'borrowed'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setType(t)}
-                className={`px-2 py-1 rounded-md text-[10px] font-bold capitalize border transition-all ${
-                  type === t ? getTypeStyle(t) + ' ring-1 ring-emerald-600' : 'bg-slate-50 text-gray-500 border-gray-200'
-                }`}
-              >
-                {t === 'expense' ? 'Spent 🔴' : t === 'income' ? 'Income 🟢' : t === 'lent' ? 'Lent 🤝' : 'Borrowed 🤝'}
-              </button>
-            ))}
-          </div>
+          <select
+            value={type}
+            onChange={e => setType(e.target.value as Transaction['type'])}
+            className={`w-full text-xs font-bold rounded-lg p-2 outline-none border cursor-pointer ${getTypeStyle(type)}`}
+          >
+            <option value="expense">Spent 🔴</option>
+            <option value="income">Income 🟢</option>
+            <option value="lent">Lent 🤝</option>
+            <option value="borrowed">Borrowed 🤝</option>
+          </select>
         </div>
 
         {/* Editable Title Input */}
@@ -131,9 +127,9 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
   );
 };
 
-// Tabular Editable Form for Multiple Entries
+// Tabular & Card Editable Form for Multiple Entries
 const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ items }) => {
-  const { confirmPendingItemsBatch } = useFinance();
+  const { confirmPendingItemsBatch, deleteTransaction } = useFinance();
   const [drafts, setDrafts] = useState<Transaction[]>(items);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
@@ -157,6 +153,11 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
     setIsConfirmed(true);
   };
 
+  const handleDiscardAll = () => {
+    drafts.forEach(d => deleteTransaction(d.id));
+    setDrafts([]);
+  };
+
   if (isConfirmed || drafts.length === 0) return null;
 
   return (
@@ -168,8 +169,67 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
       </div>
 
       <div className="space-y-2">
-        {/* Tabular Table Form */}
-        <div className="overflow-x-auto border border-gray-200 rounded-lg bg-slate-50 max-w-full">
+        {/* MOBILE VIEW: Stacked Card Rows for Perfect Touch Responsiveness (< sm) */}
+        <div className="space-y-2 sm:hidden">
+          {drafts.map((row, idx) => (
+            <div key={row.id} className="p-2 bg-slate-50 border border-gray-200 rounded-lg space-y-1.5">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[9px] font-bold text-gray-400">#{idx + 1}</span>
+                <select
+                  value={row.type || 'expense'}
+                  onChange={e => handleUpdate(row.id, 'type', e.target.value)}
+                  className={`text-[9px] font-extrabold rounded px-1.5 py-0.5 outline-none border cursor-pointer ${
+                    row.type === 'income' ? 'bg-green-100 text-green-800 border-green-200' :
+                    row.type === 'lent' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                    row.type === 'borrowed' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                    'bg-red-100 text-red-800 border-red-200'
+                  }`}
+                >
+                  <option value="expense">Spent 🔴</option>
+                  <option value="income">Income 🟢</option>
+                  <option value="lent">Lent 🤝</option>
+                  <option value="borrowed">Borrowed 🤝</option>
+                </select>
+                <button
+                  onClick={() => handleDeleteRow(row.id)}
+                  className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 ml-auto"
+                  title="Remove entry"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div>
+                <input
+                  type="text"
+                  value={row.title === 'Reason Missing' ? '' : row.title}
+                  onChange={e => handleUpdate(row.id, 'title', e.target.value)}
+                  placeholder="Title..."
+                  className="w-full text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-emerald-600"
+                />
+              </div>
+
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={row.notes || ''}
+                  onChange={e => handleUpdate(row.id, 'notes', e.target.value)}
+                  placeholder="+ Add note / remark"
+                  className="flex-1 text-[10px] text-gray-600 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-emerald-600 placeholder-gray-400"
+                />
+                <input
+                  type="number"
+                  value={row.amount}
+                  onChange={e => handleUpdate(row.id, 'amount', e.target.value)}
+                  className="w-20 text-xs font-bold text-emerald-700 bg-white border border-gray-200 rounded px-1.5 py-1 outline-none focus:border-emerald-600 text-right"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* DESKTOP/TABLET VIEW: Tabular Form (>= sm) */}
+        <div className="hidden sm:block overflow-x-auto border border-gray-200 rounded-lg bg-slate-50 max-w-full">
           <table className="w-full text-left text-[11px] border-collapse min-w-[280px]">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-100/80 text-[8px] sm:text-[9px] uppercase font-bold text-gray-500">
@@ -240,13 +300,22 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
           </table>
         </div>
 
-        <button
-          onClick={handleConfirmAll}
-          className="w-full py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all mt-2"
-        >
-          <Check className="w-4 h-4" />
-          <span>Confirm & Add</span>
-        </button>
+        {/* Action Buttons: Confirm & Add + Discard All */}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={handleConfirmAll}
+            className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+          >
+            <Check className="w-4 h-4" />
+            <span>Confirm & Add</span>
+          </button>
+          <button
+            onClick={handleDiscardAll}
+            className="py-2 px-3 border border-gray-200 text-gray-500 hover:text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex-shrink-0"
+          >
+            Discard All
+          </button>
+        </div>
       </div>
     </div>
   );
