@@ -207,7 +207,7 @@ export const DashboardOverview: React.FC = () => {
 
       {/* 2. Same-Day AI Audit Banner */}
       <div className="max-w-4xl mx-auto mb-3 sm:mb-4">
-        <DailyReconciliationCard transactions={transactions} />
+        <DailyReconciliationCard transactions={finalizedTransactions} />
       </div>
 
       {/* 3. Financial Mobile App Passbook Feed */}
