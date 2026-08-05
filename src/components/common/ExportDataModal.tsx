@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, FileSpreadsheet, Download, Calendar, Layers } from 'lucide-react';
 import { Transaction } from '../../types/finance';
 import { exportToExcel } from '../../utils/excelExport';
+import { useFinance } from '../../context/FinanceContext';
 
 interface Props {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions }) => {
+  const { settings } = useFinance();
   const [exportType, setExportType] = useState<'all' | 'monthly'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
@@ -35,7 +37,7 @@ export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions
   const availableMonths = Object.entries(availableMonthsMap);
 
   const handleDownload = () => {
-    exportToExcel(transactions, exportType, selectedMonth);
+    exportToExcel(transactions, exportType, selectedMonth, (settings as any).userName || 'User');
     onClose();
   };
 
