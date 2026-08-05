@@ -135,51 +135,61 @@ export const DashboardOverview: React.FC = () => {
             </div>
           </div>
 
-          {/* Single White Card Container with Vertical Divider Lines & Loading Skeleton */}
+          {/* Single White Card Container: 4 Horizontal Rows with Vertical Divider Line & Parallel Numbers */}
           <div className="pt-2 sm:pt-3 border-t border-gray-800/80">
-            <div className="bg-white text-[#0D2E14] p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs">
-              {/* Row 1: Income (Left) & Spent (Right) */}
-              <div className="grid grid-cols-2 divide-x divide-gray-200 sm:grid-cols-4">
-                {/* 1. Income (Credit) */}
-                <div className="flex flex-col justify-center items-start pl-2 sm:pl-0 sm:items-center sm:text-center">
-                  <span className="text-gray-500 font-bold text-[10px] sm:text-xs">Income (Credit)</span>
+            <div className="bg-white text-[#0D2E14] p-3.5 sm:p-4 rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100">
+              {/* 1. Income (Credit) Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-1.5 first:pt-0">
+                <div className="pr-3 flex items-center justify-start text-left">
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Income (Credit)</span>
+                </div>
+                <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md mt-1"></span>
+                    <span className="inline-block w-16 h-4 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-extrabold text-green-700 text-xs sm:text-sm mt-0.5 tracking-tight">+₹{totalIncome.toLocaleString('en-IN')}</span>
+                    <span className="font-extrabold text-green-700 text-xs sm:text-sm tracking-tight">+₹{totalIncome.toLocaleString('en-IN')}</span>
                   )}
                 </div>
+              </div>
 
-                {/* 2. Spent (Debit) */}
-                <div className="flex flex-col justify-center items-start pl-4 sm:pl-0 sm:items-center sm:text-center">
-                  <span className="text-gray-500 font-bold text-[10px] sm:text-xs">Spent (Debit)</span>
+              {/* 2. Spent (Debit) Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-1.5">
+                <div className="pr-3 flex items-center justify-start text-left">
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Spent (Debit)</span>
+                </div>
+                <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md mt-1"></span>
+                    <span className="inline-block w-16 h-4 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-extrabold text-[#D93025] text-xs sm:text-sm mt-0.5 tracking-tight">-₹{totalExpense.toLocaleString('en-IN')}</span>
+                    <span className="font-extrabold text-[#D93025] text-xs sm:text-sm tracking-tight">-₹{totalExpense.toLocaleString('en-IN')}</span>
                   )}
                 </div>
+              </div>
 
-                {/* Mobile Divider Line between Row 1 and Row 2 */}
-                <div className="col-span-2 sm:hidden border-t border-gray-100 my-2.5"></div>
-
-                {/* 3. Lent Out */}
-                <div className="flex flex-col justify-center items-start pl-2 sm:pl-0 sm:items-center sm:text-center">
-                  <span className="text-gray-500 font-bold text-[10px] sm:text-xs">Lent Out</span>
+              {/* 3. Lent Out Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-1.5">
+                <div className="pr-3 flex items-center justify-start text-left">
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Lent Out</span>
+                </div>
+                <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md mt-1"></span>
+                    <span className="inline-block w-16 h-4 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-extrabold text-amber-700 text-xs sm:text-sm mt-0.5 tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
+                    <span className="font-extrabold text-amber-700 text-xs sm:text-sm tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
                   )}
                 </div>
+              </div>
 
-                {/* 4. Current Balance */}
-                <div className="flex flex-col justify-center items-start pl-4 sm:pl-0 sm:items-center sm:text-center">
-                  <span className="text-gray-500 font-bold text-[10px] sm:text-xs">Current Balance</span>
+              {/* 4. Current Balance Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-1.5 last:pb-0">
+                <div className="pr-3 flex items-center justify-start text-left">
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Current Balance</span>
+                </div>
+                <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md mt-1"></span>
+                    <span className="inline-block w-16 h-4 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-extrabold text-[#0D2E14] text-xs sm:text-sm mt-0.5 tracking-tight">₹{currentBalance.toLocaleString('en-IN')}</span>
+                    <span className="font-extrabold text-[#0D2E14] text-xs sm:text-sm tracking-tight">₹{currentBalance.toLocaleString('en-IN')}</span>
                   )}
                 </div>
               </div>
