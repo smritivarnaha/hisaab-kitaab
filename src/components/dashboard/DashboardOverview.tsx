@@ -134,31 +134,31 @@ export const DashboardOverview: React.FC = () => {
             </div>
           </div>
 
-          {/* Refined Numbers Sub-Boxes */}
+          {/* Refined 2-Column Mobile Grid Numbers Sub-Boxes with Left-Aligned Parallel Numbers */}
           <div className="pt-2 sm:pt-3 border-t border-gray-800/80">
-            <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs space-y-2 sm:space-y-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:divide-x divide-gray-200">
-              {/* 1. Income (Credit) Row */}
-              <div className="flex items-center justify-between sm:justify-center sm:flex-col sm:items-center sm:text-center text-xs px-1 sm:px-2">
-                <span className="text-gray-500 font-bold text-[11px] sm:text-xs">Income (Credit)</span>
-                <span className="font-bold text-green-700 text-xs sm:text-sm sm:mt-1">+₹{totalIncome.toLocaleString('en-IN')}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+              {/* 1. Income (Credit) Card */}
+              <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs flex flex-col justify-center items-start text-left">
+                <span className="text-gray-500 font-bold text-[10px] sm:text-xs block">Income (Credit)</span>
+                <span className="font-extrabold text-green-700 text-xs sm:text-sm mt-0.5 tracking-tight">+₹{totalIncome.toLocaleString('en-IN')}</span>
               </div>
 
-              {/* 2. Spent (Debit) Row */}
-              <div className="flex items-center justify-between sm:justify-center sm:flex-col sm:items-center sm:text-center text-xs pt-1.5 sm:pt-0 border-t sm:border-t-0 border-gray-100 px-1 sm:px-2">
-                <span className="text-gray-500 font-bold text-[11px] sm:text-xs">Spent (Debit)</span>
-                <span className="font-bold text-[#D93025] text-xs sm:text-sm sm:mt-1">-₹{totalExpense.toLocaleString('en-IN')}</span>
+              {/* 2. Spent (Debit) Card */}
+              <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs flex flex-col justify-center items-start text-left">
+                <span className="text-gray-500 font-bold text-[10px] sm:text-xs block">Spent (Debit)</span>
+                <span className="font-extrabold text-[#D93025] text-xs sm:text-sm mt-0.5 tracking-tight">-₹{totalExpense.toLocaleString('en-IN')}</span>
               </div>
 
-              {/* 3. Lent Out Row */}
-              <div className="flex items-center justify-between sm:justify-center sm:flex-col sm:items-center sm:text-center text-xs pt-1.5 sm:pt-0 border-t sm:border-t-0 border-gray-100 px-1 sm:px-2">
-                <span className="text-gray-500 font-bold text-[11px] sm:text-xs">Lent Out</span>
-                <span className="font-bold text-amber-700 text-xs sm:text-sm sm:mt-1">₹{totalLent.toLocaleString('en-IN')}</span>
+              {/* 3. Lent Out Card */}
+              <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs flex flex-col justify-center items-start text-left">
+                <span className="text-gray-500 font-bold text-[10px] sm:text-xs block">Lent Out</span>
+                <span className="font-extrabold text-amber-700 text-xs sm:text-sm mt-0.5 tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
               </div>
 
-              {/* 4. Current Balance Row */}
-              <div className="flex items-center justify-between sm:justify-center sm:flex-col sm:items-center sm:text-center text-xs pt-1.5 sm:pt-0 border-t sm:border-t-0 border-gray-100 px-1 sm:px-2">
-                <span className="text-gray-500 font-bold text-[11px] sm:text-xs">Current Balance</span>
-                <span className="font-bold text-[#0D2E14] text-xs sm:text-sm sm:mt-1">₹{currentBalance.toLocaleString('en-IN')}</span>
+              {/* 4. Current Balance Card */}
+              <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs flex flex-col justify-center items-start text-left">
+                <span className="text-gray-500 font-bold text-[10px] sm:text-xs block">Current Balance</span>
+                <span className="font-extrabold text-[#0D2E14] text-xs sm:text-sm mt-0.5 tracking-tight">₹{currentBalance.toLocaleString('en-IN')}</span>
               </div>
             </div>
           </div>
