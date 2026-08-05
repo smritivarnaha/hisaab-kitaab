@@ -16,11 +16,12 @@ import {
   BarChart3,
   History,
   User,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 
 export const DashboardOverview: React.FC = () => {
-  const { transactions, updateTransaction, currentUser } = useFinance();
+  const { transactions, updateTransaction, currentUser, dbStatus } = useFinance();
   const [searchTerm, setSearchTerm] = useState('');
   const [txTypeFilter, setTxTypeFilter] = useState<'all' | 'debit' | 'credit'>('all');
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
@@ -134,31 +135,53 @@ export const DashboardOverview: React.FC = () => {
             </div>
           </div>
 
-          {/* Refined 2-Column Mobile Grid Numbers Sub-Boxes with Left-Aligned Parallel Numbers */}
+          {/* Single White Card Container with Vertical Divider Lines & Loading Skeleton */}
           <div className="pt-2 sm:pt-3 border-t border-gray-800/80">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-              {/* 1. Income (Credit) Card */}
-              <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs flex flex-col justify-center items-start text-left">
-                <span className="text-gray-500 font-bold text-[10px] sm:text-xs block">Income (Credit)</span>
-                <span className="font-extrabold text-green-700 text-xs sm:text-sm mt-0.5 tracking-tight">+₹{totalIncome.toLocaleString('en-IN')}</span>
-              </div>
+            <div className="bg-white text-[#0D2E14] p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs">
+              {/* Row 1: Income (Left) & Spent (Right) */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 sm:grid-cols-4">
+                {/* 1. Income (Credit) */}
+                <div className="flex flex-col justify-center items-start pl-2 sm:pl-0 sm:items-center sm:text-center">
+                  <span className="text-gray-500 font-bold text-[10px] sm:text-xs">Income (Credit)</span>
+                  {dbStatus === 'loading' ? (
+                    <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md mt-1"></span>
+                  ) : (
+                    <span className="font-extrabold text-green-700 text-xs sm:text-sm mt-0.5 tracking-tight">+₹{totalIncome.toLocaleString('en-IN')}</span>
+                  )}
+                </div>
 
-              {/* 2. Spent (Debit) Card */}
-              <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs flex flex-col justify-center items-start text-left">
-                <span className="text-gray-500 font-bold text-[10px] sm:text-xs block">Spent (Debit)</span>
-                <span className="font-extrabold text-[#D93025] text-xs sm:text-sm mt-0.5 tracking-tight">-₹{totalExpense.toLocaleString('en-IN')}</span>
-              </div>
+                {/* 2. Spent (Debit) */}
+                <div className="flex flex-col justify-center items-start pl-4 sm:pl-0 sm:items-center sm:text-center">
+                  <span className="text-gray-500 font-bold text-[10px] sm:text-xs">Spent (Debit)</span>
+                  {dbStatus === 'loading' ? (
+                    <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md mt-1"></span>
+                  ) : (
+                    <span className="font-extrabold text-[#D93025] text-xs sm:text-sm mt-0.5 tracking-tight">-₹{totalExpense.toLocaleString('en-IN')}</span>
+                  )}
+                </div>
 
-              {/* 3. Lent Out Card */}
-              <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs flex flex-col justify-center items-start text-left">
-                <span className="text-gray-500 font-bold text-[10px] sm:text-xs block">Lent Out</span>
-                <span className="font-extrabold text-amber-700 text-xs sm:text-sm mt-0.5 tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
-              </div>
+                {/* Mobile Divider Line between Row 1 and Row 2 */}
+                <div className="col-span-2 sm:hidden border-t border-gray-100 my-2.5"></div>
 
-              {/* 4. Current Balance Card */}
-              <div className="bg-white text-[#0D2E14] p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] shadow-2xs flex flex-col justify-center items-start text-left">
-                <span className="text-gray-500 font-bold text-[10px] sm:text-xs block">Current Balance</span>
-                <span className="font-extrabold text-[#0D2E14] text-xs sm:text-sm mt-0.5 tracking-tight">₹{currentBalance.toLocaleString('en-IN')}</span>
+                {/* 3. Lent Out */}
+                <div className="flex flex-col justify-center items-start pl-2 sm:pl-0 sm:items-center sm:text-center">
+                  <span className="text-gray-500 font-bold text-[10px] sm:text-xs">Lent Out</span>
+                  {dbStatus === 'loading' ? (
+                    <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md mt-1"></span>
+                  ) : (
+                    <span className="font-extrabold text-amber-700 text-xs sm:text-sm mt-0.5 tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
+                  )}
+                </div>
+
+                {/* 4. Current Balance */}
+                <div className="flex flex-col justify-center items-start pl-4 sm:pl-0 sm:items-center sm:text-center">
+                  <span className="text-gray-500 font-bold text-[10px] sm:text-xs">Current Balance</span>
+                  {dbStatus === 'loading' ? (
+                    <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md mt-1"></span>
+                  ) : (
+                    <span className="font-extrabold text-[#0D2E14] text-xs sm:text-sm mt-0.5 tracking-tight">₹{currentBalance.toLocaleString('en-IN')}</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -322,8 +345,15 @@ export const DashboardOverview: React.FC = () => {
                 })}
 
                 {filteredTransactions.length === 0 && (
-                  <div className="p-6 text-center text-xs text-gray-500 font-semibold">
-                    No transactions match your search filter.
+                  <div className="p-6 text-center text-xs text-gray-500 font-semibold flex items-center justify-center gap-2">
+                    {dbStatus === 'loading' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-[#0D2E14]" />
+                        <span>Syncing passbook from cloud...</span>
+                      </>
+                    ) : (
+                      <span>No transactions match your search filter.</span>
+                    )}
                   </div>
                 )}
               </div>

@@ -242,11 +242,8 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
             <ShoppingBag className="w-4 h-4 text-[#0D2E14]" />
-            Daily Spend Bunches (Mota Mota Hisaab)
+            Daily Spend Bunches
           </h3>
-          <span className="text-[10px] text-gray-400 font-medium">
-            {datesToDisplay.length} Date {datesToDisplay.length === 1 ? 'Bunch' : 'Bunches'} • Click to view breakdown
-          </span>
         </div>
 
         <div className="space-y-3">
@@ -308,9 +305,6 @@ export const AnalyticsPanel: React.FC<Props> = ({ transactions }) => {
                     <div className="text-right">
                       <span className="text-xs sm:text-sm font-semibold text-slate-900 block">
                         ₹{data.total.toLocaleString('en-IN')}
-                      </span>
-                      <span className="text-[9px] font-medium text-emerald-700 block">
-                        {isExpanded ? 'Click to collapse' : 'Click for items'}
                       </span>
                     </div>
 
