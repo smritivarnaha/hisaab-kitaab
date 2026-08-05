@@ -7,7 +7,7 @@ export const Footer: React.FC = () => {
   const userName = currentUser?.name || 'Praveen';
 
   return (
-    <footer className="w-full bg-[#FAFBF9] border-t border-[#E2E8E0] px-3 py-2 sticky bottom-0 z-40 font-outfit shadow-md flex-shrink-0">
+    <footer className="fixed bottom-0 left-0 right-0 z-50 bg-[#FAFBF9] border-t border-[#E2E8E0] px-3 py-2 font-outfit shadow-2xl">
       <div className="grid grid-cols-2 gap-2 max-w-lg mx-auto">
         <button
           onClick={() => setAccountMode('personal')}
