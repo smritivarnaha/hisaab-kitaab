@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') {
       const rows = await sql`
         SELECT * FROM chat_messages 
-        WHERE "userId" = ${userId} 
+        WHERE "userId" = ${userId} OR "mode" = 'business'
         ORDER BY timestamp ASC LIMIT 200
       `;
       const parsed = rows.map((row: any) => ({

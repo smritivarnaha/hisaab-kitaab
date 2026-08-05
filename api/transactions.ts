@@ -68,9 +68,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
 
-    // ── GET — fetch all transactions for specific user ────────────────────────
+    // ── GET — fetch all transactions for specific user & shared business mode ──────
     if (req.method === 'GET') {
-      const rows = await sql`SELECT * FROM transactions WHERE "userId" = ${userId} ORDER BY timestamp DESC`;
+      const rows = await sql`SELECT * FROM transactions WHERE "userId" = ${userId} OR "mode" = 'business' ORDER BY timestamp DESC`;
       const parsed = rows.map((row: any) => ({
         ...row,
         amount: Number(row.amount),
