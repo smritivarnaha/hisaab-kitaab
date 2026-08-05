@@ -130,13 +130,13 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
       </div>
 
       {/* Auto Settlement Banner */}
-      <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex items-center gap-3">
+      <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex items-center gap-2.5 max-w-full overflow-hidden">
         <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0">
           <ArrowRightLeft className="w-4 h-4" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-[9px] font-extrabold text-amber-800 uppercase tracking-wider block">Auto Equalization Settlement</span>
-          <p className="text-xs sm:text-sm font-black text-amber-900 truncate">{settlementText}</p>
+          <p className="text-xs sm:text-sm font-black text-amber-900 leading-snug break-words">{settlementText}</p>
         </div>
       </div>
     </div>
