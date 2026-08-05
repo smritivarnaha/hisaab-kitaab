@@ -25,32 +25,8 @@ export const Header: React.FC<Props> = ({
         </h1>
       </div>
 
-      {/* Top Action Controls & Account Mode Switcher */}
+      {/* Top Action Controls */}
       <div className="flex items-center gap-1.5">
-        {/* Account Mode Switcher Pill */}
-        <div className="flex items-center bg-white border border-[#E2E8E0] rounded-full p-0.5 shadow-2xs">
-          <button
-            onClick={() => setAccountMode('personal')}
-            className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] font-black transition-all flex items-center gap-1 ${
-              accountMode === 'personal'
-                ? 'bg-[#0D2E14] text-white shadow-2xs'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <span>{currentUser?.name || 'Praveen'}</span>
-          </button>
-
-          <button
-            onClick={() => setAccountMode('business')}
-            className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] font-black transition-all flex items-center gap-1 ${
-              accountMode === 'business'
-                ? 'bg-[#0D2E14] text-white shadow-2xs font-extrabold'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <span>Business</span>
-          </button>
-        </div>
         {/* Export Data Symbol Button */}
         {onOpenExport && (
           <button

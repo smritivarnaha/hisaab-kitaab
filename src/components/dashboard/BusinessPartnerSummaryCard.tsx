@@ -19,7 +19,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
   } = businessSettlement;
 
   return (
-    <div className="bg-white rounded-3xl p-5 border border-[#E2E8E0] shadow-xl space-y-4 font-outfit animate-fadeIn">
+    <div className="bg-white rounded-3xl p-3.5 sm:p-5 border border-[#E2E8E0] shadow-xl space-y-3.5 font-outfit animate-fadeIn max-w-full overflow-hidden">
       {/* Title Header */}
       <div className="flex items-center justify-between border-b border-gray-100 pb-3">
         <div className="flex items-center gap-2">
