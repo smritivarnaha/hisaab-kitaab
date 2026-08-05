@@ -411,17 +411,29 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (bTxList.length > 0) {
       if (Math.abs(praveenDue) < 1) {
-        settlementText = '✅ 50-50 Profit is perfectly balanced between Praveen & Sarthak!';
+        settlementText = '✅ 50-50 Business Ledger is perfectly balanced between Praveen & Sarthak!';
       } else if (praveenDue > 0) {
         payerName = 'Sarthak';
         payeeName = 'Praveen';
         amountDue = Math.round(praveenDue);
-        settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen for equal 50-50 profit`;
+        if (totalIncome === 0) {
+          settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen to equalize 50-50 out-of-pocket expenses`;
+        } else if (totalExpense === 0) {
+          settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen to equalize 50-50 income`;
+        } else {
+          settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen to equalize 50-50 net profit`;
+        }
       } else {
         payerName = 'Praveen';
         payeeName = 'Sarthak';
         amountDue = Math.round(sarthakDue);
-        settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak for equal 50-50 profit`;
+        if (totalIncome === 0) {
+          settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak to equalize 50-50 out-of-pocket expenses`;
+        } else if (totalExpense === 0) {
+          settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak to equalize 50-50 income`;
+        } else {
+          settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak to equalize 50-50 net profit`;
+        }
       }
     }
 
