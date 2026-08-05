@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, FileText, Settings, Wifi, WifiOff, Loader2, LogOut, User, FileSpreadsheet } from 'lucide-react';
+import { Camera, FileText, Settings, Wifi, WifiOff, Loader2, LogOut, User, Download } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 
 interface Props {
@@ -47,7 +47,7 @@ export const Header: React.FC<Props> = ({
             title="Export Data to Excel Sheet"
             className="w-8 h-8 rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xs active:scale-95 hover:bg-emerald-900 transition-all"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+            <Download className="w-3.5 h-3.5 text-white" />
           </button>
         )}
 
