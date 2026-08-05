@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FinanceProvider, useFinance } from './context/FinanceContext';
 import { Header } from './components/layout/Header';
+import { Footer } from './components/layout/Footer';
 import { ChatContainer } from './components/chat/ChatContainer';
 import { DashboardOverview } from './components/dashboard/DashboardOverview';
 import { ReceiptScannerModal } from './components/ocr/ReceiptScannerModal';
@@ -65,6 +66,9 @@ export const AppContent: React.FC = () => {
         <main className="flex-1 overflow-hidden relative flex flex-col">
           <DashboardOverview />
         </main>
+
+        {/* Clean Off-white Professional Footer with Account Switcher */}
+        <Footer />
 
         {/* Floating Chat Bubble Widget (Bottom-Right) — hidden when chat is open */}
         {!isChatOpen && (
