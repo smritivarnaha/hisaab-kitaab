@@ -134,7 +134,7 @@ export const DashboardOverview: React.FC = () => {
             {/* Active Username / Account Pill */}
             <div className="px-3 py-1 rounded-full bg-[#14471f] border border-[#93E044]/50 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 flex-shrink-0 shadow-xs">
               <User className="w-3.5 h-3.5 text-white" />
-              <span className="text-white font-bold capitalize">{accountMode === 'business' ? 'Business 50-50' : (currentUser?.name || 'Praveen')}</span>
+              <span className="text-white font-bold capitalize">{currentUser?.name || 'Praveen'}</span>
             </div>
           </div>
 
