@@ -138,58 +138,60 @@ export const DashboardOverview: React.FC = () => {
           {/* Single White Card Container: 4 Horizontal Rows with Vertical Divider Line & Parallel Numbers */}
           <div className="pt-2 sm:pt-3 border-t border-gray-800/80">
             <div className="bg-white text-[#0D2E14] p-3.5 sm:p-4 rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100">
-              {/* 1. Income (Credit) Row */}
-              <div className="grid grid-cols-2 divide-x divide-gray-200 py-1.5 first:pt-0">
+              {/* 1. Income Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-2 first:pt-0">
                 <div className="pr-3 flex items-center justify-start text-left">
-                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Income (Credit)</span>
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Income</span>
                 </div>
                 <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-16 h-4 bg-gray-200 animate-pulse rounded-md"></span>
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-extrabold text-green-700 text-xs sm:text-sm tracking-tight">+₹{totalIncome.toLocaleString('en-IN')}</span>
+                    <span className="font-black text-green-700 text-sm sm:text-base tracking-tight">₹{totalIncome.toLocaleString('en-IN')}</span>
                   )}
                 </div>
               </div>
 
-              {/* 2. Spent (Debit) Row */}
-              <div className="grid grid-cols-2 divide-x divide-gray-200 py-1.5">
+              {/* 2. Spent Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-2">
                 <div className="pr-3 flex items-center justify-start text-left">
-                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Spent (Debit)</span>
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Spent</span>
                 </div>
                 <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-16 h-4 bg-gray-200 animate-pulse rounded-md"></span>
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-extrabold text-[#D93025] text-xs sm:text-sm tracking-tight">-₹{totalExpense.toLocaleString('en-IN')}</span>
+                    <span className="font-black text-[#D93025] text-sm sm:text-base tracking-tight">₹{totalExpense.toLocaleString('en-IN')}</span>
                   )}
                 </div>
               </div>
 
               {/* 3. Lent Out Row */}
-              <div className="grid grid-cols-2 divide-x divide-gray-200 py-1.5">
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-2">
                 <div className="pr-3 flex items-center justify-start text-left">
                   <span className="text-gray-500 font-bold text-xs sm:text-sm">Lent Out</span>
                 </div>
                 <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-16 h-4 bg-gray-200 animate-pulse rounded-md"></span>
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-extrabold text-amber-700 text-xs sm:text-sm tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
+                    <span className="font-black text-amber-700 text-sm sm:text-base tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
                   )}
                 </div>
               </div>
 
-              {/* 4. Current Balance Row */}
-              <div className="grid grid-cols-2 divide-x divide-gray-200 py-1.5 last:pb-0">
+              {/* 4. Current Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-2 last:pb-0">
                 <div className="pr-3 flex items-center justify-start text-left">
-                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Current Balance</span>
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Current</span>
                 </div>
                 <div className="pl-3.5 flex items-center justify-start text-left">
                   {dbStatus === 'loading' ? (
-                    <span className="inline-block w-16 h-4 bg-gray-200 animate-pulse rounded-md"></span>
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
                   ) : (
-                    <span className="font-extrabold text-[#0D2E14] text-xs sm:text-sm tracking-tight">₹{currentBalance.toLocaleString('en-IN')}</span>
+                    <span className="font-black text-[#0D2E14] text-sm sm:text-base tracking-tight">
+                      {currentBalance >= 0 ? '+' : '-'}₹{Math.abs(currentBalance).toLocaleString('en-IN')}
+                    </span>
                   )}
                 </div>
               </div>
@@ -332,7 +334,7 @@ export const DashboardOverview: React.FC = () => {
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <div className="text-right">
                             <span
-                              className={`text-xs sm:text-sm font-bold font-outfit block ${
+                              className={`text-sm sm:text-base font-black font-outfit block ${
                                 isCredit ? 'text-green-700' : 'text-[#D93025]'
                               }`}
                             >
