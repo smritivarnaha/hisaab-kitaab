@@ -18,11 +18,18 @@
     --accent-lime: #93E044;
   }
 
+  html, body, #root {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+  }
+
   body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
     -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden !important;
   }
 }
 
