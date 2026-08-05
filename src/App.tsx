@@ -92,7 +92,7 @@ export const AppContent: React.FC = () => {
 
         {/* Sliding Chat Accountant Drawer Panel (Right Side) */}
         <div
-          className={`fixed inset-y-0 right-0 z-40 w-full sm:w-[450px] max-w-full bg-white border-l border-gray-200/80 shadow-2xl flex flex-col transform transition-all duration-300 ease-out overflow-hidden ${
+          className={`fixed inset-y-0 right-0 z-[60] w-full sm:w-[450px] max-w-full bg-white border-l border-gray-200/80 shadow-2xl flex flex-col transform transition-all duration-300 ease-out overflow-hidden ${
             isChatOpen ? 'translate-x-0 opacity-100 pointer-events-auto' : 'translate-x-full opacity-0 pointer-events-none'
           }`}
         >

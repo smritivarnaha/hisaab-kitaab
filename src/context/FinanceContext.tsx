@@ -631,7 +631,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Fallback local engine
     setTimeout(() => {
       const lower = text.toLowerCase().trim();
-      const parsedItems = parseMultiInput(text, aiMemory).map(tx => ({ ...tx, isPending: true, userId: activeUserId }));
+      const parsedItems: Transaction[] = parseMultiInput(text, aiMemory).map(tx => ({
+        ...tx,
+        isPending: true,
+        userId: activeUserId,
+        mode: accountMode,
+        enteredBy: currentUser?.name || 'Praveen',
+        type: accountMode === 'business' ? (tx.type === 'income' ? 'income' : 'expense') : (tx.type || 'expense')
+      }));
       
       if (!parsedItems.length) {
         let responseText = `I couldn't detect an amount in your input. Try saying e.g. *"Petrol 2200"* or *"Spent 23 for Nandini"*`;
@@ -648,7 +655,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           id: `msg_ai_${Date.now()}`,
           sender: 'assistant',
           text: responseText,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          mode: accountMode
         };
         setChatMessages(prev => [...prev, aiMsg]);
         saveMessageToDb(aiMsg, activeUserId);
@@ -665,7 +673,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         sender: 'assistant',
         text: responseText,
         timestamp: Date.now(),
-        pendingReviewItems: parsedItems
+        pendingReviewItems: parsedItems,
+        mode: accountMode
       };
       setChatMessages(prev => [...prev, aiMsg]);
       saveMessageToDb(aiMsg, activeUserId);
