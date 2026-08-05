@@ -492,7 +492,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateTransaction = (id: string, updated: Partial<Transaction>) => {
     setTransactions(prev => prev.map(t => {
       if (t.id === id) {
-        const full = { ...t, ...updated, userId: activeUserId };
+        const full = { 
+          ...t, 
+          ...updated, 
+          userId: activeUserId,
+          mode: updated.mode || t.mode || accountMode,
+          enteredBy: updated.enteredBy || t.enteredBy || currentUser?.name || 'Praveen'
+        };
         saveTransactionToDb(full, activeUserId);
         return full;
       }
@@ -530,7 +536,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const confirmPendingItemsBatch = (clearedList: Transaction[]) => {
     clearedList.forEach(tx => {
-      updateTransaction(tx.id, { ...tx, isPending: false });
+      updateTransaction(tx.id, { 
+        ...tx, 
+        isPending: false,
+        mode: tx.mode || accountMode,
+        enteredBy: tx.enteredBy || currentUser?.name || 'Praveen'
+      });
     });
     setPendingReviewItems(prev => prev.filter(p => !clearedList.some(c => c.id === p.id)));
   };

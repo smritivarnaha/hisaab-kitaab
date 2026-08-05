@@ -267,7 +267,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
 };
 
 export const ChatMessageItem: React.FC<Props> = ({ message }) => {
-  const { settings, transactions } = useFinance();
+  const { settings, transactions, currentUser, accountMode } = useFinance();
   const [avatarError, setAvatarError] = useState(false);
   const isUser = message.sender === 'user';
 
@@ -371,6 +371,21 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
 
           {pendingItems.length > 1 && (
             <MultiInlineTransactionEditor items={pendingItems} />
+          )}
+
+          {/* Green Tick Confirmation Acknowledgment Banner */}
+          {message.pendingReviewItems && message.pendingReviewItems.length > 0 && pendingItems.length === 0 && (
+            <div className="mt-2.5 p-2 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-left animate-fadeIn">
+              <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <span className="text-[11px] font-black text-emerald-900 block">
+                  ✅ Saved to Passbook!
+                </span>
+                <span className="text-[10px] text-emerald-700 font-medium block">
+                  {message.pendingReviewItems.length} {message.pendingReviewItems.length === 1 ? 'entry' : 'entries'} confirmed by {message.senderName || currentUser?.name || 'Praveen'} ({accountMode === 'business' ? 'Business Account' : 'Personal Account'})
+                </span>
+              </div>
+            </div>
           )}
 
           {/* Action Summary Pill */}
