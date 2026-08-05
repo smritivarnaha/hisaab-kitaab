@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FinanceProvider, useFinance } from './context/FinanceContext';
 import { Header } from './components/layout/Header';
-import { Footer } from './components/layout/Footer';
 import { ChatContainer } from './components/chat/ChatContainer';
 import { DashboardOverview } from './components/dashboard/DashboardOverview';
 import { ReceiptScannerModal } from './components/ocr/ReceiptScannerModal';
@@ -67,14 +66,11 @@ export const AppContent: React.FC = () => {
           <DashboardOverview />
         </main>
 
-        {/* Clean Off-white Professional Footer with Account Switcher */}
-        <Footer />
-
         {/* Floating Chat Bubble Widget (Bottom-Right) — hidden when chat is open */}
         {!isChatOpen && (
           <button
             onClick={() => setIsChatOpen(true)}
-            className={`fixed bottom-20 right-6 z-50 ${bubbleSizeClass} rounded-full bg-accent-primary text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105 overflow-hidden border-2 border-white`}
+            className={`fixed bottom-6 right-6 z-50 ${bubbleSizeClass} rounded-full bg-accent-primary text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105 overflow-hidden border-2 border-white`}
             title={settings.aiAccountantName || 'My Accountant'}
           >
             {botAvatar && !botAvatarError ? (

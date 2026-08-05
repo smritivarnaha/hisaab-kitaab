@@ -14,6 +14,7 @@ import {
   Check, 
   Upload, 
   User,
+  Building2,
   Palette,
   Type,
   MessageSquare,
@@ -55,7 +56,7 @@ const ACCENT_OPTIONS = [
 ] as const;
 
 export const SettingsModal: React.FC<Props> = ({ onClose }) => {
-  const { settings, updateSettings, currentUser, resetAllData, changePassword } = useFinance();
+  const { settings, updateSettings, currentUser, resetAllData, changePassword, accountMode, setAccountMode } = useFinance();
   const [draft, setDraft] = useState<UserSettings>({ ...settings });
   const [activeTab, setActiveTab] = useState<TabType>('ai');
   const [saved, setSaved] = useState(false);
@@ -180,6 +181,45 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
 
         {/* Body — scrollable */}
         <div className="overflow-y-auto flex-1 p-4 space-y-3 bg-gray-50/50 no-scrollbar">
+
+          {/* Account Mode & Profile Switcher Card */}
+          <div className="bg-white border border-gray-200/90 rounded-2xl p-3.5 space-y-2 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider block">
+                Active Account Ledger
+              </label>
+              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 capitalize">
+                Mode: {accountMode}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setAccountMode('personal')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 border ${
+                  accountMode === 'personal'
+                    ? 'bg-[#0D2E14] text-white border-[#0D2E14] shadow-xs'
+                    : 'bg-slate-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                <User className="w-4 h-4" />
+                <span>{currentUser?.name || 'Praveen'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAccountMode('business')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 border ${
+                  accountMode === 'business'
+                    ? 'bg-[#0D2E14] text-white border-[#0D2E14] shadow-xs'
+                    : 'bg-slate-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span>Business</span>
+              </button>
+            </div>
+          </div>
 
           {/* TAB 1: AI SETTINGS */}
           {activeTab === 'ai' && (
