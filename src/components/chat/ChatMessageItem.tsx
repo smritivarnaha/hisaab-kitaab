@@ -14,6 +14,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
   const [title, setTitle] = useState(item.title === 'Reason Missing' ? '' : item.title);
   const [amount, setAmount] = useState(String(item.amount || ''));
   const [type, setType] = useState<Transaction['type']>(item.type || 'expense');
+  const [notes, setNotes] = useState(item.notes || '');
   const [isConfirmed, setIsConfirmed] = useState(!item.isPending);
   const [isDiscarded, setIsDiscarded] = useState(false);
 
@@ -24,6 +25,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
       title: title.trim() || (type === 'income' ? 'Income' : type === 'lent' ? 'Lent Money' : 'Expense'),
       amount: Number(amount) || 0,
       type,
+      notes: notes.trim() || undefined,
       isPending: false // Confirmed and added to Passbook!
     });
     setIsConfirmed(true);
@@ -44,7 +46,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
   };
 
   return (
-    <div className="mt-2.5 p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit animate-fadeIn">
+    <div className="mt-2.5 p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit animate-fadeIn max-w-full">
       {/* Clean Header */}
       <div className="flex items-center justify-between gap-2 border-b border-amber-100 pb-1.5">
         <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
@@ -57,7 +59,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
         {/* Type Badge & Selector */}
         <div>
           <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Entry Type</label>
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {(['expense', 'income', 'lent', 'borrowed'] as const).map((t) => (
               <button
                 key={t}
@@ -73,15 +75,27 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
           </div>
         </div>
 
-        {/* Editable Description Input */}
+        {/* Editable Title Input */}
         <div>
-          <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Title / Spelling</label>
+          <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Title</label>
           <input
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Edit title or correct spelling..."
             className="w-full bg-slate-50 border border-gray-200 text-xs font-semibold text-gray-900 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all"
+          />
+        </div>
+
+        {/* Optional Notes / Remark Input */}
+        <div>
+          <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Notes / Remark (Optional)</label>
+          <input
+            type="text"
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Add note or remark..."
+            className="w-full bg-slate-50 border border-gray-200 text-xs text-gray-700 rounded-lg p-1.5 outline-none focus:border-emerald-600 transition-all placeholder-gray-400"
           />
         </div>
 
@@ -123,7 +137,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
   const [drafts, setDrafts] = useState<Transaction[]>(items);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
-  const handleUpdate = (id: string, field: 'title' | 'amount' | 'type', value: any) => {
+  const handleUpdate = (id: string, field: 'title' | 'amount' | 'type' | 'notes', value: any) => {
     setDrafts(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
@@ -136,6 +150,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
       ...item,
       title: item.title.trim() || 'Expense',
       amount: Number(item.amount) || 0,
+      notes: item.notes?.trim() || undefined,
       isPending: false
     }));
     confirmPendingItemsBatch(ready);
@@ -145,7 +160,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
   if (isConfirmed || drafts.length === 0) return null;
 
   return (
-    <div className="mt-2.5 p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit animate-fadeIn">
+    <div className="mt-2.5 p-2.5 sm:p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit animate-fadeIn max-w-full">
       <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
         <span className="text-xs font-bold text-amber-800 flex items-center gap-1">
           ✏️ Verify All {drafts.length} Entries Below
@@ -154,15 +169,15 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
 
       <div className="space-y-2">
         {/* Tabular Table Form */}
-        <div className="overflow-x-auto border border-gray-200 rounded-lg bg-slate-50">
-          <table className="w-full text-left text-[11px] border-collapse">
+        <div className="overflow-x-auto border border-gray-200 rounded-lg bg-slate-50 max-w-full">
+          <table className="w-full text-left text-[11px] border-collapse min-w-[280px]">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-100/80 text-[8px] sm:text-[9px] uppercase font-bold text-gray-500">
-                <th className="p-1 w-4 text-center">#</th>
-                <th className="p-1 w-16">Type</th>
-                <th className="p-1">Description / Title</th>
+                <th className="p-1 w-3 text-center">#</th>
+                <th className="p-1 w-14 sm:w-16">Type</th>
+                <th className="p-1">Title</th>
                 <th className="p-1 w-16 sm:w-20 text-right">Amount (₹)</th>
-                <th className="p-1 text-center w-6">Action</th>
+                <th className="p-1 text-center w-5">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -173,17 +188,17 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
                     <select
                       value={row.type || 'expense'}
                       onChange={e => handleUpdate(row.id, 'type', e.target.value)}
-                      className={`text-[9px] font-extrabold rounded px-1 py-0.5 outline-none border cursor-pointer ${
+                      className={`w-full text-[9px] font-extrabold rounded px-0.5 py-0.5 outline-none border cursor-pointer ${
                         row.type === 'income' ? 'bg-green-100 text-green-800 border-green-200' :
                         row.type === 'lent' ? 'bg-amber-100 text-amber-800 border-amber-200' :
                         row.type === 'borrowed' ? 'bg-purple-100 text-purple-800 border-purple-200' :
                         'bg-red-100 text-red-800 border-red-200'
                       }`}
                     >
-                      <option value="expense">Spent 🔴</option>
-                      <option value="income">Income 🟢</option>
-                      <option value="lent">Lent 🤝</option>
-                      <option value="borrowed">Borrowed 🤝</option>
+                      <option value="expense">Spent</option>
+                      <option value="income">Income</option>
+                      <option value="lent">Lent</option>
+                      <option value="borrowed">Borrowed</option>
                     </select>
                   </td>
                   <td className="p-1">
@@ -191,8 +206,15 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
                       type="text"
                       value={row.title === 'Reason Missing' ? '' : row.title}
                       onChange={e => handleUpdate(row.id, 'title', e.target.value)}
-                      placeholder="Title / description..."
-                      className="w-full text-[10px] sm:text-xs font-semibold text-gray-900 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 outline-none focus:border-emerald-600 truncate"
+                      placeholder="Title..."
+                      className="w-full text-[10px] sm:text-xs font-semibold text-gray-900 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 outline-none focus:border-emerald-600"
+                    />
+                    <input
+                      type="text"
+                      value={row.notes || ''}
+                      onChange={e => handleUpdate(row.id, 'notes', e.target.value)}
+                      placeholder="+ Add note / remark"
+                      className="w-full text-[9px] text-gray-500 bg-transparent border-b border-transparent focus:border-gray-300 outline-none px-1 py-0.5 placeholder-gray-400 mt-0.5"
                     />
                   </td>
                   <td className="p-1 text-right">
@@ -200,7 +222,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
                       type="number"
                       value={row.amount}
                       onChange={e => handleUpdate(row.id, 'amount', e.target.value)}
-                      className="w-16 sm:w-20 text-[10px] sm:text-xs font-bold text-emerald-700 bg-gray-50 border border-gray-200 rounded px-1 py-0.5 outline-none focus:border-emerald-600 text-right"
+                      className="w-14 sm:w-20 text-[10px] sm:text-xs font-bold text-emerald-700 bg-gray-50 border border-gray-200 rounded px-1 py-0.5 outline-none focus:border-emerald-600 text-right"
                     />
                   </td>
                   <td className="p-1 text-center">
