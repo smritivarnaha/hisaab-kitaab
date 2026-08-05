@@ -3,7 +3,8 @@ import { Transaction } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
 import { speechService } from '../../services/voice/speechRecognition';
 import { formatGlobalDate } from '../../utils/dateUtils';
-import { CheckCircle2, Clock, Mic, Send, Sparkles, Check } from 'lucide-react';
+import { CheckCircle2, Clock, Mic, Send, Sparkles, Check, Edit2 } from 'lucide-react';
+import { TransactionEditModal } from '../common/TransactionEditModal';
 
 interface Props {
   transactions: Transaction[];
@@ -30,6 +31,8 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
   });
 
 
+
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
   const quickReasonChips = [
     'Dinner / Food',
@@ -184,11 +187,11 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
           </span>
         </div>
 
-        <form onSubmit={handleBatchSubmit} className="flex items-center gap-1.5">
+        <form onSubmit={handleBatchSubmit} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <button
             type="button"
             onClick={handleToggleBatchVoice}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition-all active:scale-95 flex-shrink-0 ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-95 flex-shrink-0 ${
               isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-[#0D2E14] text-white'
             }`}
             title="Speak continuous script"
@@ -197,22 +200,24 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
             <span className="text-[11px] text-white">{isListening ? 'Listening Script...' : 'Speak Batch Script'}</span>
           </button>
 
-          <input
-            type="text"
-            value={batchVoiceText}
-            onChange={e => setBatchVoiceText(e.target.value)}
-            placeholder="e.g. '1st was petrol refill, 2nd was swiggy dinner, 3rd was grocery'..."
-            className="flex-1 bg-[#F3F5F1] border border-[#E2E8E0] rounded-full py-1.5 px-3 text-xs text-[#0D2E14] outline-none font-semibold placeholder-gray-400 focus:border-[#0D2E14]"
-          />
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <input
+              type="text"
+              value={batchVoiceText}
+              onChange={e => setBatchVoiceText(e.target.value)}
+              placeholder="e.g. '1st was petrol refill, 2nd was swiggy dinner'..."
+              className="flex-1 min-w-0 bg-[#F3F5F1] border border-[#E2E8E0] rounded-full py-1.5 px-3 text-xs text-[#0D2E14] outline-none font-semibold placeholder-gray-400 focus:border-[#0D2E14]"
+            />
 
-          <button
-            type="submit"
-            disabled={!batchVoiceText.trim()}
-            className="px-3.5 py-1.5 rounded-full bg-[#0D2E14] text-white text-xs font-bold flex items-center gap-1 disabled:opacity-30 transition-all active:scale-95 flex-shrink-0"
-          >
-            <Send className="w-3 h-3 text-white" />
-            <span className="text-white">Analyze</span>
-          </button>
+            <button
+              type="submit"
+              disabled={!batchVoiceText.trim()}
+              className="px-3.5 py-1.5 rounded-full bg-[#0D2E14] text-white text-xs font-bold flex items-center gap-1 disabled:opacity-30 transition-all active:scale-95 flex-shrink-0"
+            >
+              <Send className="w-3 h-3 text-white" />
+              <span className="text-white">Analyze</span>
+            </button>
+          </div>
         </form>
 
         {isListening && (
@@ -247,14 +252,24 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
                   </span>
 
                   <div className="min-w-0 flex-1">
-                    <h5 className="text-xs font-semibold text-[#0D2E14] truncate">
-                      What was reason for <span className="font-bold text-[#D93025]">₹{Number(item.amount || 0).toLocaleString('en-IN')}</span>?
+                    <h5 className="text-xs font-semibold text-[#0D2E14] truncate flex items-center gap-1">
+                      <span>What was reason for <span className="font-bold text-[#D93025]">₹{Number(item.amount || 0).toLocaleString('en-IN')}</span>?</span>
                     </h5>
                     <span className="text-[10px] text-gray-500 font-semibold truncate block">
                       {formatGlobalDate(item.date || item.timestamp)}
                     </span>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setEditingTx(item)}
+                  className="p-1 text-gray-500 hover:text-[#0D2E14] hover:bg-[#F3F5F1] rounded-lg transition-colors flex items-center gap-1 text-[10px] font-bold"
+                  title="Full edit entry"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Edit</span>
+                </button>
               </div>
 
               {/* Inline Typing Input for Single Row */}
@@ -301,6 +316,13 @@ export const DailyReconciliationCard: React.FC<Props> = ({ transactions }) => {
           );
         })}
       </div>
+
+      {editingTx && (
+        <TransactionEditModal
+          transaction={editingTx}
+          onClose={() => setEditingTx(null)}
+        />
+      )}
     </div>
   );
 };

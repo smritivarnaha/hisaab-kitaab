@@ -55,8 +55,6 @@ export const AppContent: React.FC = () => {
       <div className="w-full max-w-6xl mx-auto flex flex-col h-screen overflow-hidden shadow-2xl sm:border-x border-[#E2E8E0] bg-[#F3F5F1] relative">
         {/* Top Header Navbar */}
         <Header
-          onOpenOCR={() => setIsOCROpen(true)}
-          onOpenImport={() => setIsImportOpen(true)}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />
 

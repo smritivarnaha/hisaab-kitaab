@@ -29,7 +29,7 @@ interface Props {
   onClose: () => void;
 }
 
-type TabType = 'ai' | 'app' | 'avatars' | 'appearance' | 'account';
+type TabType = 'ai' | 'avatars' | 'appearance' | 'account';
 
 const PRESET_BOT_AVATARS = [
   { name: 'Classic Bot', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Felix' },
@@ -153,14 +153,6 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
             🤖 AI
           </button>
           <button
-            onClick={() => setActiveTab('app')}
-            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
-              activeTab === 'app' ? 'bg-[#0D2E14] text-white shadow-2xs font-bold ring-2 ring-emerald-500/20' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-            }`}
-          >
-            📱 App APK
-          </button>
-          <button
             onClick={() => setActiveTab('avatars')}
             className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
               activeTab === 'avatars' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -188,53 +180,6 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
 
         {/* Body — scrollable */}
         <div className="overflow-y-auto flex-1 p-4 space-y-3 bg-gray-50/50 no-scrollbar">
-
-          {/* TAB: ANDROID APP APK DOWNLOAD */}
-          {activeTab === 'app' && (
-            <div className="space-y-3 font-outfit">
-              <section className="bg-gradient-to-br from-[#0D2E14] to-slate-900 text-white rounded-xl p-4 space-y-3 shadow-md">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                    <Smartphone className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-extrabold text-white">Hisaab Kitab Native Android App</h4>
-                    <p className="text-[10px] text-emerald-200/90 font-medium">Install directly on your Android smartphone</p>
-                  </div>
-                </div>
-
-                <p className="text-[11px] text-gray-200 leading-relaxed">
-                  Download the standalone Android APK file to install the complete Hisaab Kitab AI application with Whisper voice notes, Vision receipt scanner, and isolated Neon cloud passbook on your phone.
-                </p>
-
-                <div className="pt-1">
-                  <a
-                    href="https://github.com/smritivarnaha/hisaab-kitaab/releases/download/v1.0.1/HisaabKitab.apk"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-3 px-4 bg-[#93E044] hover:bg-[#82cb3b] text-[#0D2E14] font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 text-center"
-                  >
-                    <Download className="w-4 h-4 text-[#0D2E14]" />
-                    <span>📥 Download Android APK (.apk)</span>
-                  </a>
-                </div>
-
-                <span className="text-[9px] text-gray-400 block text-center font-medium">
-                  Direct download link • No GitHub login required • 100% Free
-                </span>
-              </section>
-
-              <section className="bg-white border border-gray-200 rounded-xl p-3.5 space-y-2">
-                <h5 className="text-xs font-bold text-gray-900">How to Install APK on Android:</h5>
-                <ol className="text-[11px] text-gray-600 space-y-1.5 list-decimal pl-4">
-                  <li>Tap the green <strong>"Download Android APK"</strong> button above.</li>
-                  <li>Open the downloaded <code>app-debug.apk</code> file on your phone.</li>
-                  <li>If prompted with <em>"Install unknown app"</em>, tap <strong>Settings → Allow</strong>.</li>
-                  <li>Tap <strong>Install</strong> to launch Hisaab Kitab on your phone screen!</li>
-                </ol>
-              </section>
-            </div>
-          )}
 
           {/* TAB 1: AI SETTINGS */}
           {activeTab === 'ai' && (

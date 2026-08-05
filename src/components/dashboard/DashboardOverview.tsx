@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Transaction } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
 import { DebtLentLedger } from './DebtLentLedger';
 import { InsightsCard } from './InsightsCard';
@@ -6,6 +7,7 @@ import { DailyReconciliationCard } from './DailyReconciliationCard';
 import { CategoryIcon } from '../common/CategoryIcon';
 import { PaymentMethodIcon } from '../common/PaymentMethodIcon';
 import { AnalyticsPanel } from './AnalyticsPanel';
+import { TransactionEditModal } from '../common/TransactionEditModal';
 import { formatGlobalDate } from '../../utils/dateUtils';
 import { 
   Search, 
@@ -13,7 +15,8 @@ import {
   FileText,
   BarChart3,
   History,
-  User
+  User,
+  Edit2
 } from 'lucide-react';
 
 export const DashboardOverview: React.FC = () => {
@@ -22,6 +25,7 @@ export const DashboardOverview: React.FC = () => {
   const [txTypeFilter, setTxTypeFilter] = useState<'all' | 'debit' | 'credit'>('all');
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
   const [activeSubTab, setActiveSubTab] = useState<'passbook' | 'analytics'>('passbook');
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
   // Compute period range e.g. "01 Aug 26 - 03 Aug 26"
   const getCurrentPeriodRange = () => {
@@ -256,7 +260,8 @@ export const DashboardOverview: React.FC = () => {
                   return (
                     <div 
                       key={tx.id} 
-                      className="p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] bg-[#FAFCF9] hover:bg-white transition-all shadow-2xs"
+                      onClick={() => setEditingTx(tx)}
+                      className="p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] bg-[#FAFCF9] hover:bg-white hover:border-[#0D2E14] transition-all shadow-2xs cursor-pointer group relative"
                     >
                       <div className="flex items-center justify-between gap-2">
                         {/* Left: Category Icon + Title + Plain Text Date & Method */}
@@ -264,13 +269,17 @@ export const DashboardOverview: React.FC = () => {
                           <CategoryIcon category={tx.category} size="sm" />
 
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1">
-                              <h4 className="text-xs font-bold text-[#0D2E14] font-outfit leading-tight truncate">
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="text-xs font-bold text-[#0D2E14] font-outfit leading-tight truncate group-hover:text-emerald-900">
                                 {tx.title || tx.category} {tx.person ? `(${tx.person})` : ''}
                               </h4>
+                              <Edit2 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                               {hasSpecialNotes && (
                                 <button
-                                  onClick={() => toggleNoteExpand(tx.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleNoteExpand(tx.id);
+                                  }}
                                   className="text-blue-600 hover:text-blue-800 p-0.5"
                                   title={isExpanded ? "Hide note" : "View note"}
                                 >
@@ -281,6 +290,8 @@ export const DashboardOverview: React.FC = () => {
 
                             <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-500 font-medium truncate">
                               <span className="font-semibold text-gray-600">{formatGlobalDate(tx.date || tx.timestamp)}</span>
+                              <span>•</span>
+                              <span className="text-gray-400">{tx.paymentMethod}</span>
                             </div>
                           </div>
                         </div>
@@ -294,6 +305,7 @@ export const DashboardOverview: React.FC = () => {
                           >
                             {isCredit ? '+' : '-'}₹{Number(tx.amount || 0).toLocaleString('en-IN')}
                           </span>
+                          <span className="text-[9px] text-gray-400 group-hover:text-emerald-700 font-medium transition-colors">Click to edit</span>
                         </div>
                       </div>
 
@@ -326,6 +338,14 @@ export const DashboardOverview: React.FC = () => {
           <DebtLentLedger transactions={transactions} onSettle={handleSettle} />
         </div>
       </div>
+
+      {/* Transaction Edit Modal */}
+      {editingTx && (
+        <TransactionEditModal
+          transaction={editingTx}
+          onClose={() => setEditingTx(null)}
+        />
+      )}
     </div>
   );
 };
