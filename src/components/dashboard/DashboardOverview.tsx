@@ -334,7 +334,7 @@ export const DashboardOverview: React.FC = () => {
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <div className="text-right">
                             <span
-                              className={`text-lg sm:text-xl font-bold font-outfit block ${
+                              className={`text-xs sm:text-sm font-bold font-outfit block ${
                                 isCredit ? 'text-green-700' : 'text-[#D93025]'
                               }`}
                             >
