@@ -159,164 +159,105 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
     setDrafts([]);
   };
 
+  const getTypeStyle = (t: string) => {
+    switch (t) {
+      case 'income': return 'bg-green-100 text-green-800 border-green-200';
+      case 'lent': return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'borrowed': return 'bg-purple-100 text-purple-800 border-purple-200';
+      default: return 'bg-red-100 text-red-800 border-red-200';
+    }
+  };
+
   if (isConfirmed || drafts.length === 0) return null;
 
   return (
-    <div className="mt-2.5 p-2.5 sm:p-3 bg-white rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 text-left text-gray-900 font-outfit animate-fadeIn max-w-full">
-      <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
-        <span className="text-xs font-bold text-amber-800 flex items-center gap-1">
+    <div className="mt-2.5 p-3 bg-white rounded-2xl border border-amber-200/90 shadow-xs space-y-3 text-left text-gray-900 font-outfit animate-fadeIn max-w-full">
+      {/* Clean Header */}
+      <div className="flex items-center justify-between border-b border-amber-100 pb-2">
+        <span className="text-xs font-extrabold text-amber-800 flex items-center gap-1.5">
           ✏️ Verify All {drafts.length} Entries Below
         </span>
       </div>
 
-      <div className="space-y-2">
-        {/* MOBILE VIEW: Stacked Card Rows for Perfect Touch Responsiveness (< sm) */}
-        <div className="space-y-2 sm:hidden">
-          {drafts.map((row, idx) => (
-            <div key={row.id} className="p-2 bg-slate-50 border border-gray-200 rounded-lg space-y-1.5">
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[9px] font-bold text-gray-400">#{idx + 1}</span>
-                <select
-                  value={row.type || 'expense'}
-                  onChange={e => handleUpdate(row.id, 'type', e.target.value)}
-                  className={`text-[9px] font-extrabold rounded px-1.5 py-0.5 outline-none border cursor-pointer ${
-                    row.type === 'income' ? 'bg-green-100 text-green-800 border-green-200' :
-                    row.type === 'lent' ? 'bg-amber-100 text-amber-800 border-amber-200' :
-                    row.type === 'borrowed' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                    'bg-red-100 text-red-800 border-red-200'
-                  }`}
-                >
-                  <option value="expense">Spent 🔴</option>
-                  <option value="income">Income 🟢</option>
-                  <option value="lent">Lent 🤝</option>
-                  <option value="borrowed">Borrowed 🤝</option>
-                </select>
-                <button
-                  onClick={() => handleDeleteRow(row.id)}
-                  className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 ml-auto"
-                  title="Remove entry"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+      {/* Itemized Stacked Cards (Spacious, Fully Responsive Everywhere) */}
+      <div className="space-y-2.5">
+        {drafts.map((row, idx) => (
+          <div key={row.id} className="p-2.5 bg-slate-50 border border-gray-200/90 rounded-xl space-y-2">
+            {/* Top Bar: #1 • Type Dropdown • Amount • Trash */}
+            <div className="flex items-center gap-1.5 justify-between">
+              <span className="text-[10px] font-black text-gray-400 w-5">#{idx + 1}</span>
 
-              <div>
-                <input
-                  type="text"
-                  value={row.title === 'Reason Missing' ? '' : row.title}
-                  onChange={e => handleUpdate(row.id, 'title', e.target.value)}
-                  placeholder="Title..."
-                  className="w-full text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-emerald-600"
-                />
-              </div>
+              {/* Type Select Dropdown */}
+              <select
+                value={row.type || 'expense'}
+                onChange={e => handleUpdate(row.id, 'type', e.target.value)}
+                className={`text-[10px] font-extrabold rounded-lg px-2 py-1 outline-none border cursor-pointer ${getTypeStyle(row.type || 'expense')}`}
+              >
+                <option value="expense">Spent 🔴</option>
+                <option value="income">Income 🟢</option>
+                <option value="lent">Lent 🤝</option>
+                <option value="borrowed">Borrowed 🤝</option>
+              </select>
 
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={row.notes || ''}
-                  onChange={e => handleUpdate(row.id, 'notes', e.target.value)}
-                  placeholder="+ Add note / remark"
-                  className="flex-1 text-[10px] text-gray-600 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-emerald-600 placeholder-gray-400"
-                />
+              {/* Amount Input */}
+              <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg px-2 py-0.5 ml-auto">
+                <span className="text-xs font-bold text-gray-400">₹</span>
                 <input
                   type="number"
                   value={row.amount}
                   onChange={e => handleUpdate(row.id, 'amount', e.target.value)}
-                  className="w-20 text-xs font-bold text-emerald-700 bg-white border border-gray-200 rounded px-1.5 py-1 outline-none focus:border-emerald-600 text-right"
+                  placeholder="0"
+                  className="w-16 sm:w-20 text-xs font-black text-emerald-700 outline-none text-right"
                 />
               </div>
+
+              {/* Delete Button */}
+              <button
+                onClick={() => handleDeleteRow(row.id)}
+                className="p-1.5 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 flex-shrink-0 transition-colors"
+                title="Remove entry"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+              </button>
             </div>
-          ))}
-        </div>
 
-        {/* DESKTOP/TABLET VIEW: Tabular Form (>= sm) */}
-        <div className="hidden sm:block overflow-x-auto border border-gray-200 rounded-lg bg-slate-50 max-w-full">
-          <table className="w-full text-left text-[11px] border-collapse min-w-[280px]">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-100/80 text-[8px] sm:text-[9px] uppercase font-bold text-gray-500">
-                <th className="p-1 w-3 text-center">#</th>
-                <th className="p-1 w-14 sm:w-16">Type</th>
-                <th className="p-1">Title</th>
-                <th className="p-1 w-16 sm:w-20 text-right">Amount (₹)</th>
-                <th className="p-1 text-center w-5">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {drafts.map((row, idx) => (
-                <tr key={row.id} className="border-b border-gray-100 bg-white">
-                  <td className="p-1 text-[9px] font-semibold text-gray-400 text-center">{idx + 1}</td>
-                  <td className="p-1">
-                    <select
-                      value={row.type || 'expense'}
-                      onChange={e => handleUpdate(row.id, 'type', e.target.value)}
-                      className={`w-full text-[9px] font-extrabold rounded px-0.5 py-0.5 outline-none border cursor-pointer ${
-                        row.type === 'income' ? 'bg-green-100 text-green-800 border-green-200' :
-                        row.type === 'lent' ? 'bg-amber-100 text-amber-800 border-amber-200' :
-                        row.type === 'borrowed' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                        'bg-red-100 text-red-800 border-red-200'
-                      }`}
-                    >
-                      <option value="expense">Spent</option>
-                      <option value="income">Income</option>
-                      <option value="lent">Lent</option>
-                      <option value="borrowed">Borrowed</option>
-                    </select>
-                  </td>
-                  <td className="p-1">
-                    <input
-                      type="text"
-                      value={row.title === 'Reason Missing' ? '' : row.title}
-                      onChange={e => handleUpdate(row.id, 'title', e.target.value)}
-                      placeholder="Title..."
-                      className="w-full text-[10px] sm:text-xs font-semibold text-gray-900 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 outline-none focus:border-emerald-600"
-                    />
-                    <input
-                      type="text"
-                      value={row.notes || ''}
-                      onChange={e => handleUpdate(row.id, 'notes', e.target.value)}
-                      placeholder="+ Add note / remark"
-                      className="w-full text-[9px] text-gray-500 bg-transparent border-b border-transparent focus:border-gray-300 outline-none px-1 py-0.5 placeholder-gray-400 mt-0.5"
-                    />
-                  </td>
-                  <td className="p-1 text-right">
-                    <input
-                      type="number"
-                      value={row.amount}
-                      onChange={e => handleUpdate(row.id, 'amount', e.target.value)}
-                      className="w-14 sm:w-20 text-[10px] sm:text-xs font-bold text-emerald-700 bg-gray-50 border border-gray-200 rounded px-1 py-0.5 outline-none focus:border-emerald-600 text-right"
-                    />
-                  </td>
-                  <td className="p-1 text-center">
-                    <button
-                      onClick={() => handleDeleteRow(row.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
-                      title="Remove row"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            {/* Title & Notes Inputs */}
+            <div className="space-y-1 pt-0.5">
+              <input
+                type="text"
+                value={row.title === 'Reason Missing' ? '' : row.title}
+                onChange={e => handleUpdate(row.id, 'title', e.target.value)}
+                placeholder="Title / description..."
+                className="w-full text-xs font-semibold text-gray-900 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-emerald-600 shadow-2xs"
+              />
 
-        {/* Action Buttons: Confirm & Add + Discard All */}
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={handleConfirmAll}
-            className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all"
-          >
-            <Check className="w-4 h-4" />
-            <span>Confirm & Add</span>
-          </button>
-          <button
-            onClick={handleDiscardAll}
-            className="py-2 px-3 border border-gray-200 text-gray-500 hover:text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex-shrink-0"
-          >
-            Discard All
-          </button>
-        </div>
+              <input
+                type="text"
+                value={row.notes || ''}
+                onChange={e => handleUpdate(row.id, 'notes', e.target.value)}
+                placeholder="+ Add optional note or remark..."
+                className="w-full text-[10px] text-gray-600 bg-white/70 border border-gray-200/80 rounded-lg px-2.5 py-1 outline-none focus:border-emerald-600 placeholder-gray-400"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Action Buttons: Confirm & Add + Discard All */}
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={handleConfirmAll}
+          className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+        >
+          <Check className="w-4 h-4" />
+          <span>Confirm & Add</span>
+        </button>
+        <button
+          onClick={handleDiscardAll}
+          className="py-2 px-3 border border-gray-200 text-gray-500 hover:text-red-600 rounded-xl text-xs font-medium hover:bg-red-50 transition-colors flex-shrink-0"
+        >
+          Discard All
+        </button>
       </div>
     </div>
   );
