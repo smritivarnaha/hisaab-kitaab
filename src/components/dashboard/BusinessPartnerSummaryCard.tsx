@@ -186,7 +186,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         </div>
 
         {/* Inner White Card: Income, Expenses & Direct Personal Transfers */}
-        <div className="relative z-0 bg-white text-[#0D2E14] rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100 overflow-hidden">
+        <div className="relative z-0 bg-white text-[#0D2E14] rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y md:divide-y-0 md:divide-x divide-gray-100 md:grid md:grid-cols-3 overflow-hidden">
           {/* Income Section */}
           <div className="p-3 sm:p-4 space-y-2.5">
             <div 
@@ -202,34 +202,32 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                   <span className="text-base sm:text-lg font-black text-emerald-700">₹{totalIncome.toLocaleString('en-IN')}</span>
                 </div>
               </div>
-              <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
+              <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full md:hidden">
                 {isIncomeOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
             </div>
 
-            {isIncomeOpen && (
-              <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
-                <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
-                  {/* Left: Praveen */}
-                  <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
-                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
-                      Praveen
-                    </span>
-                    <span className="font-semibold text-gray-900 ml-1">₹{praveenIncome.toLocaleString('en-IN')}</span>
-                  </div>
+            <div className="pt-2.5 border-t border-gray-100">
+              <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
+                {/* Left: Praveen */}
+                <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
+                    Praveen
+                  </span>
+                  <span className="font-semibold text-gray-900 ml-1">₹{praveenIncome.toLocaleString('en-IN')}</span>
+                </div>
 
-                  {/* Right: Sarthak */}
-                  <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
-                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
-                      Sarthak
-                    </span>
-                    <span className="font-semibold text-gray-900 ml-1">₹{sarthakIncome.toLocaleString('en-IN')}</span>
-                  </div>
+                {/* Right: Sarthak */}
+                <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
+                    Sarthak
+                  </span>
+                  <span className="font-semibold text-gray-900 ml-1">₹{sarthakIncome.toLocaleString('en-IN')}</span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Expenses Section */}
@@ -247,37 +245,35 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                   <span className="text-base sm:text-lg font-black text-rose-600">₹{totalExpense.toLocaleString('en-IN')}</span>
                 </div>
               </div>
-              <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
+              <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full md:hidden">
                 {isExpenseOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
             </div>
 
-            {isExpenseOpen && (
-              <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
-                <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
-                  {/* Left: Praveen */}
-                  <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
-                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
-                      <span className="w-2 h-2 rounded-full bg-rose-500 inline-block flex-shrink-0" />
-                      Praveen
-                    </span>
-                    <span className="font-semibold text-gray-900 ml-1">₹{praveenExpense.toLocaleString('en-IN')}</span>
-                  </div>
+            <div className="pt-2.5 border-t border-gray-100">
+              <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
+                {/* Left: Praveen */}
+                <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 inline-block flex-shrink-0" />
+                    Praveen
+                  </span>
+                  <span className="font-semibold text-gray-900 ml-1">₹{praveenExpense.toLocaleString('en-IN')}</span>
+                </div>
 
-                  {/* Right: Sarthak */}
-                  <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
-                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
-                      <span className="w-2 h-2 rounded-full bg-rose-400 inline-block flex-shrink-0" />
-                      Sarthak
-                    </span>
-                    <span className="font-semibold text-gray-900 ml-1">₹{sarthakExpense.toLocaleString('en-IN')}</span>
-                  </div>
+                {/* Right: Sarthak */}
+                <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                    <span className="w-2 h-2 rounded-full bg-rose-400 inline-block flex-shrink-0" />
+                    Sarthak
+                  </span>
+                  <span className="font-semibold text-gray-900 ml-1">₹{sarthakExpense.toLocaleString('en-IN')}</span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
-          {/* Direct Partner & Family Transfers (100% Direct Offset) */}
+          {/* Direct Partner & Family Transfers Section */}
           <div className="p-3 sm:p-4 space-y-2.5">
             <div 
               onClick={() => setIsDirectOpen(prev => !prev)}
@@ -292,34 +288,32 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                   <span className="text-base sm:text-lg font-black text-blue-700">₹{(praveenDirectGiven + sarthakDirectGiven).toLocaleString('en-IN')}</span>
                 </div>
               </div>
-              <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
+              <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full md:hidden">
                 {isDirectOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
             </div>
 
-            {isDirectOpen && (
-              <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
-                <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
-                  {/* Left: Praveen Direct Given */}
-                  <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
-                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
-                      <span className="w-2 h-2 rounded-full bg-blue-500 inline-block flex-shrink-0" />
-                      Praveen
-                    </span>
-                    <span className="font-semibold text-gray-900 ml-1">₹{praveenDirectGiven.toLocaleString('en-IN')}</span>
-                  </div>
+            <div className="pt-2.5 border-t border-gray-100">
+              <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
+                {/* Left: Praveen Direct Given */}
+                <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 inline-block flex-shrink-0" />
+                    Praveen
+                  </span>
+                  <span className="font-semibold text-gray-900 ml-1">₹{praveenDirectGiven.toLocaleString('en-IN')}</span>
+                </div>
 
-                  {/* Right: Sarthak Direct Given */}
-                  <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
-                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
-                      <span className="w-2 h-2 rounded-full bg-blue-400 inline-block flex-shrink-0" />
-                      Sarthak
-                    </span>
-                    <span className="font-semibold text-gray-900 ml-1">₹{sarthakDirectGiven.toLocaleString('en-IN')}</span>
-                  </div>
+                {/* Right: Sarthak Direct Given */}
+                <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 inline-block flex-shrink-0" />
+                    Sarthak
+                  </span>
+                  <span className="font-semibold text-gray-900 ml-1">₹{sarthakDirectGiven.toLocaleString('en-IN')}</span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
