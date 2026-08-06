@@ -490,20 +490,46 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateTransaction = (id: string, updated: Partial<Transaction>) => {
-    setTransactions(prev => prev.map(t => {
-      if (t.id === id) {
-        const full = { 
-          ...t, 
-          ...updated, 
-          userId: activeUserId,
-          mode: updated.mode || t.mode || accountMode,
-          enteredBy: updated.enteredBy || t.enteredBy || currentUser?.name || 'Praveen'
+    setTransactions(prev => {
+      const exists = prev.some(t => t.id === id);
+      if (exists) {
+        return prev.map(t => {
+          if (t.id === id) {
+            const full = { 
+              ...t, 
+              ...updated, 
+              isPending: false,
+              userId: activeUserId,
+              mode: updated.mode || t.mode || accountMode,
+              enteredBy: updated.enteredBy || t.enteredBy || currentUser?.name || 'Praveen'
+            };
+            saveTransactionToDb(full, activeUserId);
+            return full;
+          }
+          return t;
+        });
+      } else {
+        const full: Transaction = {
+          id: id || `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          amount: Number(updated.amount || 0),
+          currency: '₹',
+          type: updated.type || 'expense',
+          category: updated.category || 'Others',
+          title: updated.title || 'Expense',
+          date: updated.date || new Date().toISOString().split('T')[0],
+          relativeDateText: 'Today',
+          timestamp: updated.timestamp || Date.now(),
+          confidenceScore: 100,
+          paymentMethod: updated.paymentMethod || 'UPI',
+          mode: updated.mode || accountMode,
+          enteredBy: updated.enteredBy || currentUser?.name || 'Praveen',
+          ...updated,
+          isPending: false
         };
         saveTransactionToDb(full, activeUserId);
-        return full;
+        return [full, ...prev];
       }
-      return t;
-    }));
+    });
   };
 
   const deleteTransaction = (id: string) => {
