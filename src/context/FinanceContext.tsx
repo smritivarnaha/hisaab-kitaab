@@ -479,11 +479,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
-    // Sarthak Current Amount: (Sarthak Income / 2) - sarthakDirectGiven + praveenDirectGiven
-    const sarthakCurrentAmount = Math.round((sarthakIncome / 2) - sarthakDirectGiven + praveenDirectGiven);
+    // Praveen Current Amount: Praveen Income - Praveen Expense - praveenDirectGiven + sarthakDirectGiven
+    const praveenCurrentAmount = Math.round(praveenIncome - praveenExpense - praveenDirectGiven + sarthakDirectGiven);
 
-    // Praveen Current Amount: ((Praveen Income - Total Expenses) / 2) - praveenDirectGiven + sarthakDirectGiven
-    const praveenCurrentAmount = Math.round(((praveenIncome - totalExpense) / 2) - praveenDirectGiven + sarthakDirectGiven);
+    // Sarthak Current Amount: Sarthak Income - Sarthak Expense - sarthakDirectGiven + praveenDirectGiven
+    const sarthakCurrentAmount = Math.round(sarthakIncome - sarthakExpense - sarthakDirectGiven + praveenDirectGiven);
 
     return {
       totalIncome,
