@@ -202,28 +202,23 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
 
         {/* Header Row */}
         <div className="relative z-10 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#14471f] border border-[#93E044]/40 text-emerald-300 flex items-center justify-center font-bold flex-shrink-0 shadow-xs">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-2xl font-extrabold tracking-tight text-white">
-                Business Overview
-              </h2>
-              <span className="text-[10px] sm:text-xs font-semibold text-emerald-300 block mt-0.5">
-                Period: {getPeriodLabel()}
-              </span>
-            </div>
+          <div>
+            <h2 className="text-lg sm:text-2xl font-extrabold tracking-tight text-white">
+              Business Overview
+            </h2>
+            <span className="text-[10px] sm:text-xs font-semibold text-emerald-300 block mt-0.5">
+              Period: {getPeriodLabel()}
+            </span>
           </div>
 
           <div className="relative">
             <button 
               onClick={() => setIsCalendarMenuOpen(prev => !prev)}
-              className="px-3 py-1.5 rounded-full bg-[#14471f] hover:bg-[#1b5e2a] border border-[#93E044]/50 text-emerald-300 text-xs font-extrabold flex items-center gap-1.5 flex-shrink-0 shadow-xs cursor-pointer active:scale-95 transition-all"
+              className="px-3 py-1.5 rounded-full bg-[#FAFCF9] hover:bg-white border border-gray-200 text-gray-800 text-xs font-bold flex items-center gap-1.5 flex-shrink-0 shadow-2xs cursor-pointer active:scale-95 transition-all"
             >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>{selectedPeriod === 'this_month' ? 'This Month' : selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'last_month' ? 'Last Month' : selectedPeriod === 'this_year' ? 'This Year' : 'All Time'}</span>
-              <ChevronDown className="w-3 h-3 text-emerald-300" />
+              <Calendar className="w-3.5 h-3.5 text-gray-600" />
+              <span className="text-gray-800 font-bold">{selectedPeriod === 'this_month' ? 'This Month' : selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'last_month' ? 'Last Month' : selectedPeriod === 'this_year' ? 'This Year' : 'All Time'}</span>
+              <ChevronDown className="w-3 h-3 text-gray-500" />
             </button>
 
             {isCalendarMenuOpen && (
