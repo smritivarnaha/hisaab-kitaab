@@ -378,7 +378,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const [accountMode, setAccountMode] = useState<'personal' | 'business'>('personal');
+  const [accountMode, setAccountModeState] = useState<'personal' | 'business'>(() => {
+    try {
+      const saved = localStorage.getItem('hisaab_account_mode');
+      return saved === 'business' ? 'business' : 'personal';
+    } catch {
+      return 'personal';
+    }
+  });
+
+  const setAccountMode = (mode: 'personal' | 'business') => {
+    setAccountModeState(mode);
+    try {
+      localStorage.setItem('hisaab_account_mode', mode);
+    } catch (e) {
+      console.error('Failed to save account mode', e);
+    }
+  };
 
   // Compute 50-50 Business Settlement with Priority Offset for Direct Partner Transfers
   const businessSettlement = React.useMemo<BusinessSettlement>(() => {
