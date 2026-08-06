@@ -201,7 +201,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#93E044]/10 rounded-full blur-2xl pointer-events-none" />
 
         {/* Header Row */}
-        <div className="relative z-10 flex items-center justify-between gap-3">
+        <div className="relative z-30 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg sm:text-2xl font-extrabold tracking-tight text-white">
               Business Overview
@@ -211,7 +211,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
             </span>
           </div>
 
-          <div className="relative">
+          <div className="relative z-50">
             <button 
               onClick={() => setIsCalendarMenuOpen(prev => !prev)}
               className="px-3 py-1.5 rounded-full bg-[#FAFCF9] hover:bg-white border border-gray-200 text-gray-800 text-xs font-bold flex items-center gap-1.5 flex-shrink-0 shadow-2xs cursor-pointer active:scale-95 transition-all"
@@ -222,7 +222,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
             </button>
 
             {isCalendarMenuOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white text-gray-800 rounded-2xl shadow-xl border border-gray-200 z-50 py-1.5 animate-fadeIn">
+              <div className="absolute right-0 mt-2 w-44 bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 z-[100] py-1.5 animate-fadeIn">
                 <div className="px-3 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100 mb-1">
                   Select Period
                 </div>
@@ -267,7 +267,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         </div>
 
         {/* Inner White Card: Income & Expenses Sections ONLY */}
-        <div className="relative z-10 bg-white text-[#0D2E14] rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100 overflow-hidden">
+        <div className="relative z-0 bg-white text-[#0D2E14] rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100 overflow-hidden">
           {/* Income Section */}
           <div className="p-3 sm:p-4 space-y-2.5">
             <div 
