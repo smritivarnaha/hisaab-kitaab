@@ -391,10 +391,12 @@ export const DashboardOverview: React.FC = () => {
           )}
         </div>
 
-        {/* Right 1-Column */}
-        <div className="space-y-3 sm:space-y-4">
-          <DebtLentLedger transactions={transactions} onSettle={handleSettle} />
-        </div>
+        {/* Right 1-Column - Hidden in Business Mode */}
+        {accountMode !== 'business' && (
+          <div className="space-y-3 sm:space-y-4">
+            <DebtLentLedger transactions={transactions} onSettle={handleSettle} />
+          </div>
+        )}
       </div>
 
       {/* Transaction Edit Modal */}
