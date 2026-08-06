@@ -201,108 +201,108 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               )}
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Section 2: Current Amount & Final Settlement Outcome Grid */}
-          <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3 grid grid-cols-2 divide-x divide-slate-200 items-center">
-            {/* Left: Current Amount */}
-            <div className="pr-3 flex flex-col justify-center text-left">
-              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5">
-                Current Amount
-              </span>
-              <p className={`text-base sm:text-xl font-black tracking-tight ${
-                netProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'
+      {/* 2. OUTSIDE CARD: Current Amount & Final Settlement Outcome Grid */}
+      <div className="bg-slate-50 border border-slate-200/90 rounded-3xl p-4 grid grid-cols-2 divide-x divide-slate-200 items-center shadow-2xs">
+        {/* Left: Current Amount */}
+        <div className="pr-3.5 flex flex-col justify-center text-left">
+          <span className="text-[10px] sm:text-xs font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5">
+            Current Amount
+          </span>
+          <p className={`text-base sm:text-2xl font-black tracking-tight ${
+            netProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'
+          }`}>
+            {netProfit >= 0 ? '+ ' : '- '}₹{Math.abs(netProfit).toLocaleString('en-IN')}
+          </p>
+          <span className="text-[9px] text-slate-400 font-semibold">Total Net Balance</span>
+        </div>
+
+        {/* Right: Partner Final Settlement Outcome */}
+        <div className="pl-3.5 flex flex-col justify-center text-left space-y-1">
+          <span className="text-[10px] sm:text-xs font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5">
+            Final Settlement
+          </span>
+
+          <div className="space-y-0.5 text-xs font-bold">
+            {/* Praveen outcome */}
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-slate-700 font-bold truncate">Praveen:</span>
+              <span className={`font-black flex-shrink-0 text-[10px] sm:text-xs ${
+                praveenCashHeld < fairSharePerPartner ? 'text-emerald-700' : praveenCashHeld > fairSharePerPartner ? 'text-rose-600' : 'text-slate-600'
               }`}>
-                {netProfit >= 0 ? '+ ' : '- '}₹{Math.abs(netProfit).toLocaleString('en-IN')}
-              </p>
-              <span className="text-[9px] text-slate-400 font-semibold">Total Net Balance</span>
-            </div>
-
-            {/* Right: Partner Final Settlement Outcome */}
-            <div className="pl-3 flex flex-col justify-center text-left space-y-1">
-              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5">
-                Final Settlement
+                {fairSharePerPartner - praveenCashHeld > 0 ? `+₹${Math.round(fairSharePerPartner - praveenCashHeld).toLocaleString('en-IN')} (gets)` :
+                 fairSharePerPartner - praveenCashHeld < 0 ? `-₹${Math.round(Math.abs(fairSharePerPartner - praveenCashHeld)).toLocaleString('en-IN')} (pays)` :
+                 '₹0 (settled)'}
               </span>
-
-              <div className="space-y-0.5 text-xs font-bold">
-                {/* Praveen outcome */}
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-slate-700 font-bold truncate">Praveen:</span>
-                  <span className={`font-black flex-shrink-0 text-[10px] ${
-                    praveenCashHeld < fairSharePerPartner ? 'text-emerald-700' : praveenCashHeld > fairSharePerPartner ? 'text-rose-600' : 'text-slate-600'
-                  }`}>
-                    {fairSharePerPartner - praveenCashHeld > 0 ? `+₹${Math.round(fairSharePerPartner - praveenCashHeld).toLocaleString('en-IN')} (gets)` :
-                     fairSharePerPartner - praveenCashHeld < 0 ? `-₹${Math.round(Math.abs(fairSharePerPartner - praveenCashHeld)).toLocaleString('en-IN')} (pays)` :
-                     '₹0 (settled)'}
-                  </span>
-                </div>
-
-                {/* Sarthak outcome */}
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-slate-700 font-bold truncate">Sarthak:</span>
-                  <span className={`font-black flex-shrink-0 text-[10px] ${
-                    sarthakCashHeld < fairSharePerPartner ? 'text-emerald-700' : sarthakCashHeld > fairSharePerPartner ? 'text-rose-600' : 'text-slate-600'
-                  }`}>
-                    {fairSharePerPartner - sarthakCashHeld > 0 ? `+₹${Math.round(fairSharePerPartner - sarthakCashHeld).toLocaleString('en-IN')} (gets)` :
-                     fairSharePerPartner - sarthakCashHeld < 0 ? `-₹${Math.round(Math.abs(fairSharePerPartner - sarthakCashHeld)).toLocaleString('en-IN')} (pays)` :
-                     '₹0 (settled)'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: Settlement Flow Action Box */}
-          <div className="bg-[#FFFBEB] rounded-2xl p-3 border border-amber-200 shadow-2xs space-y-2">
-            <div className="flex items-center justify-between border-b border-amber-100 pb-1.5">
-              <span className="text-[11px] font-extrabold text-amber-900">Settlement Equalization</span>
-              <Users className="w-3.5 h-3.5 text-amber-800" />
             </div>
 
-            {settled ? (
-              <div className="p-2 bg-emerald-100 border border-emerald-300 rounded-xl text-center space-y-0.5 animate-fadeIn">
-                <CheckCircle2 className="w-5 h-5 text-emerald-700 mx-auto" />
-                <p className="text-xs font-black text-emerald-900">Settlement Recorded to Business Passbook!</p>
-              </div>
-            ) : amountDue > 0 && payerName && payeeName ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-around py-1">
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 border-2 border-emerald-300 flex items-center justify-center font-black text-xs shadow-2xs">
-                      {payerName.charAt(0)}
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-800">{payerName}</span>
-                  </div>
-
-                  <div className="flex flex-col items-center">
-                    <span className="text-[9px] font-extrabold text-amber-800 uppercase tracking-wider">Pays</span>
-                    <div className="flex items-center gap-1 text-amber-900 font-black text-sm sm:text-base">
-                      <span>₹{amountDue.toLocaleString('en-IN')}</span>
-                      <ArrowRight className="w-4 h-4 text-amber-800" />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div className="w-9 h-9 rounded-full bg-emerald-200 text-emerald-900 border-2 border-emerald-400 flex items-center justify-center font-black text-xs shadow-2xs">
-                      {payeeName.charAt(0)}
-                    </div>
-                    <span className="text-[10px] font-bold text-gray-800">{payeeName}</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleSettleNow}
-                  className="w-full py-2 bg-[#0D2E14] hover:bg-[#14471f] text-white rounded-xl font-black text-xs shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>Settle Now</span>
-                </button>
-              </div>
-            ) : (
-              <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
-                <p className="text-[11px] font-extrabold text-emerald-800">✅ Business 50-50 Ledger is perfectly balanced!</p>
-              </div>
-            )}
+            {/* Sarthak outcome */}
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-slate-700 font-bold truncate">Sarthak:</span>
+              <span className={`font-black flex-shrink-0 text-[10px] sm:text-xs ${
+                sarthakCashHeld < fairSharePerPartner ? 'text-emerald-700' : sarthakCashHeld > fairSharePerPartner ? 'text-rose-600' : 'text-slate-600'
+              }`}>
+                {fairSharePerPartner - sarthakCashHeld > 0 ? `+₹${Math.round(fairSharePerPartner - sarthakCashHeld).toLocaleString('en-IN')} (gets)` :
+                 fairSharePerPartner - sarthakCashHeld < 0 ? `-₹${Math.round(Math.abs(fairSharePerPartner - sarthakCashHeld)).toLocaleString('en-IN')} (pays)` :
+                 '₹0 (settled)'}
+              </span>
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* 3. OUTSIDE CARD: Settlement Equalization Flow & Action Box */}
+      <div className="bg-[#FFFBEB] rounded-3xl p-4 border border-amber-200 shadow-2xs space-y-2.5">
+        <div className="flex items-center justify-between border-b border-amber-100 pb-2">
+          <span className="text-xs font-extrabold text-amber-900">Settlement Equalization</span>
+          <Users className="w-4 h-4 text-amber-800" />
+        </div>
+
+        {settled ? (
+          <div className="p-2.5 bg-emerald-100 border border-emerald-300 rounded-2xl text-center space-y-1 animate-fadeIn">
+            <CheckCircle2 className="w-5 h-5 text-emerald-700 mx-auto" />
+            <p className="text-xs font-black text-emerald-900">Settlement Recorded to Business Passbook!</p>
+          </div>
+        ) : amountDue > 0 && payerName && payeeName ? (
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-around py-1">
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 border-2 border-emerald-300 flex items-center justify-center font-black text-xs shadow-2xs">
+                  {payerName.charAt(0)}
+                </div>
+                <span className="text-[11px] font-bold text-gray-800">{payerName}</span>
+              </div>
+
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] font-extrabold text-amber-800 uppercase tracking-wider">Pays</span>
+                <div className="flex items-center gap-1 text-amber-900 font-black text-base sm:text-lg">
+                  <span>₹{amountDue.toLocaleString('en-IN')}</span>
+                  <ArrowRight className="w-4 h-4 text-amber-800" />
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="w-10 h-10 rounded-full bg-emerald-200 text-emerald-900 border-2 border-emerald-400 flex items-center justify-center font-black text-xs shadow-2xs">
+                  {payeeName.charAt(0)}
+                </div>
+                <span className="text-[11px] font-bold text-gray-800">{payeeName}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSettleNow}
+              className="w-full py-2.5 bg-[#0D2E14] hover:bg-[#14471f] text-white rounded-2xl font-black text-xs shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Settle Now</span>
+            </button>
+          </div>
+        ) : (
+          <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
+            <p className="text-xs font-extrabold text-emerald-800">✅ Business 50-50 Ledger is perfectly balanced!</p>
+          </div>
+        )}
       </div>
     </div>
   );
