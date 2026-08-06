@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Transaction, Category, PaymentMethod, TransactionType, CATEGORIES_LIST } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
-import { X, Save, Trash2, Calendar, Tag, CreditCard, User, FileText, Check } from 'lucide-react';
+import { X, Save, Trash2, Calendar, Tag, CreditCard, User, FileText, Check, Lock } from 'lucide-react';
 
 interface Props {
   transaction: Transaction;
@@ -17,7 +17,14 @@ const PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
 ];
 
 export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) => {
-  const { updateTransaction, deleteTransaction } = useFinance();
+  const { currentUser, updateTransaction, deleteTransaction } = useFinance();
+
+  const creatorName = transaction.enteredBy || 'Praveen';
+  const currentUserName = currentUser?.name || 'Praveen';
+
+  const isCreator = !transaction.enteredBy ||
+    creatorName.toLowerCase().includes(currentUserName.toLowerCase()) ||
+    currentUserName.toLowerCase().includes(creatorName.toLowerCase());
 
   const [title, setTitle] = useState(transaction.title || '');
   const [amount, setAmount] = useState<string>(String(transaction.amount || ''));
@@ -87,6 +94,14 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
 
         {/* Body Form */}
         <form onSubmit={handleSave} className="overflow-y-auto flex-1 p-4 space-y-3.5 no-scrollbar bg-gray-50/50">
+          {/* Lock Banner if not creator */}
+          {!isCreator && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2.5 text-xs font-bold text-amber-900 shadow-2xs">
+              <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>🔒 Read-Only: Initiated by <b>{creatorName}</b>. Only <b>{creatorName}</b> can edit or delete this entry.</span>
+            </div>
+          )}
+
           {/* Type Selector (Expense, Income, Lent) */}
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Transaction Type</label>
@@ -230,15 +245,24 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
           <div className="pt-2 flex flex-col gap-2">
             <button
               type="submit"
-              disabled={isSaved}
-              className={`w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95 ${
-                isSaved ? 'bg-emerald-600 text-white' : 'bg-[#0D2E14] hover:bg-black text-white'
+              disabled={isSaved || !isCreator}
+              className={`w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all ${
+                !isCreator
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+                  : isSaved
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-[#0D2E14] hover:bg-black text-white active:scale-95 cursor-pointer'
               }`}
             >
               {isSaved ? (
                 <>
                   <Check className="w-4 h-4" />
                   <span>Saved Changes!</span>
+                </>
+              ) : !isCreator ? (
+                <>
+                  <Lock className="w-4 h-4 text-gray-400" />
+                  <span>Locked (Initiated by {creatorName})</span>
                 </>
               ) : (
                 <>
@@ -248,18 +272,20 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
               )}
             </button>
 
-            <button
-              type="button"
-              onClick={handleDelete}
-              className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                confirmDelete
-                  ? 'bg-red-600 border-red-600 text-white animate-pulse'
-                  : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
-              }`}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>{confirmDelete ? 'Confirm Permanent Delete?' : 'Delete Entry'}</span>
-            </button>
+            {isCreator && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  confirmDelete
+                    ? 'bg-red-600 border-red-600 text-white animate-pulse'
+                    : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100 cursor-pointer'
+                }`}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{confirmDelete ? 'Confirm Delete Entry?' : 'Delete Entry'}</span>
+              </button>
+            )}
           </div>
         </form>
       </div>

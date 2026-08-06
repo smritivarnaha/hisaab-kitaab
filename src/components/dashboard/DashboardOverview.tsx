@@ -316,12 +316,12 @@ export const DashboardOverview: React.FC = () => {
                                 {tx.title || tx.category} {tx.person ? `(${tx.person})` : ''}
                               </h4>
                               {accountMode === 'business' && (
-                                <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-full border ${
+                                <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-full border flex items-center gap-0.5 ${
                                   (tx.enteredBy || '').toLowerCase().includes('sarthak')
                                     ? 'bg-indigo-100 text-indigo-900 border-indigo-200'
                                     : 'bg-emerald-100 text-emerald-900 border-emerald-200'
                                 }`}>
-                                  👤 {tx.enteredBy || 'Praveen'}
+                                  {(!tx.enteredBy || (tx.enteredBy || '').toLowerCase().includes((currentUser?.name || 'Praveen').toLowerCase()) || (currentUser?.name || 'Praveen').toLowerCase().includes((tx.enteredBy || '').toLowerCase())) ? '👤' : '🔒'} {tx.enteredBy || 'Praveen'}
                                 </span>
                               )}
                               {hasSpecialNotes && (
