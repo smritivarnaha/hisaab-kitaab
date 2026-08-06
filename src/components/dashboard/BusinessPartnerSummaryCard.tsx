@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { Transaction } from '../../types/finance';
 import { 
@@ -14,35 +14,143 @@ import {
 } from 'lucide-react';
 
 export const BusinessPartnerSummaryCard: React.FC = () => {
-  const { businessSettlement, addTransaction } = useFinance();
+  const { transactions, addTransaction } = useFinance();
   const [isIncomeOpen, setIsIncomeOpen] = useState(true);
   const [isExpenseOpen, setIsExpenseOpen] = useState(true);
   const [settled, setSettled] = useState(false);
 
+  const [selectedPeriod, setSelectedPeriod] = useState<'this_month' | 'today' | 'last_month' | 'this_year' | 'all'>('this_month');
+  const [isCalendarMenuOpen, setIsCalendarMenuOpen] = useState(false);
+
+  const filteredBusinessTx = useMemo(() => {
+    const bTx = transactions.filter(t => !t.isPending && t.mode === 'business');
+    const now = new Date();
+
+    if (selectedPeriod === 'today') {
+      const todayStr = now.toISOString().split('T')[0];
+      return bTx.filter(t => t.date === todayStr);
+    }
+    if (selectedPeriod === 'this_month') {
+      const curYear = now.getFullYear();
+      const curMonth = now.getMonth();
+      return bTx.filter(t => {
+        const d = new Date(t.date || t.timestamp);
+        return d.getFullYear() === curYear && d.getMonth() === curMonth;
+      });
+    }
+    if (selectedPeriod === 'last_month') {
+      const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lmYear = lastMonthDate.getFullYear();
+      const lmMonth = lastMonthDate.getMonth();
+      return bTx.filter(t => {
+        const d = new Date(t.date || t.timestamp);
+        return d.getFullYear() === lmYear && d.getMonth() === lmMonth;
+      });
+    }
+    if (selectedPeriod === 'this_year') {
+      const curYear = now.getFullYear();
+      return bTx.filter(t => {
+        const d = new Date(t.date || t.timestamp);
+        return d.getFullYear() === curYear;
+      });
+    }
+    return bTx;
+  }, [transactions, selectedPeriod]);
+
   const {
     totalIncome,
     totalExpense,
-    netProfit,
-    fairSharePerPartner,
     praveenIncome,
     praveenExpense,
-    praveenCashHeld,
     sarthakIncome,
     sarthakExpense,
+    praveenCashHeld,
     sarthakCashHeld,
+    netProfit,
+    fairSharePerPartner,
     payerName,
     payeeName,
     amountDue
-  } = businessSettlement;
+  } = useMemo(() => {
+    const incList = filteredBusinessTx.filter(t => t.type === 'income');
+    const expList = filteredBusinessTx.filter(t => t.type === 'expense');
 
-  // Compute period range e.g. "01 Aug 26 - 06 Aug 26"
-  const getCurrentPeriodRange = () => {
+    const totalIncome = incList.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const totalExpense = expList.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+    const isPraveen = (t: Transaction) => (t.enteredBy || '').toLowerCase().includes('praveen') || !t.enteredBy;
+    const isSarthak = (t: Transaction) => (t.enteredBy || '').toLowerCase().includes('sarthak');
+
+    const praveenIncome = incList.filter(isPraveen).reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const sarthakIncome = incList.filter(isSarthak).reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+    const praveenExpense = expList.filter(isPraveen).reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const sarthakExpense = expList.filter(isSarthak).reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+    const praveenCashHeld = praveenIncome - praveenExpense;
+    const sarthakCashHeld = sarthakIncome - sarthakExpense;
+
+    const netProfit = totalIncome - totalExpense;
+    const fairSharePerPartner = netProfit / 2;
+
+    const praveenDue = fairSharePerPartner - praveenCashHeld;
+    const sarthakDue = fairSharePerPartner - sarthakCashHeld;
+
+    let payerName = '';
+    let payeeName = '';
+    let amountDue = 0;
+
+    if (praveenDue > 0.01) {
+      payeeName = 'Praveen';
+      payerName = 'Sarthak';
+      amountDue = Math.round(praveenDue);
+    } else if (sarthakDue > 0.01) {
+      payeeName = 'Sarthak';
+      payerName = 'Praveen';
+      amountDue = Math.round(sarthakDue);
+    }
+
+    return {
+      totalIncome,
+      totalExpense,
+      praveenIncome,
+      praveenExpense,
+      sarthakIncome,
+      sarthakExpense,
+      praveenCashHeld,
+      sarthakCashHeld,
+      netProfit,
+      fairSharePerPartner,
+      payerName,
+      payeeName,
+      amountDue
+    };
+  }, [filteredBusinessTx]);
+
+  const getPeriodLabel = () => {
     const now = new Date();
-    const year = String(now.getFullYear()).slice(-2);
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = monthNames[now.getMonth()] || 'Aug';
-    const day = String(now.getDate()).padStart(2, '0');
-    return `01 ${month} ${year} - ${day} ${month} ${year}`;
+
+    if (selectedPeriod === 'today') {
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = monthNames[now.getMonth()];
+      return `Today (${day} ${month})`;
+    }
+    if (selectedPeriod === 'this_month') {
+      const month = monthNames[now.getMonth()];
+      const year = String(now.getFullYear()).slice(-2);
+      return `01 ${month} ${year} - 31 ${month} ${year}`;
+    }
+    if (selectedPeriod === 'last_month') {
+      const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const month = monthNames[lm.getMonth()];
+      const year = String(lm.getFullYear()).slice(-2);
+      return `01 ${month} ${year} - 31 ${month} ${year}`;
+    }
+    if (selectedPeriod === 'this_year') {
+      return `Year ${now.getFullYear()}`;
+    }
+    return 'All Time';
   };
 
   const handleSettleNow = () => {
@@ -71,7 +179,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
 
   return (
     <div className="space-y-2.5 sm:space-y-4 font-outfit w-full mx-auto animate-fadeIn">
-      {/* 1. Top Green Business Overview Card (Contains Header & Income/Expenses Card inside it) */}
+      {/* 1. Top Green Business Overview Card */}
       <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] space-y-2.5 sm:space-y-4 w-full">
         {/* Spreading Bottom-Left Green Gradient Layer */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#93E044]/25 via-[#14471f]/50 to-[#0D2E14] pointer-events-none" />
@@ -103,13 +211,63 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                 Business Overview
               </h2>
               <span className="text-[10px] sm:text-xs font-semibold text-emerald-300 block mt-0.5">
-                Period: {getCurrentPeriodRange()}
+                Period: {getPeriodLabel()}
               </span>
             </div>
           </div>
-          <div className="px-3 py-1 rounded-full bg-[#14471f] border border-[#93E044]/50 text-emerald-300 text-xs font-extrabold flex items-center gap-1.5 flex-shrink-0 shadow-xs">
-            <Calendar className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Business 50-50</span>
+
+          <div className="relative">
+            <button 
+              onClick={() => setIsCalendarMenuOpen(prev => !prev)}
+              className="px-3 py-1.5 rounded-full bg-[#14471f] hover:bg-[#1b5e2a] border border-[#93E044]/50 text-emerald-300 text-xs font-extrabold flex items-center gap-1.5 flex-shrink-0 shadow-xs cursor-pointer active:scale-95 transition-all"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{selectedPeriod === 'this_month' ? 'This Month' : selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'last_month' ? 'Last Month' : selectedPeriod === 'this_year' ? 'This Year' : 'All Time'}</span>
+              <ChevronDown className="w-3 h-3 text-emerald-300" />
+            </button>
+
+            {isCalendarMenuOpen && (
+              <div className="absolute right-0 mt-2 w-44 bg-white text-gray-800 rounded-2xl shadow-xl border border-gray-200 z-50 py-1.5 animate-fadeIn">
+                <div className="px-3 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100 mb-1">
+                  Select Period
+                </div>
+                <button
+                  onClick={() => { setSelectedPeriod('this_month'); setIsCalendarMenuOpen(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'this_month' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
+                >
+                  <span>This Month</span>
+                  {selectedPeriod === 'this_month' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                </button>
+                <button
+                  onClick={() => { setSelectedPeriod('today'); setIsCalendarMenuOpen(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'today' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
+                >
+                  <span>Today</span>
+                  {selectedPeriod === 'today' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                </button>
+                <button
+                  onClick={() => { setSelectedPeriod('last_month'); setIsCalendarMenuOpen(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'last_month' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
+                >
+                  <span>Last Month</span>
+                  {selectedPeriod === 'last_month' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                </button>
+                <button
+                  onClick={() => { setSelectedPeriod('this_year'); setIsCalendarMenuOpen(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'this_year' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
+                >
+                  <span>This Year</span>
+                  {selectedPeriod === 'this_year' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                </button>
+                <button
+                  onClick={() => { setSelectedPeriod('all'); setIsCalendarMenuOpen(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'all' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
+                >
+                  <span>All Time</span>
+                  {selectedPeriod === 'all' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -223,7 +381,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         </div>
 
         {/* Right: Partner Final Settlement Outcome */}
-        <div className="pl-4 flex flex-col justify-center text-left space-y-1">
+        <div className="pl-2.5 sm:pl-4 flex flex-col justify-center text-left space-y-1">
           <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
             Final Settlement
           </span>
@@ -257,7 +415,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
       </div>
 
       {/* 3. OUTSIDE CARD: Settlement Equalization Action Card */}
-      <div className="bg-[#FFFBEB] rounded-3xl p-4 sm:p-5 border border-amber-200 shadow-xs space-y-3">
+      <div className="bg-[#FFFBEB] rounded-3xl p-4 sm:p-5 border border-amber-200 shadow-xs space-y-3 w-full">
         <div className="flex items-center justify-between border-b border-amber-100 pb-2">
           <span className="text-xs font-extrabold text-amber-900">Settlement Equalization</span>
           <Users className="w-4 h-4 text-amber-800" />

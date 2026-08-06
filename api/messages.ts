@@ -28,6 +28,7 @@ async function ensureTable(sql: ReturnType<typeof neon>) {
     await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
     await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "mode" TEXT DEFAULT 'personal'`;
     await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "senderName" TEXT`;
+    await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "pendingReviewItems" JSONB`;
   } catch {}
 }
 
@@ -55,7 +56,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ...row,
         timestamp: Number(row.timestamp),
         mode: row.mode || 'personal',
-        senderName: row.senderName || null
+        senderName: row.senderName || null,
+        pendingReviewItems: row.pendingReviewItems || undefined
       }));
       return res.status(200).json(parsed);
     }
@@ -66,10 +68,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await Promise.all(msgs.map((m: any) => {
         if (!m?.id) return Promise.resolve();
         const msgUserId = m.userId || userId;
+        const pendingJson = m.pendingReviewItems ? JSON.stringify(m.pendingReviewItems) : null;
         return sql`
-          INSERT INTO chat_messages ("id","sender","text","timestamp","isVoice","audioLevel","userId","mode","senderName")
-          VALUES (${m.id}, ${m.sender}, ${m.text}, ${m.timestamp}, ${m.isVoice || false}, ${m.audioLevel || null}, ${msgUserId}, ${m.mode || 'personal'}, ${m.senderName || null})
-          ON CONFLICT ("id") DO UPDATE SET "text" = EXCLUDED."text", "mode" = EXCLUDED."mode", "senderName" = EXCLUDED."senderName"
+          INSERT INTO chat_messages ("id","sender","text","timestamp","isVoice","audioLevel","userId","mode","senderName","pendingReviewItems")
+          VALUES (${m.id}, ${m.sender}, ${m.text}, ${m.timestamp}, ${m.isVoice || false}, ${m.audioLevel || null}, ${msgUserId}, ${m.mode || 'personal'}, ${m.senderName || null}, ${pendingJson}::jsonb)
+          ON CONFLICT ("id") DO UPDATE SET "text" = EXCLUDED."text", "mode" = EXCLUDED."mode", "senderName" = EXCLUDED."senderName", "pendingReviewItems" = EXCLUDED."pendingReviewItems"
         `;
       }));
       return res.status(200).json({ success: true });

@@ -628,7 +628,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         agentRes?.responseText?.includes('Service Notice');
 
       if (agentRes && !isConnectionError) {
-        const createdItems = applyAgentToolAction(agentRes);
+        let createdItems = applyAgentToolAction(agentRes);
+
+        // Guarantee table extraction on first submission if user text contains amounts
+        if (!createdItems.length && /\d+/.test(text)) {
+          const fallbackExtracted: Transaction[] = parseMultiInput(text, aiMemory).map(tx => ({
+            ...tx,
+            isPending: true,
+            userId: activeUserId,
+            mode: accountMode,
+            enteredBy: currentUser?.name || 'Praveen',
+            type: accountMode === 'business' ? (tx.type === 'income' ? 'income' : 'expense') : (tx.type || 'expense')
+          }));
+          if (fallbackExtracted.length) {
+            addTransactionsBatch(fallbackExtracted);
+            setPendingReviewItems(prev => [...prev, ...fallbackExtracted]);
+            createdItems = fallbackExtracted;
+          }
+        }
 
         const aiMsg: ChatMessage = {
           id: `msg_ai_${Date.now()}`,
