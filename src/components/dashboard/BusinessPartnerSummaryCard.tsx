@@ -95,94 +95,97 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Income Accordion Card */}
-      <div className="bg-white rounded-3xl p-4 border border-gray-200/90 shadow-xs space-y-2.5">
-        <div 
-          onClick={() => setIsIncomeOpen(prev => !prev)}
-          className="flex items-center justify-between cursor-pointer select-none"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-black flex-shrink-0">
-              <ArrowUpRight className="w-5 h-5" />
+      {/* 2. Combined Income & Expenses Single Card */}
+      <div className="bg-white rounded-3xl border border-gray-200/90 shadow-xs divide-y divide-gray-100 overflow-hidden">
+        {/* Income Section */}
+        <div className="p-4 space-y-2.5">
+          <div 
+            onClick={() => setIsIncomeOpen(prev => !prev)}
+            className="flex items-center justify-between cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-black flex-shrink-0">
+                <ArrowUpRight className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-500 block">Income</span>
+                <span className="text-lg font-black text-emerald-700">₹{totalIncome.toLocaleString('en-IN')}</span>
+              </div>
             </div>
-            <div>
-              <span className="text-xs font-bold text-gray-500 block">Income</span>
-              <span className="text-lg font-black text-emerald-700">₹{totalIncome.toLocaleString('en-IN')}</span>
-            </div>
+            <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
+              {isIncomeOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </button>
           </div>
-          <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
-            {isIncomeOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-          </button>
+
+          {isIncomeOpen && (
+            <div className="pt-2 border-t border-gray-100 animate-fadeIn">
+              <div className="flex items-center justify-between text-xs text-gray-600 divide-x divide-gray-200 py-1">
+                {/* Left: Praveen */}
+                <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
+                    Praveen
+                  </span>
+                  <span className="font-semibold text-gray-900 ml-1">₹{praveenIncome.toLocaleString('en-IN')}</span>
+                </div>
+
+                {/* Right: Sarthak */}
+                <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
+                    Sarthak
+                  </span>
+                  <span className="font-semibold text-gray-900 ml-1">₹{sarthakIncome.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {isIncomeOpen && (
-          <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
-            <div className="flex items-center justify-between text-xs font-bold text-gray-700 bg-emerald-50/60 p-2.5 rounded-2xl border border-emerald-100/80 divide-x divide-emerald-200/80">
-              {/* Left: Praveen */}
-              <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
-                <span className="flex items-center gap-1.5 text-emerald-950 font-extrabold truncate">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
-                  Praveen
-                </span>
-                <span className="font-extrabold text-emerald-800 ml-1">₹{praveenIncome.toLocaleString('en-IN')}</span>
+        {/* Expenses Section */}
+        <div className="p-4 space-y-2.5">
+          <div 
+            onClick={() => setIsExpenseOpen(prev => !prev)}
+            className="flex items-center justify-between cursor-pointer select-none"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center font-black flex-shrink-0">
+                <ArrowDownRight className="w-5 h-5" />
               </div>
-
-              {/* Right: Sarthak */}
-              <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
-                <span className="flex items-center gap-1.5 text-emerald-950 font-extrabold truncate">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
-                  Sarthak
-                </span>
-                <span className="font-extrabold text-emerald-800 ml-1">₹{sarthakIncome.toLocaleString('en-IN')}</span>
+              <div>
+                <span className="text-xs font-bold text-gray-500 block">Expenses</span>
+                <span className="text-lg font-black text-rose-600">₹{totalExpense.toLocaleString('en-IN')}</span>
               </div>
             </div>
+            <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
+              {isExpenseOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* 3. Expenses Accordion Card */}
-      <div className="bg-white rounded-3xl p-4 border border-gray-200/90 shadow-xs space-y-2.5">
-        <div 
-          onClick={() => setIsExpenseOpen(prev => !prev)}
-          className="flex items-center justify-between cursor-pointer select-none"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center font-black flex-shrink-0">
-              <ArrowDownRight className="w-5 h-5" />
+          {isExpenseOpen && (
+            <div className="pt-2 border-t border-gray-100 animate-fadeIn">
+              <div className="flex items-center justify-between text-xs text-gray-600 divide-x divide-gray-200 py-1">
+                {/* Left: Praveen */}
+                <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 inline-block flex-shrink-0" />
+                    Praveen
+                  </span>
+                  <span className="font-semibold text-gray-900 ml-1">₹{praveenExpense.toLocaleString('en-IN')}</span>
+                </div>
+
+                {/* Right: Sarthak */}
+                <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                    <span className="w-2 h-2 rounded-full bg-rose-400 inline-block flex-shrink-0" />
+                    Sarthak
+                  </span>
+                  <span className="font-semibold text-gray-900 ml-1">₹{sarthakExpense.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="text-xs font-bold text-gray-500 block">Expenses</span>
-              <span className="text-lg font-black text-rose-600">₹{totalExpense.toLocaleString('en-IN')}</span>
-            </div>
-          </div>
-          <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
-            {isExpenseOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-          </button>
+          )}
         </div>
-
-        {isExpenseOpen && (
-          <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
-            <div className="flex items-center justify-between text-xs font-bold text-gray-700 bg-rose-50/60 p-2.5 rounded-2xl border border-rose-100/80 divide-x divide-rose-200/80">
-              {/* Left: Praveen */}
-              <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
-                <span className="flex items-center gap-1.5 text-rose-950 font-extrabold truncate">
-                  <span className="w-2 h-2 rounded-full bg-rose-500 inline-block flex-shrink-0" />
-                  Praveen
-                </span>
-                <span className="font-extrabold text-rose-600 ml-1">₹{praveenExpense.toLocaleString('en-IN')}</span>
-              </div>
-
-              {/* Right: Sarthak */}
-              <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
-                <span className="flex items-center gap-1.5 text-rose-950 font-extrabold truncate">
-                  <span className="w-2 h-2 rounded-full bg-rose-400 inline-block flex-shrink-0" />
-                  Sarthak
-                </span>
-                <span className="font-extrabold text-rose-600 ml-1">₹{sarthakExpense.toLocaleString('en-IN')}</span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 4. Current Amount & Partner Final Settlement Outcome Card */}
