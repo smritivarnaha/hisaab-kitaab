@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export const BusinessPartnerSummaryCard: React.FC = () => {
-  const { businessSettlement, addTransaction } = useFinance();
+  const { businessSettlement, addTransaction, dbStatus } = useFinance();
   const [isIncomeOpen, setIsIncomeOpen] = useState(true);
   const [isExpenseOpen, setIsExpenseOpen] = useState(true);
   const [isDirectOpen, setIsDirectOpen] = useState(true);
@@ -21,6 +21,13 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
 
   const [selectedPeriod, setSelectedPeriod] = useState<'this_month' | 'today' | 'last_month' | 'this_year' | 'all'>('this_month');
   const [isCalendarMenuOpen, setIsCalendarMenuOpen] = useState(false);
+
+  const renderAmount = (amount: number, colorClass: string, prefix = '₹', skeletonWidth = 'w-16') => {
+    if (dbStatus === 'loading') {
+      return <span className={`inline-block ${skeletonWidth} h-4 sm:h-5 bg-gray-200 animate-pulse rounded-md align-middle my-0.5`} />;
+    }
+    return <span className={colorClass}>{prefix}{amount.toLocaleString('en-IN')}</span>;
+  };
 
   const {
     totalIncome,
@@ -199,7 +206,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-xs font-bold text-gray-500 block">Income</span>
-                  <span className="text-base sm:text-lg font-black text-emerald-700">₹{totalIncome.toLocaleString('en-IN')}</span>
+                  {renderAmount(totalIncome, 'text-base sm:text-lg font-black text-emerald-700')}
                 </div>
               </div>
               <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full md:hidden">
@@ -215,7 +222,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
                     Praveen
                   </span>
-                  <span className="font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs">₹{praveenIncome.toLocaleString('en-IN')}</span>
+                  {renderAmount(praveenIncome, 'font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs')}
                 </div>
 
                 {/* Right: Sarthak */}
@@ -224,7 +231,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
                     Sarthak
                   </span>
-                  <span className="font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs">₹{sarthakIncome.toLocaleString('en-IN')}</span>
+                  {renderAmount(sarthakIncome, 'font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs')}
                 </div>
               </div>
             </div>
@@ -242,7 +249,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-xs font-bold text-gray-500 block">Expenses</span>
-                  <span className="text-base sm:text-lg font-black text-rose-600">₹{totalExpense.toLocaleString('en-IN')}</span>
+                  {renderAmount(totalExpense, 'text-base sm:text-lg font-black text-rose-600')}
                 </div>
               </div>
               <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full md:hidden">
@@ -258,7 +265,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block flex-shrink-0" />
                     Praveen
                   </span>
-                  <span className="font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs">₹{praveenExpense.toLocaleString('en-IN')}</span>
+                  {renderAmount(praveenExpense, 'font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs')}
                 </div>
 
                 {/* Right: Sarthak */}
@@ -267,7 +274,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block flex-shrink-0" />
                     Sarthak
                   </span>
-                  <span className="font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs">₹{sarthakExpense.toLocaleString('en-IN')}</span>
+                  {renderAmount(sarthakExpense, 'font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs')}
                 </div>
               </div>
             </div>
@@ -285,7 +292,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-xs font-bold text-gray-500 block">Direct Partner Transfers</span>
-                  <span className="text-base sm:text-lg font-black text-blue-700">₹{(praveenDirectGiven + sarthakDirectGiven).toLocaleString('en-IN')}</span>
+                  {renderAmount(praveenDirectGiven + sarthakDirectGiven, 'text-base sm:text-lg font-black text-blue-700')}
                 </div>
               </div>
               <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full md:hidden">
@@ -301,7 +308,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block flex-shrink-0" />
                     Praveen
                   </span>
-                  <span className="font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs">₹{praveenDirectGiven.toLocaleString('en-IN')}</span>
+                  {renderAmount(praveenDirectGiven, 'font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs')}
                 </div>
 
                 {/* Right: Sarthak Direct Given */}
@@ -310,7 +317,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block flex-shrink-0" />
                     Sarthak
                   </span>
-                  <span className="font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs">₹{sarthakDirectGiven.toLocaleString('en-IN')}</span>
+                  {renderAmount(sarthakDirectGiven, 'font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs')}
                 </div>
               </div>
             </div>
@@ -325,10 +332,8 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
           <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
             Current Amount
           </span>
-          <p className={`text-lg sm:text-2xl font-black tracking-tight ${
-            netProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'
-          }`}>
-            {netProfit >= 0 ? '+ ' : '- '}₹{Math.abs(netProfit).toLocaleString('en-IN')}
+          <p className="text-lg sm:text-2xl font-black tracking-tight">
+            {renderAmount(Math.abs(netProfit), netProfit >= 0 ? 'text-emerald-700' : 'text-rose-600', netProfit >= 0 ? '+ ₹' : '- ₹')}
           </p>
           <span className="text-[10px] text-slate-400 font-semibold mt-0.5">Total Net Balance</span>
         </div>
@@ -346,7 +351,9 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               <span className={`font-black flex-shrink-0 text-xs sm:text-sm ${
                 praveenNetDue > 0 ? 'text-emerald-700' : praveenNetDue < 0 ? 'text-rose-600' : 'text-slate-600'
               }`}>
-                {praveenNetDue > 0 ? `+₹${Math.round(praveenNetDue).toLocaleString('en-IN')} (gets)` :
+                {dbStatus === 'loading' ? (
+                  <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md align-middle" />
+                ) : praveenNetDue > 0 ? `+₹${Math.round(praveenNetDue).toLocaleString('en-IN')} (gets)` :
                  praveenNetDue < 0 ? `-₹${Math.round(Math.abs(praveenNetDue)).toLocaleString('en-IN')} (pays)` :
                  '₹0 (settled)'}
               </span>
@@ -358,7 +365,9 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               <span className={`font-black flex-shrink-0 text-xs sm:text-sm ${
                 sarthakNetDue > 0 ? 'text-emerald-700' : sarthakNetDue < 0 ? 'text-rose-600' : 'text-slate-600'
               }`}>
-                {sarthakNetDue > 0 ? `+₹${Math.round(sarthakNetDue).toLocaleString('en-IN')} (gets)` :
+                {dbStatus === 'loading' ? (
+                  <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md align-middle" />
+                ) : sarthakNetDue > 0 ? `+₹${Math.round(sarthakNetDue).toLocaleString('en-IN')} (gets)` :
                  sarthakNetDue < 0 ? `-₹${Math.round(Math.abs(sarthakNetDue)).toLocaleString('en-IN')} (pays)` :
                  '₹0 (settled)'}
               </span>
@@ -385,11 +394,11 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
             <div className="bg-amber-100/60 rounded-xl p-2.5 text-[11px] text-amber-900 font-semibold space-y-1.5 border border-amber-200/80">
               <div className="flex justify-between items-center">
                 <span className="text-gray-700 font-bold">Praveen ➔ Sarthak:</span>
-                <span className="font-black text-rose-700 text-xs">₹{praveenOwesSarthak.toLocaleString('en-IN')}</span>
+                {renderAmount(praveenOwesSarthak, 'font-black text-rose-700 text-xs')}
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-700 font-bold">Sarthak ➔ Praveen:</span>
-                <span className="font-black text-emerald-700 text-xs">₹{sarthakOwesPraveen.toLocaleString('en-IN')}</span>
+                {renderAmount(sarthakOwesPraveen, 'font-black text-emerald-700 text-xs')}
               </div>
             </div>
 
@@ -404,7 +413,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               <div className="flex flex-col items-center">
                 <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider">Pays Net Dues</span>
                 <div className="flex items-center gap-1 text-amber-900 font-black text-base sm:text-xl">
-                  <span>₹{amountDue.toLocaleString('en-IN')}</span>
+                  {renderAmount(amountDue, 'text-amber-900 font-black text-base sm:text-xl')}
                   <ArrowRight className="w-5 h-5 text-amber-800" />
                 </div>
               </div>
@@ -434,11 +443,15 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         <div className="pt-3 border-t border-amber-200/80 grid grid-cols-2 gap-2 text-center">
           <div className="p-2.5 bg-amber-50/90 rounded-2xl border border-amber-200/80 shadow-2xs">
             <span className="text-[10px] font-extrabold text-amber-900/70 uppercase tracking-wider block">Praveen Current Amount</span>
-            <span className="text-xs sm:text-sm font-black text-[#0D2E14] mt-0.5 block">₹{praveenCurrentAmount.toLocaleString('en-IN')}</span>
+            <div className="mt-0.5">
+              {renderAmount(praveenCurrentAmount, 'text-xs sm:text-sm font-black text-[#0D2E14]')}
+            </div>
           </div>
           <div className="p-2.5 bg-amber-50/90 rounded-2xl border border-amber-200/80 shadow-2xs">
             <span className="text-[10px] font-extrabold text-amber-900/70 uppercase tracking-wider block">Sarthak Current Amount</span>
-            <span className="text-xs sm:text-sm font-black text-[#0D2E14] mt-0.5 block">₹{sarthakCurrentAmount.toLocaleString('en-IN')}</span>
+            <div className="mt-0.5">
+              {renderAmount(sarthakCurrentAmount, 'text-xs sm:text-sm font-black text-[#0D2E14]')}
+            </div>
           </div>
         </div>
       </div>
