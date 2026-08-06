@@ -70,9 +70,9 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3 sm:space-y-4 font-outfit max-w-4xl mx-auto animate-fadeIn">
+    <div className="space-y-2.5 sm:space-y-4 font-outfit w-full mx-auto animate-fadeIn">
       {/* 1. Top Green Business Overview Card (Contains Header & Income/Expenses Card inside it) */}
-      <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3.5 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] space-y-3 sm:space-y-4">
+      <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] space-y-2.5 sm:space-y-4 w-full">
         {/* Spreading Bottom-Left Green Gradient Layer */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#93E044]/25 via-[#14471f]/50 to-[#0D2E14] pointer-events-none" />
 
@@ -116,7 +116,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         {/* Inner White Card: Income & Expenses Sections ONLY */}
         <div className="relative z-10 bg-white text-[#0D2E14] rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100 overflow-hidden">
           {/* Income Section */}
-          <div className="p-3.5 sm:p-4 space-y-2.5">
+          <div className="p-3 sm:p-4 space-y-2.5">
             <div 
               onClick={() => setIsIncomeOpen(prev => !prev)}
               className="flex items-center justify-between cursor-pointer select-none"
@@ -139,7 +139,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
                 <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
                   {/* Left: Praveen */}
-                  <div className="flex-1 pr-3 flex items-center justify-between min-w-0">
+                  <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
                     <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
                       Praveen
@@ -148,7 +148,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                   </div>
 
                   {/* Right: Sarthak */}
-                  <div className="flex-1 pl-3 flex items-center justify-between min-w-0">
+                  <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
                     <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
                       Sarthak
@@ -161,7 +161,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
           </div>
 
           {/* Expenses Section */}
-          <div className="p-3.5 sm:p-4 space-y-2.5">
+          <div className="p-3 sm:p-4 space-y-2.5">
             <div 
               onClick={() => setIsExpenseOpen(prev => !prev)}
               className="flex items-center justify-between cursor-pointer select-none"
@@ -184,7 +184,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
                 <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
                   {/* Left: Praveen */}
-                  <div className="flex-1 pr-3 flex items-center justify-between min-w-0">
+                  <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
                     <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
                       <span className="w-2 h-2 rounded-full bg-rose-500 inline-block flex-shrink-0" />
                       Praveen
@@ -193,7 +193,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                   </div>
 
                   {/* Right: Sarthak */}
-                  <div className="flex-1 pl-3 flex items-center justify-between min-w-0">
+                  <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
                     <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
                       <span className="w-2 h-2 rounded-full bg-rose-400 inline-block flex-shrink-0" />
                       Sarthak
@@ -208,9 +208,9 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
       </div>
 
       {/* 2. OUTSIDE CARD: Current Amount & Final Settlement Outcome Grid */}
-      <div className="bg-slate-50 border border-slate-200/90 rounded-3xl p-4 sm:p-5 grid grid-cols-2 divide-x divide-slate-200 items-center shadow-xs">
+      <div className="bg-slate-50 border border-slate-200/90 rounded-3xl p-3.5 sm:p-5 grid grid-cols-2 divide-x divide-slate-200 items-center shadow-xs w-full">
         {/* Left: Current Amount */}
-        <div className="pr-4 flex flex-col justify-center text-left">
+        <div className="pr-2.5 sm:pr-4 flex flex-col justify-center text-left">
           <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
             Current Amount
           </span>
