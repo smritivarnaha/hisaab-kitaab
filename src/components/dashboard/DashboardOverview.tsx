@@ -98,7 +98,7 @@ export const DashboardOverview: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-[18px] sm:px-6 py-3 sm:py-4 pb-24 sm:pb-16 no-scrollbar bg-[#F3F5F1] font-outfit space-y-3 sm:space-y-4 w-full max-w-4xl mx-auto">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden px-[18px] sm:px-6 py-3 sm:py-4 pb-24 sm:pb-16 no-scrollbar bg-[#F3F5F1] font-outfit space-y-3 sm:space-y-4 w-full max-w-4xl mx-auto">
       {accountMode === 'business' ? (
         <BusinessPartnerSummaryCard />
       ) : (

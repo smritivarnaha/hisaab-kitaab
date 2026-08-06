@@ -99,7 +99,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
   return (
     <div className="space-y-2.5 sm:space-y-4 font-outfit w-full mx-auto animate-fadeIn">
       {/* 1. Top Green Business Overview Card */}
-      <div className="relative overflow-visible bg-[#0D2E14] text-white p-3 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] space-y-2.5 sm:space-y-4 w-full z-20">
+      <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] space-y-2.5 sm:space-y-4 w-full z-20">
         {/* Spreading Bottom-Left Green Gradient Layer */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#93E044]/25 via-[#14471f]/50 to-[#0D2E14] pointer-events-none rounded-3xl overflow-hidden" />
 
