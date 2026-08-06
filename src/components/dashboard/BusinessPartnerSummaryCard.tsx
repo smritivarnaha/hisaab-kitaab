@@ -39,6 +39,8 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
     sarthakNetDue,
     praveenOwesSarthak,
     sarthakOwesPraveen,
+    praveenCurrentAmount,
+    sarthakCurrentAmount,
     payerName,
     payeeName,
     amountDue
@@ -385,14 +387,14 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
           </div>
         ) : amountDue > 0 && payerName && payeeName ? (
           <div className="space-y-3">
-            {/* Two Distinct Tax-Separated Ledger Lines */}
+            {/* Two Distinct Tax-Separated Ledger Lines (Clean Labels) */}
             <div className="bg-amber-100/60 rounded-xl p-2.5 text-[11px] text-amber-900 font-semibold space-y-1.5 border border-amber-200/80">
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-bold">Praveen ➔ Sarthak (50% Praveen Net - Direct Transfers):</span>
+                <span className="text-gray-700 font-bold">Praveen ➔ Sarthak:</span>
                 <span className="font-black text-rose-700 text-xs">₹{praveenOwesSarthak.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-bold">Sarthak ➔ Praveen (50% Sarthak Incoming - Direct Transfers):</span>
+                <span className="text-gray-700 font-bold">Sarthak ➔ Praveen:</span>
                 <span className="font-black text-emerald-700 text-xs">₹{sarthakOwesPraveen.toLocaleString('en-IN')}</span>
               </div>
             </div>
@@ -433,6 +435,18 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
             <p className="text-xs font-extrabold text-emerald-800">✅ Business 50-50 Ledger is perfectly balanced!</p>
           </div>
         )}
+
+        {/* Current Cash Held Cards Below Settle Now Button */}
+        <div className="pt-3 border-t border-amber-200/80 grid grid-cols-2 gap-2 text-center">
+          <div className="p-2.5 bg-amber-50/90 rounded-2xl border border-amber-200/80 shadow-2xs">
+            <span className="text-[10px] font-extrabold text-amber-900/70 uppercase tracking-wider block">Praveen Current Amount</span>
+            <span className="text-xs sm:text-sm font-black text-[#0D2E14] mt-0.5 block">₹{praveenCurrentAmount.toLocaleString('en-IN')}</span>
+          </div>
+          <div className="p-2.5 bg-amber-50/90 rounded-2xl border border-amber-200/80 shadow-2xs">
+            <span className="text-[10px] font-extrabold text-amber-900/70 uppercase tracking-wider block">Sarthak Current Amount</span>
+            <span className="text-xs sm:text-sm font-black text-[#0D2E14] mt-0.5 block">₹{sarthakCurrentAmount.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
