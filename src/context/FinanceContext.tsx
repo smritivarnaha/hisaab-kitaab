@@ -32,6 +32,8 @@ interface BusinessSettlement {
   sarthakOperatingDue: number;
   praveenNetDue: number;
   sarthakNetDue: number;
+  praveenOwesSarthak: number;
+  sarthakOwesPraveen: number;
   settlementText: string;
   payerName?: string;
   payeeName?: string;
@@ -418,17 +420,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const praveenCashHeld = praveenIncome - praveenExpense;
     const sarthakCashHeld = sarthakIncome - sarthakExpense;
 
-    // Operating dues from 50-50 profit split (Positive = Sarthak owes Praveen)
-    const baseSarthakOwesPraveen = fairSharePerPartner - praveenCashHeld;
+    // Asymmetric Tax-Separated Ledgers:
+    // 1. Praveen's Incoming Pool minus ALL Business Expenses:
+    const praveenPoolAfterExpenses = praveenIncome - totalExpense;
+    const praveenOwesSarthakRaw = (praveenPoolAfterExpenses / 2) - sarthakDirectGiven;
+    const praveenOwesSarthak = Math.max(0, Math.round(praveenOwesSarthakRaw));
 
-    // Final Net Dues after SUBTRACTING what Sarthak already gave Praveen (sarthakDirectGiven):
-    const finalSarthakOwesPraveen = baseSarthakOwesPraveen - sarthakDirectGiven + praveenDirectGiven;
+    // 2. Sarthak's Incoming Pool (50% directly owed to Praveen without deducting expenses):
+    const sarthakOwesPraveenRaw = (sarthakIncome / 2) - praveenDirectGiven;
+    const sarthakOwesPraveen = Math.max(0, Math.round(sarthakOwesPraveenRaw));
 
-    const praveenOperatingDue = baseSarthakOwesPraveen; // Positive = Praveen gets, Negative = Praveen pays
-    const sarthakOperatingDue = -baseSarthakOwesPraveen;
+    // Net Difference (Positive = Praveen owes Sarthak, Negative = Sarthak owes Praveen)
+    const netDifference = praveenOwesSarthakRaw - sarthakOwesPraveenRaw;
 
-    const praveenNetDue = finalSarthakOwesPraveen; // Positive = Praveen gets, Negative = Praveen pays
-    const sarthakNetDue = -finalSarthakOwesPraveen;
+    const praveenOperatingDue = Math.round(praveenPoolAfterExpenses / 2);
+    const sarthakOperatingDue = Math.round(sarthakIncome / 2);
+
+    const praveenNetDue = -netDifference;
+    const sarthakNetDue = netDifference;
 
     let settlementText = 'No transactions recorded yet in Business Mode.';
     let payerName: string | undefined = undefined;
@@ -436,18 +445,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     let amountDue = 0;
 
     if (bTxList.length > 0) {
-      if (Math.abs(finalSarthakOwesPraveen) < 1) {
+      if (Math.abs(netDifference) < 1) {
         settlementText = '✅ 50-50 Business Ledger is perfectly balanced between Praveen & Sarthak!';
-      } else if (finalSarthakOwesPraveen > 0) {
-        payerName = 'Sarthak';
-        payeeName = 'Praveen';
-        amountDue = Math.round(finalSarthakOwesPraveen);
-        settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen (after personal transfer offset)`;
-      } else {
+      } else if (netDifference > 0) {
         payerName = 'Praveen';
         payeeName = 'Sarthak';
-        amountDue = Math.round(Math.abs(finalSarthakOwesPraveen));
-        settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak (after personal transfer offset)`;
+        amountDue = Math.round(netDifference);
+        settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak`;
+      } else {
+        payerName = 'Sarthak';
+        payeeName = 'Praveen';
+        amountDue = Math.round(Math.abs(netDifference));
+        settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen`;
       }
     }
 
@@ -468,6 +477,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       sarthakOperatingDue,
       praveenNetDue,
       sarthakNetDue,
+      praveenOwesSarthak,
+      sarthakOwesPraveen,
       settlementText,
       payerName,
       payeeName,

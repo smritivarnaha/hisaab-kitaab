@@ -37,6 +37,8 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
     sarthakOperatingDue,
     praveenNetDue,
     sarthakNetDue,
+    praveenOwesSarthak,
+    sarthakOwesPraveen,
     payerName,
     payeeName,
     amountDue
@@ -383,15 +385,19 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
           </div>
         ) : amountDue > 0 && payerName && payeeName ? (
           <div className="space-y-3">
-            {/* Priority Offset Subtitle Explanation */}
-            <div className="bg-amber-100/60 rounded-xl p-2.5 text-[11px] text-amber-900 font-semibold space-y-1">
-              <div className="flex justify-between">
-                <span>Base 50-50 Operating Dues:</span>
-                <span className="font-bold">₹{Math.abs(praveenOperatingDue).toLocaleString('en-IN')}</span>
+            {/* Two Distinct Tax-Separated Ledger Lines */}
+            <div className="bg-amber-100/60 rounded-xl p-2.5 text-[11px] text-amber-900 font-semibold space-y-1.5 border border-amber-200/80">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-bold">Praveen ➔ Sarthak (50% Praveen Pool - Expenses):</span>
+                <span className="font-black text-rose-700 text-xs">₹{praveenOwesSarthak.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-bold">Sarthak ➔ Praveen (50% Sarthak Incoming):</span>
+                <span className="font-black text-emerald-700 text-xs">₹{sarthakOwesPraveen.toLocaleString('en-IN')}</span>
               </div>
               {(praveenDirectGiven > 0 || sarthakDirectGiven > 0) && (
                 <div className="flex justify-between text-blue-900 font-bold border-t border-amber-200/80 pt-1">
-                  <span>Less Personal / Family Offset (100%):</span>
+                  <span>Less Personal / Family Transfers Offset:</span>
                   <span>- ₹{Math.abs(praveenDirectGiven - sarthakDirectGiven).toLocaleString('en-IN')}</span>
                 </div>
               )}
