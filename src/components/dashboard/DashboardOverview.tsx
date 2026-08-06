@@ -99,8 +99,11 @@ export const DashboardOverview: React.FC = () => {
 
   return (
     <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 sm:py-4 pb-24 sm:pb-16 no-scrollbar bg-[#F3F5F1] font-outfit space-y-3 sm:space-y-4 max-w-4xl mx-auto">
-      {/* 1. Proportional Top Summary Card with Spreading Bottom-Left Green Gradient & Grid Overlay */}
-      <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3.5 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] max-w-4xl mx-auto">
+      {accountMode === 'business' ? (
+        <BusinessPartnerSummaryCard />
+      ) : (
+        /* 1. Personal Top Summary Card with Spreading Bottom-Left Green Gradient & Grid Overlay */
+        <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3.5 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] max-w-4xl mx-auto">
         {/* Spreading Bottom-Left Green Gradient Layer */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#93E044]/25 via-[#14471f]/50 to-[#0D2E14] pointer-events-none" />
 
@@ -125,7 +128,7 @@ export const DashboardOverview: React.FC = () => {
           <div className="flex items-center justify-between gap-3 mb-2.5 sm:mb-3">
             <div>
               <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight font-outfit">
-                {accountMode === 'business' ? 'Business Net Overview' : 'Net Overview'}
+                Net Overview
               </h2>
               <span className="text-[10px] sm:text-xs font-semibold text-emerald-300 block mt-0.5">
                 Period: {periodRange}
@@ -140,119 +143,69 @@ export const DashboardOverview: React.FC = () => {
 
           {/* Single White Card Container */}
           <div className="pt-2 sm:pt-3 border-t border-gray-800/80">
-            {accountMode === 'business' ? (
-              <div className="bg-white text-[#0D2E14] p-3.5 sm:p-4 rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100 space-y-2">
-                {/* 1. Business Income Row with Partner Addition Breakdown */}
-                <div className="py-1.5 space-y-1">
-                  <div className="flex justify-between items-center text-xs sm:text-sm font-bold">
-                    <span className="text-gray-500 font-bold">Total Income</span>
-                    <span className="text-green-700 font-extrabold text-sm sm:text-base">₹{totalIncome.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="text-[11px] font-semibold text-gray-500 flex items-center justify-between bg-emerald-50/70 p-2 rounded-xl border border-emerald-100 flex-wrap gap-1">
-                    <span>Praveen (₹{praveenIncome.toLocaleString('en-IN')}) + Sarthak (₹{sarthakIncome.toLocaleString('en-IN')})</span>
-                    <span className="font-extrabold text-emerald-800">= ₹{totalIncome.toLocaleString('en-IN')}</span>
-                  </div>
+            <div className="bg-white text-[#0D2E14] p-3.5 sm:p-4 rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100">
+              {/* 1. Income Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-2 first:pt-0">
+                <div className="pr-3 flex items-center justify-start text-left">
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Income</span>
                 </div>
-
-                {/* 2. Business Spent Row with Partner Addition Breakdown */}
-                <div className="py-1.5 space-y-1 pt-2">
-                  <div className="flex justify-between items-center text-xs sm:text-sm font-bold">
-                    <span className="text-gray-500 font-bold">Total Spent</span>
-                    <span className="text-red-600 font-extrabold text-sm sm:text-base">₹{totalExpense.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="text-[11px] font-semibold text-gray-500 flex items-center justify-between bg-red-50/70 p-2 rounded-xl border border-red-100 flex-wrap gap-1">
-                    <span>Praveen (₹{praveenExpense.toLocaleString('en-IN')}) + Sarthak (₹{sarthakExpense.toLocaleString('en-IN')})</span>
-                    <span className="font-extrabold text-red-700">= ₹{totalExpense.toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-
-                {/* 3. Net Business Profit & Fair 50% Share Row */}
-                <div className="py-1.5 pt-2 flex justify-between items-center text-xs sm:text-sm font-bold">
-                  <span className="text-gray-500 font-bold">Net Business Profit</span>
-                  <div className="text-right">
-                    <span className={`text-sm sm:text-base font-extrabold block ${netProfit >= 0 ? 'text-emerald-800' : 'text-red-600'}`}>
-                      ₹{netProfit.toLocaleString('en-IN')}
-                    </span>
-                    <span className="text-[10px] text-indigo-700 font-bold block">
-                      50% Share: ₹{fairSharePerPartner.toLocaleString('en-IN')} each
-                    </span>
-                  </div>
-                </div>
-
-                {/* 4. Auto Settlement Equalization Banner */}
-                <div className="pt-2">
-                  <div className="p-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center gap-2">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[9px] font-extrabold text-amber-800 uppercase tracking-wider block">Auto Equalization Settlement</span>
-                      <p className="text-xs font-black text-amber-900 leading-snug break-words">{settlementText}</p>
-                    </div>
-                  </div>
+                <div className="pl-3.5 flex items-center justify-start text-left">
+                  {dbStatus === 'loading' ? (
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
+                  ) : (
+                    <span className="font-bold text-green-700 text-sm sm:text-base tracking-tight">₹{totalIncome.toLocaleString('en-IN')}</span>
+                  )}
                 </div>
               </div>
-            ) : (
-              <div className="bg-white text-[#0D2E14] p-3.5 sm:p-4 rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100">
-                {/* 1. Income Row */}
-                <div className="grid grid-cols-2 divide-x divide-gray-200 py-2 first:pt-0">
-                  <div className="pr-3 flex items-center justify-start text-left">
-                    <span className="text-gray-500 font-bold text-xs sm:text-sm">Income</span>
-                  </div>
-                  <div className="pl-3.5 flex items-center justify-start text-left">
-                    {dbStatus === 'loading' ? (
-                      <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
-                    ) : (
-                      <span className="font-bold text-green-700 text-sm sm:text-base tracking-tight">₹{totalIncome.toLocaleString('en-IN')}</span>
-                    )}
-                  </div>
-                </div>
 
-                {/* 2. Spent Row */}
-                <div className="grid grid-cols-2 divide-x divide-gray-200 py-2">
-                  <div className="pr-3 flex items-center justify-start text-left">
-                    <span className="text-gray-500 font-bold text-xs sm:text-sm">Spent</span>
-                  </div>
-                  <div className="pl-3.5 flex items-center justify-start text-left">
-                    {dbStatus === 'loading' ? (
-                      <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
-                    ) : (
-                      <span className="font-bold text-[#D93025] text-sm sm:text-base tracking-tight">₹{totalExpense.toLocaleString('en-IN')}</span>
-                    )}
-                  </div>
+              {/* 2. Spent Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-2">
+                <div className="pr-3 flex items-center justify-start text-left">
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Spent</span>
                 </div>
-
-                {/* 3. Lent Out Row */}
-                <div className="grid grid-cols-2 divide-x divide-gray-200 py-2">
-                  <div className="pr-3 flex items-center justify-start text-left">
-                    <span className="text-gray-500 font-bold text-xs sm:text-sm">Lent Out</span>
-                  </div>
-                  <div className="pl-3.5 flex items-center justify-start text-left">
-                    {dbStatus === 'loading' ? (
-                      <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
-                    ) : (
-                      <span className="font-bold text-amber-700 text-sm sm:text-base tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 4. Current Row */}
-                <div className="grid grid-cols-2 divide-x divide-gray-200 py-2 last:pb-0">
-                  <div className="pr-3 flex items-center justify-start text-left">
-                    <span className="text-gray-500 font-bold text-xs sm:text-sm">Current</span>
-                  </div>
-                  <div className="pl-3.5 flex items-center justify-start text-left">
-                    {dbStatus === 'loading' ? (
-                      <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
-                    ) : (
-                      <span className="font-bold text-[#0D2E14] text-sm sm:text-base tracking-tight">
-                        {currentBalance >= 0 ? '+ ' : '- '}₹{Math.abs(currentBalance).toLocaleString('en-IN')}
-                      </span>
-                    )}
-                  </div>
+                <div className="pl-3.5 flex items-center justify-start text-left">
+                  {dbStatus === 'loading' ? (
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
+                  ) : (
+                    <span className="font-bold text-[#D93025] text-sm sm:text-base tracking-tight">₹{totalExpense.toLocaleString('en-IN')}</span>
+                  )}
                 </div>
               </div>
-            )}
+
+              {/* 3. Lent Out Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-2">
+                <div className="pr-3 flex items-center justify-start text-left">
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Lent Out</span>
+                </div>
+                <div className="pl-3.5 flex items-center justify-start text-left">
+                  {dbStatus === 'loading' ? (
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
+                  ) : (
+                    <span className="font-bold text-amber-700 text-sm sm:text-base tracking-tight">₹{totalLent.toLocaleString('en-IN')}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* 4. Current Row */}
+              <div className="grid grid-cols-2 divide-x divide-gray-200 py-2 last:pb-0">
+                <div className="pr-3 flex items-center justify-start text-left">
+                  <span className="text-gray-500 font-bold text-xs sm:text-sm">Current</span>
+                </div>
+                <div className="pl-3.5 flex items-center justify-start text-left">
+                  {dbStatus === 'loading' ? (
+                    <span className="inline-block w-16 h-5 bg-gray-200 animate-pulse rounded-md"></span>
+                  ) : (
+                    <span className="font-bold text-[#0D2E14] text-sm sm:text-base tracking-tight">
+                      {currentBalance >= 0 ? '+ ' : '- '}₹{Math.abs(currentBalance).toLocaleString('en-IN')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+      )}
 
       {/* 2. Same-Day AI Audit Banner */}
       <div className="max-w-4xl mx-auto mb-3 sm:mb-4">
