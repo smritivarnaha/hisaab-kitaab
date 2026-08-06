@@ -114,26 +114,25 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         </div>
 
         {isIncomeOpen && (
-          <div className="pt-2 space-y-2 border-t border-gray-100 animate-fadeIn">
-            <div className="flex items-center justify-between text-xs font-bold text-gray-700">
-              <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-                Praveen
-              </span>
-              <span className="font-extrabold text-gray-900">₹{praveenIncome.toLocaleString('en-IN')}</span>
-            </div>
+          <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
+            <div className="flex items-center justify-between text-xs font-bold text-gray-700 bg-emerald-50/60 p-2.5 rounded-2xl border border-emerald-100/80 divide-x divide-emerald-200/80">
+              {/* Left: Praveen */}
+              <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
+                <span className="flex items-center gap-1.5 text-emerald-950 font-extrabold truncate">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
+                  Praveen
+                </span>
+                <span className="font-extrabold text-emerald-800 ml-1">₹{praveenIncome.toLocaleString('en-IN')}</span>
+              </div>
 
-            <div className="flex items-center justify-between text-xs font-bold text-gray-700">
-              <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-300 inline-block" />
-                Sarthak
-              </span>
-              <span className="font-extrabold text-gray-900">₹{sarthakIncome.toLocaleString('en-IN')}</span>
-            </div>
-
-            <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs font-extrabold text-emerald-800">
-              <span>Total Income</span>
-              <span className="text-sm font-black">₹{totalIncome.toLocaleString('en-IN')}</span>
+              {/* Right: Sarthak */}
+              <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
+                <span className="flex items-center gap-1.5 text-emerald-950 font-extrabold truncate">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
+                  Sarthak
+                </span>
+                <span className="font-extrabold text-emerald-800 ml-1">₹{sarthakIncome.toLocaleString('en-IN')}</span>
+              </div>
             </div>
           </div>
         )}
@@ -160,26 +159,25 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         </div>
 
         {isExpenseOpen && (
-          <div className="pt-2 space-y-2 border-t border-gray-100 animate-fadeIn">
-            <div className="flex items-center justify-between text-xs font-bold text-gray-700">
-              <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
-                Praveen
-              </span>
-              <span className="font-extrabold text-gray-900">₹{praveenExpense.toLocaleString('en-IN')}</span>
-            </div>
+          <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
+            <div className="flex items-center justify-between text-xs font-bold text-gray-700 bg-rose-50/60 p-2.5 rounded-2xl border border-rose-100/80 divide-x divide-rose-200/80">
+              {/* Left: Praveen */}
+              <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
+                <span className="flex items-center gap-1.5 text-rose-950 font-extrabold truncate">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 inline-block flex-shrink-0" />
+                  Praveen
+                </span>
+                <span className="font-extrabold text-rose-600 ml-1">₹{praveenExpense.toLocaleString('en-IN')}</span>
+              </div>
 
-            <div className="flex items-center justify-between text-xs font-bold text-gray-700">
-              <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-300 inline-block" />
-                Sarthak
-              </span>
-              <span className="font-extrabold text-gray-900">₹{sarthakExpense.toLocaleString('en-IN')}</span>
-            </div>
-
-            <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs font-extrabold text-rose-600">
-              <span>Total Expenses</span>
-              <span className="text-sm font-black">₹{totalExpense.toLocaleString('en-IN')}</span>
+              {/* Right: Sarthak */}
+              <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
+                <span className="flex items-center gap-1.5 text-rose-950 font-extrabold truncate">
+                  <span className="w-2 h-2 rounded-full bg-rose-400 inline-block flex-shrink-0" />
+                  Sarthak
+                </span>
+                <span className="font-extrabold text-rose-600 ml-1">₹{sarthakExpense.toLocaleString('en-IN')}</span>
+              </div>
             </div>
           </div>
         )}
