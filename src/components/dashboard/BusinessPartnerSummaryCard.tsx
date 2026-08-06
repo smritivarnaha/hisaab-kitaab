@@ -388,19 +388,13 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
             {/* Two Distinct Tax-Separated Ledger Lines */}
             <div className="bg-amber-100/60 rounded-xl p-2.5 text-[11px] text-amber-900 font-semibold space-y-1.5 border border-amber-200/80">
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-bold">Praveen ➔ Sarthak (50% Praveen Pool - Expenses):</span>
+                <span className="text-gray-700 font-bold">Praveen ➔ Sarthak (50% Praveen Net - Direct Transfers):</span>
                 <span className="font-black text-rose-700 text-xs">₹{praveenOwesSarthak.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-700 font-bold">Sarthak ➔ Praveen (50% Sarthak Incoming):</span>
+                <span className="text-gray-700 font-bold">Sarthak ➔ Praveen (50% Sarthak Incoming - Direct Transfers):</span>
                 <span className="font-black text-emerald-700 text-xs">₹{sarthakOwesPraveen.toLocaleString('en-IN')}</span>
               </div>
-              {(praveenDirectGiven > 0 || sarthakDirectGiven > 0) && (
-                <div className="flex justify-between text-blue-900 font-bold border-t border-amber-200/80 pt-1">
-                  <span>Less Personal / Family Transfers Offset:</span>
-                  <span>- ₹{Math.abs(praveenDirectGiven - sarthakDirectGiven).toLocaleString('en-IN')}</span>
-                </div>
-              )}
             </div>
 
             <div className="flex items-center justify-around py-1">

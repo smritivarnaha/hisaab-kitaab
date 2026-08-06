@@ -421,13 +421,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const sarthakCashHeld = sarthakIncome - sarthakExpense;
 
     // Asymmetric Tax-Separated Ledgers:
-    // 1. Praveen's Incoming Pool minus ALL Business Expenses:
+    // 1. Praveen's Incoming Pool minus ALL Business Expenses minus Praveen's Family Transfers:
     const praveenPoolAfterExpenses = praveenIncome - totalExpense;
-    const praveenOwesSarthakRaw = (praveenPoolAfterExpenses / 2) - sarthakDirectGiven;
+    const praveenOwesSarthakRaw = (praveenPoolAfterExpenses / 2) - praveenDirectGiven;
     const praveenOwesSarthak = Math.max(0, Math.round(praveenOwesSarthakRaw));
 
-    // 2. Sarthak's Incoming Pool (50% directly owed to Praveen without deducting expenses):
-    const sarthakOwesPraveenRaw = (sarthakIncome / 2) - praveenDirectGiven;
+    // 2. Sarthak's Incoming Pool (50% directly owed to Praveen minus Sarthak's Family Transfers):
+    const sarthakOwesPraveenRaw = (sarthakIncome / 2) - sarthakDirectGiven;
     const sarthakOwesPraveen = Math.max(0, Math.round(sarthakOwesPraveenRaw));
 
     // Net Difference (Positive = Praveen owes Sarthak, Negative = Sarthak owes Praveen)
