@@ -71,8 +71,8 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
 
   return (
     <div className="space-y-3 sm:space-y-4 font-outfit max-w-4xl mx-auto animate-fadeIn">
-      {/* 1. Top Green Business Overview Header Card */}
-      <div className="relative overflow-hidden bg-[#0D2E14] text-white p-4 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] flex items-center justify-between">
+      {/* 1. Top Green Business Overview Card (Contains Header & Income/Expenses Card inside it) */}
+      <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3.5 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] space-y-3 sm:space-y-4">
         {/* Spreading Bottom-Left Green Gradient Layer */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#93E044]/25 via-[#14471f]/50 to-[#0D2E14] pointer-events-none" />
 
@@ -88,8 +88,12 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
           }}
         />
 
-        {/* Content Container */}
-        <div className="relative z-10 flex items-center justify-between w-full">
+        {/* Soft Spreading Ambient Glow */}
+        <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-[#93E044]/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#93E044]/10 rounded-full blur-2xl pointer-events-none" />
+
+        {/* Header Row */}
+        <div className="relative z-10 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-[#14471f] border border-[#93E044]/40 text-emerald-300 flex items-center justify-center font-bold flex-shrink-0 shadow-xs">
               <Building2 className="w-5 h-5" />
@@ -103,107 +107,107 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               </span>
             </div>
           </div>
-          <div className="px-3 py-1.5 rounded-full bg-[#14471f] border border-[#93E044]/50 text-emerald-300 text-xs font-extrabold flex items-center gap-1.5 flex-shrink-0 shadow-xs">
+          <div className="px-3 py-1 rounded-full bg-[#14471f] border border-[#93E044]/50 text-emerald-300 text-xs font-extrabold flex items-center gap-1.5 flex-shrink-0 shadow-xs">
             <Calendar className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Business 50-50</span>
           </div>
         </div>
-      </div>
 
-      {/* 2. Standalone Income & Expenses Card */}
-      <div className="bg-white rounded-3xl border border-gray-200/90 shadow-xs divide-y divide-gray-100 overflow-hidden">
-        {/* Income Section */}
-        <div className="p-4 space-y-2.5">
-          <div 
-            onClick={() => setIsIncomeOpen(prev => !prev)}
-            className="flex items-center justify-between cursor-pointer select-none"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-black flex-shrink-0">
-                <ArrowUpRight className="w-5 h-5" />
+        {/* Inner White Card: Income & Expenses Sections ONLY */}
+        <div className="relative z-10 bg-white text-[#0D2E14] rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100 overflow-hidden">
+          {/* Income Section */}
+          <div className="p-3.5 sm:p-4 space-y-2.5">
+            <div 
+              onClick={() => setIsIncomeOpen(prev => !prev)}
+              className="flex items-center justify-between cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-black flex-shrink-0">
+                  <ArrowUpRight className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-gray-500 block">Income</span>
+                  <span className="text-base sm:text-lg font-black text-emerald-700">₹{totalIncome.toLocaleString('en-IN')}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-bold text-gray-500 block">Income</span>
-                <span className="text-lg sm:text-xl font-black text-emerald-700">₹{totalIncome.toLocaleString('en-IN')}</span>
-              </div>
+              <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
+                {isIncomeOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
             </div>
-            <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
-              {isIncomeOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-            </button>
+
+            {isIncomeOpen && (
+              <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
+                <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
+                  {/* Left: Praveen */}
+                  <div className="flex-1 pr-3 flex items-center justify-between min-w-0">
+                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
+                      Praveen
+                    </span>
+                    <span className="font-semibold text-gray-900 ml-1">₹{praveenIncome.toLocaleString('en-IN')}</span>
+                  </div>
+
+                  {/* Right: Sarthak */}
+                  <div className="flex-1 pl-3 flex items-center justify-between min-w-0">
+                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
+                      Sarthak
+                    </span>
+                    <span className="font-semibold text-gray-900 ml-1">₹{sarthakIncome.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {isIncomeOpen && (
-            <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
-              <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
-                {/* Left: Praveen */}
-                <div className="flex-1 pr-3 flex items-center justify-between min-w-0">
-                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block flex-shrink-0" />
-                    Praveen
-                  </span>
-                  <span className="font-semibold text-gray-900 ml-1">₹{praveenIncome.toLocaleString('en-IN')}</span>
+          {/* Expenses Section */}
+          <div className="p-3.5 sm:p-4 space-y-2.5">
+            <div 
+              onClick={() => setIsExpenseOpen(prev => !prev)}
+              className="flex items-center justify-between cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center font-black flex-shrink-0">
+                  <ArrowDownRight className="w-4 h-4" />
                 </div>
-
-                {/* Right: Sarthak */}
-                <div className="flex-1 pl-3 flex items-center justify-between min-w-0">
-                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block flex-shrink-0" />
-                    Sarthak
-                  </span>
-                  <span className="font-semibold text-gray-900 ml-1">₹{sarthakIncome.toLocaleString('en-IN')}</span>
+                <div>
+                  <span className="text-xs font-bold text-gray-500 block">Expenses</span>
+                  <span className="text-base sm:text-lg font-black text-rose-600">₹{totalExpense.toLocaleString('en-IN')}</span>
                 </div>
               </div>
+              <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
+                {isExpenseOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
             </div>
-          )}
-        </div>
 
-        {/* Expenses Section */}
-        <div className="p-4 space-y-2.5">
-          <div 
-            onClick={() => setIsExpenseOpen(prev => !prev)}
-            className="flex items-center justify-between cursor-pointer select-none"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center font-black flex-shrink-0">
-                <ArrowDownRight className="w-5 h-5" />
+            {isExpenseOpen && (
+              <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
+                <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
+                  {/* Left: Praveen */}
+                  <div className="flex-1 pr-3 flex items-center justify-between min-w-0">
+                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                      <span className="w-2 h-2 rounded-full bg-rose-500 inline-block flex-shrink-0" />
+                      Praveen
+                    </span>
+                    <span className="font-semibold text-gray-900 ml-1">₹{praveenExpense.toLocaleString('en-IN')}</span>
+                  </div>
+
+                  {/* Right: Sarthak */}
+                  <div className="flex-1 pl-3 flex items-center justify-between min-w-0">
+                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                      <span className="w-2 h-2 rounded-full bg-rose-400 inline-block flex-shrink-0" />
+                      Sarthak
+                    </span>
+                    <span className="font-semibold text-gray-900 ml-1">₹{sarthakExpense.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-bold text-gray-500 block">Expenses</span>
-                <span className="text-lg sm:text-xl font-black text-rose-600">₹{totalExpense.toLocaleString('en-IN')}</span>
-              </div>
-            </div>
-            <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
-              {isExpenseOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-            </button>
+            )}
           </div>
-
-          {isExpenseOpen && (
-            <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
-              <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
-                {/* Left: Praveen */}
-                <div className="flex-1 pr-3 flex items-center justify-between min-w-0">
-                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
-                    <span className="w-2 h-2 rounded-full bg-rose-500 inline-block flex-shrink-0" />
-                    Praveen
-                  </span>
-                  <span className="font-semibold text-gray-900 ml-1">₹{praveenExpense.toLocaleString('en-IN')}</span>
-                </div>
-
-                {/* Right: Sarthak */}
-                <div className="flex-1 pl-3 flex items-center justify-between min-w-0">
-                  <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
-                    <span className="w-2 h-2 rounded-full bg-rose-400 inline-block flex-shrink-0" />
-                    Sarthak
-                  </span>
-                  <span className="font-semibold text-gray-900 ml-1">₹{sarthakExpense.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* 3. Standalone Current Amount & Final Settlement Card */}
+      {/* 2. OUTSIDE CARD: Current Amount & Final Settlement Outcome Grid */}
       <div className="bg-slate-50 border border-slate-200/90 rounded-3xl p-4 sm:p-5 grid grid-cols-2 divide-x divide-slate-200 items-center shadow-xs">
         {/* Left: Current Amount */}
         <div className="pr-4 flex flex-col justify-center text-left">
@@ -252,7 +256,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Standalone Settlement Equalization Card */}
+      {/* 3. OUTSIDE CARD: Settlement Equalization Action Card */}
       <div className="bg-[#FFFBEB] rounded-3xl p-4 sm:p-5 border border-amber-200 shadow-xs space-y-3">
         <div className="flex items-center justify-between border-b border-amber-100 pb-2">
           <span className="text-xs font-extrabold text-amber-900">Settlement Equalization</span>
