@@ -479,9 +479,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     });
 
-    // Current Cash in Hand for each partner (Income Collected - Expenses Paid by each respective person):
-    const praveenCurrentAmount = Math.round(praveenIncome - praveenExpense);
-    const sarthakCurrentAmount = Math.round(sarthakIncome - sarthakExpense);
+    // Sarthak Current Amount: (Sarthak Income / 2) - sarthakDirectGiven + praveenDirectGiven
+    const sarthakCurrentAmount = Math.round((sarthakIncome / 2) - sarthakDirectGiven + praveenDirectGiven);
+
+    // Praveen Current Amount: ((Praveen Income - Total Expenses) / 2) - praveenDirectGiven + sarthakDirectGiven
+    const praveenCurrentAmount = Math.round(((praveenIncome - totalExpense) / 2) - praveenDirectGiven + sarthakDirectGiven);
 
     return {
       totalIncome,
