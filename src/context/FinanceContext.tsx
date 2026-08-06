@@ -132,10 +132,11 @@ const saveSettingsToDb = async (s: UserSettings, userId: string) => {
 };
 
 const saveTransactionToDb = async (tx: Transaction, userId: string) => {
+  const enteredBy = tx.enteredBy || (userId === 'sarthak' ? 'Sarthak' : 'Praveen');
   await fetch(`/api/transactions?userId=${userId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...tx, userId })
+    body: JSON.stringify({ ...tx, userId, enteredBy })
   });
 };
 
@@ -489,19 +490,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     saveMemoryToDb(getAIMemory(), activeUserId);
   };
 
+  const getEffectiveUserName = (txEnteredBy?: string) => {
+    if (txEnteredBy && txEnteredBy.trim()) return txEnteredBy.trim();
+    if (currentUser?.name && currentUser.name.trim()) return currentUser.name.trim();
+    if (currentUser?.id === 'sarthak' || activeUserId === 'sarthak') return 'Sarthak';
+    return 'Praveen';
+  };
+
   const updateTransaction = (id: string, updated: Partial<Transaction>) => {
     setTransactions(prev => {
       const exists = prev.some(t => t.id === id);
       if (exists) {
         return prev.map(t => {
           if (t.id === id) {
+            const originalEnteredBy = t.enteredBy || updated.enteredBy || getEffectiveUserName();
             const full = { 
               ...t, 
               ...updated, 
               isPending: false,
               userId: activeUserId,
               mode: updated.mode || t.mode || accountMode,
-              enteredBy: updated.enteredBy || t.enteredBy || currentUser?.name || 'Praveen'
+              enteredBy: originalEnteredBy
             };
             saveTransactionToDb(full, activeUserId);
             return full;
@@ -509,6 +518,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return t;
         });
       } else {
+        const creatorName = updated.enteredBy || getEffectiveUserName();
         const full: Transaction = {
           id: id || `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           amount: Number(updated.amount || 0),
@@ -522,7 +532,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           confidenceScore: 100,
           paymentMethod: updated.paymentMethod || 'UPI',
           mode: updated.mode || accountMode,
-          enteredBy: updated.enteredBy || currentUser?.name || 'Praveen',
+          enteredBy: creatorName,
           ...updated,
           isPending: false
         };
@@ -566,7 +576,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         ...tx, 
         isPending: false,
         mode: tx.mode || accountMode,
-        enteredBy: tx.enteredBy || currentUser?.name || 'Praveen'
+        enteredBy: tx.enteredBy || getEffectiveUserName()
       });
     });
     setPendingReviewItems(prev => prev.filter(p => !clearedList.some(c => c.id === p.id)));
@@ -576,6 +586,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!text.trim() && !audioBlob) return;
     setIsProcessingAI(true);
 
+    const effectiveSender = getEffectiveUserName();
     const userMsg: ChatMessage = {
       id: `msg_user_${Date.now()}`,
       sender: 'user',
@@ -583,7 +594,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       timestamp: Date.now(),
       isVoice,
       mode: accountMode,
-      senderName: currentUser?.name || 'Praveen'
+      senderName: effectiveSender
     };
 
     setChatMessages(prev => [...prev, userMsg]);
@@ -607,7 +618,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           isPending: true,
           person: t.person,
           mode: accountMode,
-          enteredBy: currentUser?.name || 'Praveen'
+          enteredBy: effectiveSender
         }));
 
         addTransactionsBatch(newTxList);
@@ -663,7 +674,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             isPending: true,
             userId: activeUserId,
             mode: accountMode,
-            enteredBy: currentUser?.name || 'Praveen',
+            enteredBy: effectiveSender,
             type: accountMode === 'business' ? (tx.type === 'income' ? 'income' : 'expense') : (tx.type || 'expense')
           }));
           if (fallbackExtracted.length) {
@@ -702,7 +713,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isPending: true,
         userId: activeUserId,
         mode: accountMode,
-        enteredBy: currentUser?.name || 'Praveen',
+        enteredBy: effectiveSender,
         type: accountMode === 'business' ? (tx.type === 'income' ? 'income' : 'expense') : (tx.type || 'expense')
       }));
       

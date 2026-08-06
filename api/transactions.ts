@@ -122,7 +122,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           "person" = EXCLUDED."person",
           "userId" = EXCLUDED."userId",
           "mode" = EXCLUDED."mode",
-          "enteredBy" = EXCLUDED."enteredBy"
+          "enteredBy" = COALESCE(EXCLUDED."enteredBy", transactions."enteredBy")
       `;
       return res.status(200).json({ success: true, id: body.id });
     }
@@ -150,14 +150,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           )
           ON CONFLICT ("id") DO UPDATE SET
             "amount" = EXCLUDED."amount",
+            "currency" = EXCLUDED."currency",
             "type" = EXCLUDED."type",
             "category" = EXCLUDED."category",
             "title" = EXCLUDED."title",
+            "merchant" = EXCLUDED."merchant",
+            "paymentMethod" = EXCLUDED."paymentMethod",
+            "date" = EXCLUDED."date",
+            "relativeDateText" = EXCLUDED."relativeDateText",
             "timestamp" = EXCLUDED."timestamp",
+            "confidenceScore" = EXCLUDED."confidenceScore",
+            "rawInput" = EXCLUDED."rawInput",
+            "shortDisplayTitle" = EXCLUDED."shortDisplayTitle",
+            "notes" = EXCLUDED."notes",
             "isPending" = EXCLUDED."isPending",
+            "person" = EXCLUDED."person",
             "userId" = EXCLUDED."userId",
             "mode" = EXCLUDED."mode",
-            "enteredBy" = EXCLUDED."enteredBy"
+            "enteredBy" = COALESCE(EXCLUDED."enteredBy", transactions."enteredBy")
         `;
       }));
       return res.status(200).json({ success: true, count: list.length });
