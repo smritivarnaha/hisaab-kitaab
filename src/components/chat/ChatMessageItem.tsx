@@ -67,8 +67,8 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
             >
               <option value="expense">Spent 🔴</option>
               <option value="income">Income 🟢</option>
-              {accountMode !== 'business' && <option value="lent">Lent 🤝</option>}
-              {accountMode !== 'business' && <option value="borrowed">Borrowed 🤝</option>}
+              <option value="lent">Direct Give 🤝 (100%)</option>
+              <option value="borrowed">Direct Take 🤝 (100%)</option>
             </select>
           </div>
 
@@ -198,8 +198,8 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
               >
                 <option value="expense">Spent 🔴</option>
                 <option value="income">Income 🟢</option>
-                {accountMode !== 'business' && <option value="lent">Lent 🤝</option>}
-                {accountMode !== 'business' && <option value="borrowed">Borrowed 🤝</option>}
+                <option value="lent">Direct Give 🤝 (100%)</option>
+                <option value="borrowed">Direct Take 🤝 (100%)</option>
               </select>
 
               {/* Amount Input Box (Centered Text) */}

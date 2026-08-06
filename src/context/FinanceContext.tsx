@@ -23,9 +23,13 @@ interface BusinessSettlement {
   praveenIncome: number;
   praveenExpense: number;
   praveenCashHeld: number;
+  praveenDirectGiven: number;
   sarthakIncome: number;
   sarthakExpense: number;
   sarthakCashHeld: number;
+  sarthakDirectGiven: number;
+  praveenOperatingDue: number;
+  sarthakOperatingDue: number;
   settlementText: string;
   payerName?: string;
   payeeName?: string;
@@ -370,7 +374,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [accountMode, setAccountMode] = useState<'personal' | 'business'>('personal');
 
-  // Compute 50-50 Business Settlement
+  // Compute 50-50 Business Settlement with Priority Offset for Direct Partner Transfers
   const businessSettlement = React.useMemo<BusinessSettlement>(() => {
     const bTxList = transactions.filter(t => t.mode === 'business' && !t.isPending);
 
@@ -380,6 +384,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     let praveenExpense = 0;
     let sarthakIncome = 0;
     let sarthakExpense = 0;
+    let praveenDirectGiven = 0;
+    let sarthakDirectGiven = 0;
 
     bTxList.forEach(t => {
       const amt = Number(t.amount || 0);
@@ -393,6 +399,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         totalExpense += amt;
         if (isPraveen) praveenExpense += amt;
         else sarthakExpense += amt;
+      } else if (t.type === 'lent') {
+        // Direct Partner / Family Transfer Given (100% not halved!)
+        if (isPraveen) praveenDirectGiven += amt;
+        else sarthakDirectGiven += amt;
+      } else if (t.type === 'borrowed') {
+        // Direct Partner / Family Transfer Taken (100% not halved!)
+        if (isPraveen) sarthakDirectGiven += amt;
+        else praveenDirectGiven += amt;
       }
     });
 
@@ -402,8 +416,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const praveenCashHeld = praveenIncome - praveenExpense;
     const sarthakCashHeld = sarthakIncome - sarthakExpense;
 
-    const praveenDue = fairSharePerPartner - praveenCashHeld;
-    const sarthakDue = fairSharePerPartner - sarthakCashHeld;
+    // Operating dues from 50-50 profit split
+    const praveenOperatingDue = fairSharePerPartner - praveenCashHeld;
+    const sarthakOperatingDue = fairSharePerPartner - sarthakCashHeld;
+
+    // Final Net Dues with 100% Direct Transfer priority offset:
+    const praveenNetDue = praveenOperatingDue - praveenDirectGiven + sarthakDirectGiven;
+    const sarthakNetDue = sarthakOperatingDue - sarthakDirectGiven + praveenDirectGiven;
 
     let settlementText = 'No transactions recorded yet in Business Mode.';
     let payerName: string | undefined = undefined;
@@ -411,30 +430,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     let amountDue = 0;
 
     if (bTxList.length > 0) {
-      if (Math.abs(praveenDue) < 1) {
+      if (Math.abs(praveenNetDue) < 1) {
         settlementText = '✅ 50-50 Business Ledger is perfectly balanced between Praveen & Sarthak!';
-      } else if (praveenDue > 0) {
+      } else if (praveenNetDue > 0) {
         payerName = 'Sarthak';
         payeeName = 'Praveen';
-        amountDue = Math.round(praveenDue);
-        if (totalIncome === 0) {
-          settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen to equalize 50-50 out-of-pocket expenses`;
-        } else if (totalExpense === 0) {
-          settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen to equalize 50-50 income`;
-        } else {
-          settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen to equalize 50-50 net profit`;
-        }
+        amountDue = Math.round(praveenNetDue);
+        settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen (after personal transfer offset)`;
       } else {
         payerName = 'Praveen';
         payeeName = 'Sarthak';
-        amountDue = Math.round(sarthakDue);
-        if (totalIncome === 0) {
-          settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak to equalize 50-50 out-of-pocket expenses`;
-        } else if (totalExpense === 0) {
-          settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak to equalize 50-50 income`;
-        } else {
-          settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak to equalize 50-50 net profit`;
-        }
+        amountDue = Math.round(sarthakNetDue);
+        settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak (after personal transfer offset)`;
       }
     }
 
@@ -446,9 +453,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       praveenIncome,
       praveenExpense,
       praveenCashHeld,
+      praveenDirectGiven,
       sarthakIncome,
       sarthakExpense,
       sarthakCashHeld,
+      sarthakDirectGiven,
+      praveenOperatingDue,
+      sarthakOperatingDue,
       settlementText,
       payerName,
       payeeName,

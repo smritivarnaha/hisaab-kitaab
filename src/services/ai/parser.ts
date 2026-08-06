@@ -219,6 +219,13 @@ function parseTransactionTypeAndEntity(text: string): {
     return { type: 'income', person, extractedReason: person ? `${person} returned money` : 'Income Received', confidenceBoost: 30 };
   }
 
+  if (/transfer|transferred|sent|gave|diye|diya|given|bheje|bheja/i.test(lower) && /(mummy|mother|father|papa|family|brother|sister|sarthak|praveen)/i.test(lower)) {
+    const familyMatch = text.match(/(?:to|ko|for)\s+([A-Za-z0-9'\s]+?)(?:\s+rs|\s+rupees|\s+\d+|$)/i) || text.match(/([A-Za-z0-9'\s]+?)\s+(?:ko|given|received)/i);
+    const rawPerson = familyMatch ? familyMatch[1].trim() : extractName(text);
+    const person = rawPerson ? rawPerson.charAt(0).toUpperCase() + rawPerson.slice(1) : undefined;
+    return { type: 'lent', person, extractedReason: person ? `Transfer to ${person}` : 'Direct Partner Transfer', confidenceBoost: 35 };
+  }
+
   if (/lent|diye|diya|gave to|paid to|ko diye|ko cash/i.test(lower) && !/shop|store|petrol|grocery|bill|swiggy|zomato/i.test(lower)) {
     const personMatch = text.match(/lent\s+([A-Za-z]+)/i) || text.match(/([A-Za-z]+)\s+ko/i) || text.match(/(?:to|gave)\s+([A-Za-z]+)/i);
     const rawName = personMatch ? personMatch[1] : extractName(text);

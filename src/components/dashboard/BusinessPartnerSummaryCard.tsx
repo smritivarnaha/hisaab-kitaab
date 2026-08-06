@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { Transaction } from '../../types/finance';
 import { 
@@ -8,124 +8,36 @@ import {
   ChevronUp, 
   Users, 
   ArrowRight,
-  Building2,
   CheckCircle2,
   Calendar
 } from 'lucide-react';
 
 export const BusinessPartnerSummaryCard: React.FC = () => {
-  const { transactions, addTransaction } = useFinance();
+  const { businessSettlement, addTransaction } = useFinance();
   const [isIncomeOpen, setIsIncomeOpen] = useState(true);
   const [isExpenseOpen, setIsExpenseOpen] = useState(true);
+  const [isDirectOpen, setIsDirectOpen] = useState(true);
   const [settled, setSettled] = useState(false);
 
   const [selectedPeriod, setSelectedPeriod] = useState<'this_month' | 'today' | 'last_month' | 'this_year' | 'all'>('this_month');
   const [isCalendarMenuOpen, setIsCalendarMenuOpen] = useState(false);
-
-  const filteredBusinessTx = useMemo(() => {
-    const bTx = transactions.filter(t => !t.isPending && t.mode === 'business');
-    const now = new Date();
-
-    if (selectedPeriod === 'today') {
-      const todayStr = now.toISOString().split('T')[0];
-      return bTx.filter(t => t.date === todayStr);
-    }
-    if (selectedPeriod === 'this_month') {
-      const curYear = now.getFullYear();
-      const curMonth = now.getMonth();
-      return bTx.filter(t => {
-        const d = new Date(t.date || t.timestamp);
-        return d.getFullYear() === curYear && d.getMonth() === curMonth;
-      });
-    }
-    if (selectedPeriod === 'last_month') {
-      const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lmYear = lastMonthDate.getFullYear();
-      const lmMonth = lastMonthDate.getMonth();
-      return bTx.filter(t => {
-        const d = new Date(t.date || t.timestamp);
-        return d.getFullYear() === lmYear && d.getMonth() === lmMonth;
-      });
-    }
-    if (selectedPeriod === 'this_year') {
-      const curYear = now.getFullYear();
-      return bTx.filter(t => {
-        const d = new Date(t.date || t.timestamp);
-        return d.getFullYear() === curYear;
-      });
-    }
-    return bTx;
-  }, [transactions, selectedPeriod]);
 
   const {
     totalIncome,
     totalExpense,
     praveenIncome,
     praveenExpense,
+    praveenDirectGiven,
     sarthakIncome,
     sarthakExpense,
-    praveenCashHeld,
-    sarthakCashHeld,
+    sarthakDirectGiven,
     netProfit,
     fairSharePerPartner,
+    praveenOperatingDue,
     payerName,
     payeeName,
     amountDue
-  } = useMemo(() => {
-    const incList = filteredBusinessTx.filter(t => t.type === 'income');
-    const expList = filteredBusinessTx.filter(t => t.type === 'expense');
-
-    const totalIncome = incList.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const totalExpense = expList.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-
-    const isPraveen = (t: Transaction) => (t.enteredBy || '').toLowerCase().includes('praveen') || !t.enteredBy;
-    const isSarthak = (t: Transaction) => (t.enteredBy || '').toLowerCase().includes('sarthak');
-
-    const praveenIncome = incList.filter(isPraveen).reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const sarthakIncome = incList.filter(isSarthak).reduce((sum, t) => sum + Number(t.amount || 0), 0);
-
-    const praveenExpense = expList.filter(isPraveen).reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const sarthakExpense = expList.filter(isSarthak).reduce((sum, t) => sum + Number(t.amount || 0), 0);
-
-    const praveenCashHeld = praveenIncome - praveenExpense;
-    const sarthakCashHeld = sarthakIncome - sarthakExpense;
-
-    const netProfit = totalIncome - totalExpense;
-    const fairSharePerPartner = netProfit / 2;
-
-    const praveenDue = fairSharePerPartner - praveenCashHeld;
-    const sarthakDue = fairSharePerPartner - sarthakCashHeld;
-
-    let payerName = '';
-    let payeeName = '';
-    let amountDue = 0;
-
-    if (praveenDue > 0.01) {
-      payeeName = 'Praveen';
-      payerName = 'Sarthak';
-      amountDue = Math.round(praveenDue);
-    } else if (sarthakDue > 0.01) {
-      payeeName = 'Sarthak';
-      payerName = 'Praveen';
-      amountDue = Math.round(sarthakDue);
-    }
-
-    return {
-      totalIncome,
-      totalExpense,
-      praveenIncome,
-      praveenExpense,
-      sarthakIncome,
-      sarthakExpense,
-      praveenCashHeld,
-      sarthakCashHeld,
-      netProfit,
-      fairSharePerPartner,
-      payerName,
-      payeeName,
-      amountDue
-    };
-  }, [filteredBusinessTx]);
+  } = businessSettlement;
 
   const getPeriodLabel = () => {
     const now = new Date();
@@ -167,7 +79,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
       timestamp: Date.now(),
       confidenceScore: 100,
       paymentMethod: 'UPI',
-      notes: `Equalized 50-50 business ledger`,
+      notes: `Equalized 50-50 business ledger after personal transfer offset`,
       isPending: false,
       mode: 'business',
       enteredBy: payerName
@@ -266,7 +178,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Inner White Card: Income & Expenses Sections ONLY */}
+        {/* Inner White Card: Income, Expenses & Direct Personal Transfers */}
         <div className="relative z-0 bg-white text-[#0D2E14] rounded-2xl border border-[#E2E8E0] shadow-2xs divide-y divide-gray-100 overflow-hidden">
           {/* Income Section */}
           <div className="p-3 sm:p-4 space-y-2.5">
@@ -357,6 +269,51 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Direct Partner & Family Transfers (100% Direct Offset) */}
+          <div className="p-3 sm:p-4 space-y-2.5">
+            <div 
+              onClick={() => setIsDirectOpen(prev => !prev)}
+              className="flex items-center justify-between cursor-pointer select-none"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black flex-shrink-0">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-gray-500 block">Direct Partner Transfers</span>
+                  <span className="text-base sm:text-lg font-black text-blue-700">₹{(praveenDirectGiven + sarthakDirectGiven).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+              <button className="p-1 text-gray-400 hover:text-gray-600 rounded-full">
+                {isDirectOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {isDirectOpen && (
+              <div className="pt-2.5 border-t border-gray-100 animate-fadeIn">
+                <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 divide-x divide-gray-200 py-1">
+                  {/* Left: Praveen Direct Given */}
+                  <div className="flex-1 pr-2.5 flex items-center justify-between min-w-0">
+                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 inline-block flex-shrink-0" />
+                      Praveen
+                    </span>
+                    <span className="font-semibold text-gray-900 ml-1">₹{praveenDirectGiven.toLocaleString('en-IN')}</span>
+                  </div>
+
+                  {/* Right: Sarthak Direct Given */}
+                  <div className="flex-1 pl-2.5 flex items-center justify-between min-w-0">
+                    <span className="flex items-center gap-1.5 font-medium text-gray-600 truncate">
+                      <span className="w-2 h-2 rounded-full bg-blue-400 inline-block flex-shrink-0" />
+                      Sarthak
+                    </span>
+                    <span className="font-semibold text-gray-900 ml-1">₹{sarthakDirectGiven.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -386,10 +343,10 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
             <div className="flex items-center justify-between gap-1">
               <span className="text-slate-700 font-bold truncate">Praveen:</span>
               <span className={`font-black flex-shrink-0 text-xs sm:text-sm ${
-                praveenCashHeld < fairSharePerPartner ? 'text-emerald-700' : praveenCashHeld > fairSharePerPartner ? 'text-rose-600' : 'text-slate-600'
+                praveenOperatingDue > 0 ? 'text-emerald-700' : praveenOperatingDue < 0 ? 'text-rose-600' : 'text-slate-600'
               }`}>
-                {fairSharePerPartner - praveenCashHeld > 0 ? `+₹${Math.round(fairSharePerPartner - praveenCashHeld).toLocaleString('en-IN')} (gets)` :
-                 fairSharePerPartner - praveenCashHeld < 0 ? `-₹${Math.round(Math.abs(fairSharePerPartner - praveenCashHeld)).toLocaleString('en-IN')} (pays)` :
+                {praveenOperatingDue > 0 ? `+₹${Math.round(praveenOperatingDue).toLocaleString('en-IN')} (gets)` :
+                 praveenOperatingDue < 0 ? `-₹${Math.round(Math.abs(praveenOperatingDue)).toLocaleString('en-IN')} (pays)` :
                  '₹0 (settled)'}
               </span>
             </div>
@@ -398,10 +355,10 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
             <div className="flex items-center justify-between gap-1">
               <span className="text-slate-700 font-bold truncate">Sarthak:</span>
               <span className={`font-black flex-shrink-0 text-xs sm:text-sm ${
-                sarthakCashHeld < fairSharePerPartner ? 'text-emerald-700' : sarthakCashHeld > fairSharePerPartner ? 'text-rose-600' : 'text-slate-600'
+                fairSharePerPartner - (sarthakIncome - sarthakExpense) > 0 ? 'text-emerald-700' : fairSharePerPartner - (sarthakIncome - sarthakExpense) < 0 ? 'text-rose-600' : 'text-slate-600'
               }`}>
-                {fairSharePerPartner - sarthakCashHeld > 0 ? `+₹${Math.round(fairSharePerPartner - sarthakCashHeld).toLocaleString('en-IN')} (gets)` :
-                 fairSharePerPartner - sarthakCashHeld < 0 ? `-₹${Math.round(Math.abs(fairSharePerPartner - sarthakCashHeld)).toLocaleString('en-IN')} (pays)` :
+                {fairSharePerPartner - (sarthakIncome - sarthakExpense) > 0 ? `+₹${Math.round(fairSharePerPartner - (sarthakIncome - sarthakExpense)).toLocaleString('en-IN')} (gets)` :
+                 fairSharePerPartner - (sarthakIncome - sarthakExpense) < 0 ? `-₹${Math.round(Math.abs(fairSharePerPartner - (sarthakIncome - sarthakExpense))).toLocaleString('en-IN')} (pays)` :
                  '₹0 (settled)'}
               </span>
             </div>
@@ -409,7 +366,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. OUTSIDE CARD: Settlement Equalization Action Card */}
+      {/* 3. OUTSIDE CARD: Settlement Equalization Action Card with Priority Offset */}
       <div className="bg-[#FFFBEB] rounded-3xl p-4 sm:p-5 border border-amber-200 shadow-xs space-y-3 w-full">
         <div className="flex items-center justify-between border-b border-amber-100 pb-2">
           <span className="text-xs font-extrabold text-amber-900">Settlement Equalization</span>
@@ -423,6 +380,20 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
           </div>
         ) : amountDue > 0 && payerName && payeeName ? (
           <div className="space-y-3">
+            {/* Priority Offset Subtitle Explanation */}
+            <div className="bg-amber-100/60 rounded-xl p-2.5 text-[11px] text-amber-900 font-semibold space-y-1">
+              <div className="flex justify-between">
+                <span>Base 50-50 Operating Dues:</span>
+                <span className="font-bold">₹{Math.abs(praveenOperatingDue).toLocaleString('en-IN')}</span>
+              </div>
+              {(praveenDirectGiven > 0 || sarthakDirectGiven > 0) && (
+                <div className="flex justify-between text-blue-900 font-bold border-t border-amber-200/80 pt-1">
+                  <span>Less Personal / Family Offset (100%):</span>
+                  <span>- ₹{Math.abs(praveenDirectGiven - sarthakDirectGiven).toLocaleString('en-IN')}</span>
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center justify-around py-1">
               <div className="flex flex-col items-center gap-1">
                 <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 border-2 border-emerald-300 flex items-center justify-center font-black text-xs shadow-2xs">
@@ -432,7 +403,7 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               </div>
 
               <div className="flex flex-col items-center">
-                <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider">Pays</span>
+                <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider">Pays Net Dues</span>
                 <div className="flex items-center gap-1 text-amber-900 font-black text-base sm:text-xl">
                   <span>₹{amountDue.toLocaleString('en-IN')}</span>
                   <ArrowRight className="w-5 h-5 text-amber-800" />
