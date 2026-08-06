@@ -34,6 +34,9 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
     netProfit,
     fairSharePerPartner,
     praveenOperatingDue,
+    sarthakOperatingDue,
+    praveenNetDue,
+    sarthakNetDue,
     payerName,
     payeeName,
     amountDue
@@ -343,10 +346,10 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
             <div className="flex items-center justify-between gap-1">
               <span className="text-slate-700 font-bold truncate">Praveen:</span>
               <span className={`font-black flex-shrink-0 text-xs sm:text-sm ${
-                praveenOperatingDue > 0 ? 'text-emerald-700' : praveenOperatingDue < 0 ? 'text-rose-600' : 'text-slate-600'
+                praveenNetDue > 0 ? 'text-emerald-700' : praveenNetDue < 0 ? 'text-rose-600' : 'text-slate-600'
               }`}>
-                {praveenOperatingDue > 0 ? `+₹${Math.round(praveenOperatingDue).toLocaleString('en-IN')} (gets)` :
-                 praveenOperatingDue < 0 ? `-₹${Math.round(Math.abs(praveenOperatingDue)).toLocaleString('en-IN')} (pays)` :
+                {praveenNetDue > 0 ? `+₹${Math.round(praveenNetDue).toLocaleString('en-IN')} (gets)` :
+                 praveenNetDue < 0 ? `-₹${Math.round(Math.abs(praveenNetDue)).toLocaleString('en-IN')} (pays)` :
                  '₹0 (settled)'}
               </span>
             </div>
@@ -355,10 +358,10 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
             <div className="flex items-center justify-between gap-1">
               <span className="text-slate-700 font-bold truncate">Sarthak:</span>
               <span className={`font-black flex-shrink-0 text-xs sm:text-sm ${
-                fairSharePerPartner - (sarthakIncome - sarthakExpense) > 0 ? 'text-emerald-700' : fairSharePerPartner - (sarthakIncome - sarthakExpense) < 0 ? 'text-rose-600' : 'text-slate-600'
+                sarthakNetDue > 0 ? 'text-emerald-700' : sarthakNetDue < 0 ? 'text-rose-600' : 'text-slate-600'
               }`}>
-                {fairSharePerPartner - (sarthakIncome - sarthakExpense) > 0 ? `+₹${Math.round(fairSharePerPartner - (sarthakIncome - sarthakExpense)).toLocaleString('en-IN')} (gets)` :
-                 fairSharePerPartner - (sarthakIncome - sarthakExpense) < 0 ? `-₹${Math.round(Math.abs(fairSharePerPartner - (sarthakIncome - sarthakExpense))).toLocaleString('en-IN')} (pays)` :
+                {sarthakNetDue > 0 ? `+₹${Math.round(sarthakNetDue).toLocaleString('en-IN')} (gets)` :
+                 sarthakNetDue < 0 ? `-₹${Math.round(Math.abs(sarthakNetDue)).toLocaleString('en-IN')} (pays)` :
                  '₹0 (settled)'}
               </span>
             </div>

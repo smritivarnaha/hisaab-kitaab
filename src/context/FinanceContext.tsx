@@ -30,6 +30,8 @@ interface BusinessSettlement {
   sarthakDirectGiven: number;
   praveenOperatingDue: number;
   sarthakOperatingDue: number;
+  praveenNetDue: number;
+  sarthakNetDue: number;
   settlementText: string;
   payerName?: string;
   payeeName?: string;
@@ -460,6 +462,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       sarthakDirectGiven,
       praveenOperatingDue,
       sarthakOperatingDue,
+      praveenNetDue,
+      sarthakNetDue,
       settlementText,
       payerName,
       payeeName,
