@@ -10,11 +10,13 @@ interface Props {
 
 // Single Transaction Confirmation Card (Spelling & Details Editor)
 const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
-  const { updateTransaction, deleteTransaction, accountMode } = useFinance();
+  const { updateTransaction, deleteTransaction, accountMode, currentUser } = useFinance();
+  const defaultAuthor = item.enteredBy || (currentUser?.name?.toLowerCase().includes('sarthak') ? 'Sarthak' : 'Praveen');
   const [title, setTitle] = useState(item.title === 'Reason Missing' ? '' : item.title);
   const [amount, setAmount] = useState(String(item.amount || ''));
   const [type, setType] = useState<Transaction['type']>(item.type || 'expense');
   const [notes, setNotes] = useState(item.notes || '');
+  const [enteredBy, setEnteredBy] = useState<string>(defaultAuthor);
   const [isConfirmed, setIsConfirmed] = useState(!item.isPending);
   const [isDiscarded, setIsDiscarded] = useState(false);
 
@@ -26,6 +28,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
       amount: Number(amount) || 0,
       type,
       notes: notes.trim() || undefined,
+      enteredBy: enteredBy.trim(),
       isPending: false // Confirmed and added to Passbook!
     });
     setIsConfirmed(true);
@@ -56,19 +59,19 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
       </div>
 
       <div className="space-y-2.5">
-        {/* Row 1: 2-Column Row with Entry Type Dropdown (Left) & Amount (Right) */}
-        <div className="grid grid-cols-2 gap-2">
+        {/* Row 1: Type, Amount & Author Grid */}
+        <div className="grid grid-cols-3 gap-2">
           <div>
-            <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Entry Type</label>
+            <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Type</label>
             <select
               value={type}
               onChange={e => setType(e.target.value as Transaction['type'])}
-              className={`w-full text-xs font-bold rounded-lg p-2 outline-none border cursor-pointer ${getTypeStyle(type)}`}
+              className={`w-full text-[11px] font-bold rounded-lg p-1.5 outline-none border cursor-pointer ${getTypeStyle(type)}`}
             >
               <option value="expense">Spent 🔴</option>
               <option value="income">Income 🟢</option>
-              <option value="lent">Direct Give 🤝 (100%)</option>
-              <option value="borrowed">Direct Take 🤝 (100%)</option>
+              <option value="lent">Direct Give 🤝</option>
+              <option value="borrowed">Direct Take 🤝</option>
             </select>
           </div>
 
@@ -78,8 +81,20 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
               type="number"
               value={amount}
               onChange={e => setAmount(e.target.value)}
-              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-emerald-700 rounded-lg p-2 outline-none focus:border-emerald-600 transition-all text-center"
+              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-emerald-700 rounded-lg p-1.5 outline-none focus:border-emerald-600 transition-all text-center"
             />
+          </div>
+
+          <div>
+            <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block mb-0.5">Author</label>
+            <select
+              value={enteredBy}
+              onChange={e => setEnteredBy(e.target.value)}
+              className="w-full bg-slate-50 border border-gray-200 text-xs font-bold text-slate-800 rounded-lg p-1.5 outline-none focus:border-emerald-600 cursor-pointer"
+            >
+              <option value="Praveen">Praveen 👤</option>
+              <option value="Sarthak">Sarthak 👤</option>
+            </select>
           </div>
         </div>
 

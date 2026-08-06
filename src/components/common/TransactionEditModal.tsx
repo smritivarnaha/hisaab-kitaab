@@ -17,8 +17,9 @@ const PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
 ];
 
 export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) => {
-  const { updateTransaction, deleteTransaction } = useFinance();
+  const { updateTransaction, deleteTransaction, currentUser } = useFinance();
 
+  const defaultAuthor = transaction.enteredBy || (currentUser?.name?.toLowerCase().includes('sarthak') ? 'Sarthak' : 'Praveen');
   const [title, setTitle] = useState(transaction.title || '');
   const [amount, setAmount] = useState<string>(String(transaction.amount || ''));
   const [type, setType] = useState<TransactionType>(transaction.type || 'expense');
@@ -27,6 +28,7 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
   const [date, setDate] = useState(transaction.date || new Date().toISOString().split('T')[0]);
   const [person, setPerson] = useState(transaction.person || '');
   const [notes, setNotes] = useState(transaction.notes || '');
+  const [enteredBy, setEnteredBy] = useState<string>(defaultAuthor);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -44,6 +46,7 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
       date,
       person: person.trim() || undefined,
       notes: notes.trim() || title.trim(),
+      enteredBy: enteredBy.trim(),
       isPending: false
     });
 
@@ -210,6 +213,21 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
                 className="w-full bg-white border border-gray-200 text-xs font-semibold text-gray-900 rounded-xl p-2 outline-none focus:border-[#0D2E14] shadow-2xs"
               />
             </div>
+          </div>
+
+          {/* Author / Entered By Partner Dropdown */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+              <User className="w-3 h-3 text-[#0D2E14]" /> Author / Entered By
+            </label>
+            <select
+              value={enteredBy}
+              onChange={e => setEnteredBy(e.target.value)}
+              className="w-full bg-white border border-gray-200 text-xs font-bold text-gray-900 rounded-xl p-2.5 outline-none focus:border-[#0D2E14] shadow-2xs cursor-pointer"
+            >
+              <option value="Praveen">Praveen 👤</option>
+              <option value="Sarthak">Sarthak 👤</option>
+            </select>
           </div>
 
           {/* Notes Optional */}
