@@ -418,13 +418,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const praveenCashHeld = praveenIncome - praveenExpense;
     const sarthakCashHeld = sarthakIncome - sarthakExpense;
 
-    // Operating dues from 50-50 profit split
-    const praveenOperatingDue = fairSharePerPartner - praveenCashHeld;
-    const sarthakOperatingDue = fairSharePerPartner - sarthakCashHeld;
+    // Operating dues from 50-50 profit split (Positive = Sarthak owes Praveen)
+    const baseSarthakOwesPraveen = fairSharePerPartner - praveenCashHeld;
 
-    // Final Net Dues with 100% Direct Transfer priority offset:
-    const praveenNetDue = praveenOperatingDue - praveenDirectGiven + sarthakDirectGiven;
-    const sarthakNetDue = sarthakOperatingDue - sarthakDirectGiven + praveenDirectGiven;
+    // Final Net Dues after SUBTRACTING what Sarthak already gave Praveen (sarthakDirectGiven):
+    const finalSarthakOwesPraveen = baseSarthakOwesPraveen - sarthakDirectGiven + praveenDirectGiven;
+
+    const praveenOperatingDue = baseSarthakOwesPraveen; // Positive = Praveen gets, Negative = Praveen pays
+    const sarthakOperatingDue = -baseSarthakOwesPraveen;
+
+    const praveenNetDue = finalSarthakOwesPraveen; // Positive = Praveen gets, Negative = Praveen pays
+    const sarthakNetDue = -finalSarthakOwesPraveen;
 
     let settlementText = 'No transactions recorded yet in Business Mode.';
     let payerName: string | undefined = undefined;
@@ -432,17 +436,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     let amountDue = 0;
 
     if (bTxList.length > 0) {
-      if (Math.abs(praveenNetDue) < 1) {
+      if (Math.abs(finalSarthakOwesPraveen) < 1) {
         settlementText = '✅ 50-50 Business Ledger is perfectly balanced between Praveen & Sarthak!';
-      } else if (praveenNetDue > 0) {
+      } else if (finalSarthakOwesPraveen > 0) {
         payerName = 'Sarthak';
         payeeName = 'Praveen';
-        amountDue = Math.round(praveenNetDue);
+        amountDue = Math.round(finalSarthakOwesPraveen);
         settlementText = `🤝 Sarthak should pay ₹${amountDue.toLocaleString('en-IN')} to Praveen (after personal transfer offset)`;
       } else {
         payerName = 'Praveen';
         payeeName = 'Sarthak';
-        amountDue = Math.round(sarthakNetDue);
+        amountDue = Math.round(Math.abs(finalSarthakOwesPraveen));
         settlementText = `🤝 Praveen should pay ₹${amountDue.toLocaleString('en-IN')} to Sarthak (after personal transfer offset)`;
       }
     }
