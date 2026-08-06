@@ -34,6 +34,8 @@ interface BusinessSettlement {
   sarthakNetDue: number;
   praveenOwesSarthak: number;
   sarthakOwesPraveen: number;
+  praveenCurrentAmount: number;
+  sarthakCurrentAmount: number;
   settlementText: string;
   payerName?: string;
   payeeName?: string;
@@ -391,7 +393,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     let praveenDirectGiven = 0;
     let sarthakDirectGiven = 0;
 
-    bTxList.forEach(t => {
+    bTxList.filter(t => !t.title?.startsWith('Settlement:')).forEach(t => {
       const amt = Number(t.amount || 0);
       const isPraveen = (t.enteredBy || '').toLowerCase().includes('praveen') || (!t.enteredBy && currentUser?.name?.toLowerCase().includes('praveen'));
       
@@ -460,6 +462,27 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     }
 
+    // Compute Settled Settlements (transactions with title starting with "Settlement:")
+    let praveenSettlementReceived = 0;
+    let praveenSettlementPaid = 0;
+    let sarthakSettlementReceived = 0;
+    let sarthakSettlementPaid = 0;
+
+    bTxList.filter(t => t.title && t.title.startsWith('Settlement:')).forEach(t => {
+      const amt = Number(t.amount || 0);
+      if (t.title.includes('Sarthak paid Praveen')) {
+        sarthakSettlementPaid += amt;
+        praveenSettlementReceived += amt;
+      } else if (t.title.includes('Praveen paid Sarthak')) {
+        praveenSettlementPaid += amt;
+        sarthakSettlementReceived += amt;
+      }
+    });
+
+    // Current Cash in Hand for each partner (Income Collected - Expenses Paid by each respective person):
+    const praveenCurrentAmount = Math.round(praveenIncome - praveenExpense);
+    const sarthakCurrentAmount = Math.round(sarthakIncome - sarthakExpense);
+
     return {
       totalIncome,
       totalExpense,
@@ -479,6 +502,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       sarthakNetDue,
       praveenOwesSarthak,
       sarthakOwesPraveen,
+      praveenCurrentAmount,
+      sarthakCurrentAmount,
       settlementText,
       payerName,
       payeeName,
