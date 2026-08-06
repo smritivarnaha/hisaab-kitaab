@@ -27,8 +27,10 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
     fairSharePerPartner,
     praveenIncome,
     praveenExpense,
+    praveenCashHeld,
     sarthakIncome,
     sarthakExpense,
+    sarthakCashHeld,
     payerName,
     payeeName,
     amountDue,
@@ -183,32 +185,52 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         )}
       </div>
 
-      {/* 4. Net Result & Each Share Card */}
-      <div className={`rounded-3xl p-4 border flex items-center justify-between ${
-        isLoss ? 'bg-rose-50/70 border-rose-200' : 'bg-emerald-50/70 border-emerald-200'
-      }`}>
-        {/* Left: Net Result */}
-        <div className="flex-1 pr-3 border-r border-gray-200/80">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-extrabold text-gray-700">Net Result</span>
-            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
-              isLoss ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-            }`}>
-              {isLoss ? 'Loss' : 'Profit'}
-            </span>
-          </div>
-          <p className={`text-lg sm:text-xl font-black ${isLoss ? 'text-rose-600' : 'text-emerald-700'}`}>
-            {isLoss ? '-' : ''}₹{Math.abs(netProfit).toLocaleString('en-IN')}
+      {/* 4. Current Amount & Partner Final Settlement Outcome Card */}
+      <div className="bg-slate-50 border border-slate-200/90 rounded-3xl p-4 grid grid-cols-2 divide-x divide-slate-200 items-center">
+        {/* Left: Current Amount */}
+        <div className="pr-3.5 flex flex-col justify-center text-left">
+          <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
+            Current Amount
+          </span>
+          <p className={`text-lg sm:text-2xl font-black tracking-tight ${
+            netProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'
+          }`}>
+            {netProfit >= 0 ? '+ ' : '- '}₹{Math.abs(netProfit).toLocaleString('en-IN')}
           </p>
+          <span className="text-[10px] text-slate-400 font-semibold mt-0.5">Total Net Balance</span>
         </div>
 
-        {/* Right: Each Share */}
-        <div className="flex-1 pl-4 text-right">
-          <span className="text-xs font-extrabold text-gray-700 block mb-1">Each Share</span>
-          <p className={`text-lg sm:text-xl font-black ${isLoss ? 'text-rose-600' : 'text-emerald-700'}`}>
-            {isLoss ? '-' : ''}₹{Math.abs(fairSharePerPartner).toLocaleString('en-IN')}
-            <span className="text-[10px] text-gray-500 font-bold block">each</span>
-          </p>
+        {/* Right: Partner Final Settlement Outcome */}
+        <div className="pl-3.5 flex flex-col justify-center text-left space-y-1">
+          <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
+            Final Settlement
+          </span>
+
+          <div className="space-y-1 text-xs font-bold">
+            {/* Praveen outcome */}
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-slate-700 font-bold truncate">Praveen:</span>
+              <span className={`font-black flex-shrink-0 text-[11px] ${
+                praveenCashHeld < fairSharePerPartner ? 'text-emerald-700' : praveenCashHeld > fairSharePerPartner ? 'text-rose-600' : 'text-slate-600'
+              }`}>
+                {fairSharePerPartner - praveenCashHeld > 0 ? `+₹${Math.round(fairSharePerPartner - praveenCashHeld).toLocaleString('en-IN')} (gets)` :
+                 fairSharePerPartner - praveenCashHeld < 0 ? `-₹${Math.round(Math.abs(fairSharePerPartner - praveenCashHeld)).toLocaleString('en-IN')} (pays)` :
+                 '₹0 (settled)'}
+              </span>
+            </div>
+
+            {/* Sarthak outcome */}
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-slate-700 font-bold truncate">Sarthak:</span>
+              <span className={`font-black flex-shrink-0 text-[11px] ${
+                sarthakCashHeld < fairSharePerPartner ? 'text-emerald-700' : sarthakCashHeld > fairSharePerPartner ? 'text-rose-600' : 'text-slate-600'
+              }`}>
+                {fairSharePerPartner - sarthakCashHeld > 0 ? `+₹${Math.round(fairSharePerPartner - sarthakCashHeld).toLocaleString('en-IN')} (gets)` :
+                 fairSharePerPartner - sarthakCashHeld < 0 ? `-₹${Math.round(Math.abs(fairSharePerPartner - sarthakCashHeld)).toLocaleString('en-IN')} (pays)` :
+                 '₹0 (settled)'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
