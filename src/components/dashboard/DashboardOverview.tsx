@@ -394,7 +394,7 @@ export const DashboardOverview: React.FC = () => {
         {/* Right 1-Column - Hidden in Business Mode */}
         {accountMode !== 'business' && (
           <div className="space-y-3 sm:space-y-4">
-            <DebtLentLedger transactions={transactions} onSettle={handleSettle} />
+            <DebtLentLedger transactions={finalizedTransactions} onSettle={handleSettle} />
           </div>
         )}
       </div>

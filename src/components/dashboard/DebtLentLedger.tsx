@@ -9,8 +9,10 @@ interface Props {
 }
 
 export const DebtLentLedger: React.FC<Props> = ({ transactions, onSettle }) => {
-  const lentItems = transactions.filter(t => t.type === 'lent' || (t.type === 'expense' && t.person));
-  const borrowedItems = transactions.filter(t => t.type === 'borrowed');
+  // Strictly filter out business mode transactions so business expenses/transfers never leak into personal ledger
+  const personalTx = transactions.filter(t => !t.isPending && t.mode !== 'business');
+  const lentItems = personalTx.filter(t => t.type === 'lent' || (t.type === 'expense' && t.person));
+  const borrowedItems = personalTx.filter(t => t.type === 'borrowed');
 
   const totalLent = lentItems.reduce((sum, t) => sum + Number(t.amount || 0), 0);
   const totalBorrowed = borrowedItems.reduce((sum, t) => sum + Number(t.amount || 0), 0);
