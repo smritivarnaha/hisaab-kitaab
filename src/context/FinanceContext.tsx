@@ -451,21 +451,30 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const praveenCashHeld = praveenIncome - praveenExpense;
     const sarthakCashHeld = sarthakIncome - sarthakExpense;
 
-    // Asymmetric Tax-Separated Ledgers:
-    // 1. Praveen's Incoming Pool minus ALL Business Expenses minus Praveen's Family Transfers:
+    // Asymmetric Tax-Separated Ledgers with Expense Surplus Equalization:
+    const halfTotalExpense = totalExpense / 2;
+    // Praveen expense surplus over half (positive = Praveen spent more than 50% of expenses):
+    const praveenExpenseSurplus = praveenExpense - halfTotalExpense;
+    // Sarthak expense surplus over half (positive = Sarthak spent more than 50% of expenses):
+    const sarthakExpenseSurplus = sarthakExpense - halfTotalExpense;
+
+    // 1. Praveen's Incoming Pool minus ALL Business Expenses / 2, minus Praveen's excess expense surplus, minus Direct Transfers:
     const praveenPoolAfterExpenses = praveenIncome - totalExpense;
-    const praveenOwesSarthakRaw = (praveenPoolAfterExpenses / 2) - praveenDirectGiven;
+    const praveenBaseHalf = praveenPoolAfterExpenses / 2;
+    const praveenOwesSarthakRaw = praveenBaseHalf - praveenExpenseSurplus - praveenDirectGiven + sarthakDirectGiven;
     const praveenOwesSarthak = Math.max(0, Math.round(praveenOwesSarthakRaw));
 
-    // 2. Sarthak's Incoming Pool (50% directly owed to Praveen minus Sarthak's Family Transfers):
-    const sarthakOwesPraveenRaw = (sarthakIncome / 2) - sarthakDirectGiven;
+    // 2. Sarthak's Incoming Pool:
+    const sarthakPoolAfterExpenses = sarthakIncome - totalExpense;
+    const sarthakBaseHalf = sarthakPoolAfterExpenses / 2;
+    const sarthakOwesPraveenRaw = (sarthakIncome > 0 ? (sarthakBaseHalf - sarthakExpenseSurplus) : (sarthakIncome / 2)) - sarthakDirectGiven + praveenDirectGiven;
     const sarthakOwesPraveen = Math.max(0, Math.round(sarthakOwesPraveenRaw));
 
     // Net Difference (Positive = Praveen owes Sarthak, Negative = Sarthak owes Praveen)
-    const netDifference = praveenOwesSarthakRaw - sarthakOwesPraveenRaw;
+    const netDifference = praveenOwesSarthakRaw - (sarthakIncome > 0 ? sarthakOwesPraveenRaw : 0);
 
-    const praveenOperatingDue = Math.round(praveenPoolAfterExpenses / 2);
-    const sarthakOperatingDue = Math.round(sarthakIncome / 2);
+    const praveenOperatingDue = Math.round(praveenBaseHalf - praveenExpenseSurplus);
+    const sarthakOperatingDue = Math.round((sarthakIncome / 2) - sarthakExpenseSurplus);
 
     const praveenNetDue = -netDifference;
     const sarthakNetDue = netDifference;
