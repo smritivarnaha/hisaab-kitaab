@@ -275,7 +275,8 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
   const messagePending = message.pendingReviewItems || [];
   const pendingItems = messagePending.filter(item => {
     const liveTx = transactions.find(t => t.id === item.id);
-    return liveTx ? liveTx.isPending : item.isPending;
+    if (liveTx && liveTx.isPending === false) return false;
+    return item.isPending !== false;
   });
 
   const formatTime = (ts: any) => {

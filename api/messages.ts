@@ -47,9 +47,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
 
     if (req.method === 'GET') {
+      const sinceParam = req.query.since ? Number(req.query.since) : NaN;
+      // Start of current day (midnight 00:00:00)
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const minTimestamp = !isNaN(sinceParam) && sinceParam > 0 ? sinceParam : startOfToday.getTime();
+
+      // Automatically purge previous days' chat messages to save storage and keep chat super fast
+      try {
+        await sql`DELETE FROM chat_messages WHERE "timestamp" < ${minTimestamp}`;
+      } catch (cleanErr) {
+        console.warn('Error purging old chat messages:', cleanErr);
+      }
+
       const rows = await sql`
         SELECT * FROM chat_messages 
-        WHERE "userId" = ${userId} OR "mode" = 'business'
+        WHERE ("userId" = ${userId} OR "mode" = 'business')
+          AND "timestamp" >= ${minTimestamp}
         ORDER BY timestamp ASC LIMIT 200
       `;
       const parsed = rows.map((row: any) => ({

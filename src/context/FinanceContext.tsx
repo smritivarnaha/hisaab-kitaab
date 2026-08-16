@@ -14,6 +14,7 @@ import { getAIMemory, learnMerchantCategory, learnPaymentPreference, saveUserFac
 import { speakText } from '../services/voice/speechRecognition';
 import { processWithGeminiAgent } from '../services/ai/gemini';
 import { processWithOpenAIAgent } from '../services/ai/openai';
+import { getStartOfTodayTimestamp } from '../utils/dateUtils';
 
 interface BusinessSettlement {
   totalIncome: number;
@@ -164,10 +165,13 @@ const deleteTransactionFromDb = async (id: string, userId: string) => {
 
 const fetchMessagesFromDb = async (userId: string): Promise<ChatMessage[] | null> => {
   try {
-    const res = await fetch(`/api/messages?userId=${userId}`);
+    const startOfToday = getStartOfTodayTimestamp();
+    const res = await fetch(`/api/messages?userId=${userId}&since=${startOfToday}`);
     if (!res.ok) return null;
     const rows = await res.json();
-    return rows.length > 0 ? rows : null;
+    if (!Array.isArray(rows)) return null;
+    const todayRows = rows.filter((r: any) => Number(r.timestamp) >= startOfToday);
+    return todayRows;
   } catch { return null; }
 };
 
@@ -242,10 +246,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ...(dbSettings || {})
     });
 
-    // 3. Chat messages
+    // 3. Chat messages (strictly today's messages only!)
+    const startOfToday = getStartOfTodayTimestamp();
     const dbMsgs = await fetchMessagesFromDb(uid);
-    if (dbMsgs && dbMsgs.length > 0) {
-      setChatMessages(dbMsgs);
+    const todayMsgs = (dbMsgs || []).filter(m => Number(m.timestamp) >= startOfToday);
+    if (todayMsgs.length > 0) {
+      setChatMessages(todayMsgs);
     } else {
       setChatMessages(INITIAL_WELCOME_MESSAGES);
     }
@@ -276,27 +282,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const interval = setInterval(async () => {
       const uid = currentUser.id;
 
-      // Poll Transactions
+      // Poll Transactions — merge local unsynced pending items to prevent table flickering!
       const dbTx = await fetchTransactions(uid);
       if (dbTx !== null) {
         setTransactions(prev => {
+          const dbIds = new Set(dbTx.map(t => t.id));
+          const localPendingUnsynced = prev.filter(t => t.isPending && !dbIds.has(t.id));
+          const merged = [...localPendingUnsynced, ...dbTx];
+
           const prevLatest = prev[0]?.timestamp ?? 0;
-          const dbLatest = dbTx[0]?.timestamp ?? 0;
-          const prevCount = prev.length;
-          const dbCount = dbTx.length;
-          if (dbLatest !== prevLatest || dbCount !== prevCount) {
-            return dbTx;
+          const mergedLatest = merged[0]?.timestamp ?? 0;
+          if (merged.length !== prev.length || prevLatest !== mergedLatest) {
+            return merged;
           }
           return prev;
         });
       }
 
-      // Poll Chat Messages
+      // Poll Chat Messages — filter for today only & merge local unsynced messages!
       const dbMsgs = await fetchMessagesFromDb(uid);
       if (dbMsgs !== null) {
+        const startOfToday = getStartOfTodayTimestamp();
+        const todayDbMsgs = dbMsgs.filter(m => Number(m.timestamp) >= startOfToday);
+
         setChatMessages(prev => {
+          const dbMsgIds = new Set(todayDbMsgs.map(m => m.id));
+          const localUnsynced = prev.filter(m => !dbMsgIds.has(m.id) && m.id.startsWith('msg_') && Number(m.timestamp) >= startOfToday);
+
           const prevMap = new Map(prev.map(m => [m.id, m]));
-          const merged = dbMsgs.map(dbMsg => {
+          const merged = todayDbMsgs.map(dbMsg => {
             const existing = prevMap.get(dbMsg.id);
             return {
               ...dbMsg,
@@ -306,10 +320,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             };
           });
 
-          const prevLatest = prev[prev.length - 1]?.id ?? '';
-          const dbLatest = dbMsgs[dbMsgs.length - 1]?.id ?? '';
-          if (dbLatest !== prevLatest || prev.length !== dbMsgs.length) {
-            return merged;
+          const fullList = [...merged, ...localUnsynced];
+          if (fullList.length !== prev.length || prev[prev.length - 1]?.id !== fullList[fullList.length - 1]?.id) {
+            return fullList.length > 0 ? fullList : INITIAL_WELCOME_MESSAGES;
           }
           return prev;
         });
@@ -727,10 +740,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const activeOpenAIKey = getActiveOpenAIKey(settings.openaiApiKey);
       const useOpenAI = settings.aiProvider === 'openai' || !settings.aiProvider || !settings.apiKey;
       const customPrompt = settings.customAIPrompt?.trim() || undefined;
+      const recentChatMessages = chatMessages.filter(m => accountMode === 'business' ? m.mode === 'business' : m.mode !== 'business');
 
       const agentRes = useOpenAI
-        ? await processWithOpenAIAgent(text, modeFilteredTx, aiMemory, activeOpenAIKey, audioBlob, [...filteredChatMessages, userMsg])
-        : await processWithGeminiAgent(text, modeFilteredTx, aiMemory, settings.apiKey, audioBlob, [...filteredChatMessages, userMsg], customPrompt);
+        ? await processWithOpenAIAgent(text, modeFilteredTx, aiMemory, activeOpenAIKey, audioBlob, [...recentChatMessages, userMsg])
+        : await processWithGeminiAgent(text, modeFilteredTx, aiMemory, settings.apiKey, audioBlob, [...recentChatMessages, userMsg], customPrompt);
 
       const isConnectionError = 
         agentRes?.responseText?.includes('Connection Error') || 

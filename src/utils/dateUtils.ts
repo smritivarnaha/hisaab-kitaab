@@ -61,3 +61,9 @@ export function sortTransactionsLatestFirst<T extends { date?: string; timestamp
     return (b.timestamp || 0) - (a.timestamp || 0);
   });
 }
+
+export function getStartOfTodayTimestamp(): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
