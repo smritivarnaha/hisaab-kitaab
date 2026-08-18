@@ -72,9 +72,9 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
         {/* Brand Header */}
         <div className="space-y-1.5">
           <div className="w-12 h-12 rounded-2xl bg-[#0D2E14] flex items-center justify-center shadow-xs mb-4 p-1">
-            <img src="/logo.png" alt="Hisaab Kitab Logo" className="w-10 h-10 object-contain drop-shadow-xs" />
+            <img src="/logo.png" alt="Funds Logger Logo" className="w-10 h-10 object-contain drop-shadow-xs" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight font-inter">Sign in to Hisaab Kitab</h1>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight font-inter">Sign in to Funds Logger</h1>
           <p className="text-xs text-slate-500 font-normal leading-relaxed">Enter your credentials to manage your financial ledger</p>
         </div>
 

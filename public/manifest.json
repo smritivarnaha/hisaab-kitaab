@@ -1,7 +1,7 @@
 {
-  "id": "com.hisaabkitab.app",
-  "short_name": "Hisaab Kitab",
-  "name": "Hisaab Kitab AI - Finance & Passbook",
+  "id": "com.fundslogger.app",
+  "short_name": "Funds Logger",
+  "name": "Funds Logger - Finance & Passbook",
   "icons": [
     {
       "src": "/pwa-192x192.png",
@@ -35,7 +35,7 @@
     }
   ],
   "start_url": "/",
-  "background_color": "#0D2E14",
+  "background_color": "#FFFFFF",
   "theme_color": "#0D2E14",
   "display": "standalone",
   "orientation": "portrait",

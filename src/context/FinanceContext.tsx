@@ -103,7 +103,7 @@ const INITIAL_WELCOME_MESSAGES: ChatMessage[] = [
   {
     id: 'msg_welcome',
     sender: 'assistant',
-    text: 'Namaste! 🙏 I am your **Hisaab Kitab AI Accountant**.\n\nYou don\'t need to fill complex forms — just talk or type naturally in English, Hindi, or Hinglish!\n\nExamples:\n• *"I spent 2200 for petrol refill today"* \n• *"Rahul returned my 500"*\n• *"Kal grocery mein 1800 kharch hue"*',
+    text: 'Namaste! 🙏 I am your **Funds Logger AI Accountant**.\n\nYou don\'t need to fill complex forms — just talk or type naturally in English, Hindi, or Hinglish!\n\nExamples:\n• *"I spent 2200 for petrol refill today"* \n• *"Rahul returned my 500"*\n• *"Kal grocery mein 1800 kharch hue"*',
     timestamp: Date.now() - 1000
   }
 ];
