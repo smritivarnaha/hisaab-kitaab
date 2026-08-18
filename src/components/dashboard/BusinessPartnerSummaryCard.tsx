@@ -38,19 +38,10 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
     sarthakIncome,
     sarthakExpense,
     sarthakDirectGiven,
-    netProfit,
-    fairSharePerPartner,
     praveenOperatingDue,
     sarthakOperatingDue,
-    praveenNetDue,
-    sarthakNetDue,
     praveenOwesSarthak,
-    sarthakOwesPraveen,
-    praveenCurrentAmount,
-    sarthakCurrentAmount,
-    payerName,
-    payeeName,
-    amountDue
+    sarthakOwesPraveen
   } = businessSettlement;
 
   const getPeriodLabel = () => {
@@ -349,57 +340,10 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. OUTSIDE CARD: Current Amount & Final Settlement Outcome Grid */}
-      <div className="bg-slate-50 border border-slate-200/90 rounded-3xl p-3.5 sm:p-5 grid grid-cols-2 divide-x divide-slate-200 items-center shadow-xs w-full">
-        {/* Left: Current Amount */}
-        <div className="pr-2.5 sm:pr-4 flex flex-col justify-center text-left">
-          <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
-            Current Amount
-          </span>
-          <p className="text-lg sm:text-2xl font-black tracking-tight">
-            {renderAmount(Math.abs(netProfit), netProfit >= 0 ? 'text-emerald-700' : 'text-rose-600', netProfit >= 0 ? '+ ₹' : '- ₹')}
-          </p>
-          <span className="text-[10px] text-slate-400 font-semibold mt-0.5">Total Net Balance</span>
-        </div>
-
-        {/* Right: Partner Final Settlement Outcome */}
-        <div className="pl-2.5 sm:pl-4 flex flex-col justify-center text-left space-y-1">
-          <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
-            Final Settlement
-          </span>
-
-          <div className="space-y-1 text-xs sm:text-sm font-bold">
-            {/* Praveen outcome */}
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-slate-700 font-bold truncate">Praveen ➔ Sarthak:</span>
-              <span className={`font-black flex-shrink-0 text-xs sm:text-sm ${
-                praveenOwesSarthak > 0 ? 'text-rose-600' : 'text-slate-600'
-              }`}>
-                {dbStatus === 'loading' ? (
-                  <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md align-middle" />
-                ) : praveenOwesSarthak > 0 ? `₹${praveenOwesSarthak.toLocaleString('en-IN')} (pays)` : '₹0 (settled)'}
-              </span>
-            </div>
-
-            {/* Sarthak outcome */}
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-slate-700 font-bold truncate">Sarthak ➔ Praveen:</span>
-              <span className={`font-black flex-shrink-0 text-xs sm:text-sm ${
-                sarthakOwesPraveen > 0 ? 'text-emerald-700' : 'text-slate-600'
-              }`}>
-                {dbStatus === 'loading' ? (
-                  <span className="inline-block w-14 h-4 bg-gray-200 animate-pulse rounded-md align-middle" />
-                ) : sarthakOwesPraveen > 0 ? `₹${sarthakOwesPraveen.toLocaleString('en-IN')} (pays)` : '₹0 (settled)'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. OUTSIDE CARD: Settlement Equalization Action Card with Direction-Specific Buckets */}
+      {/* 2. Settlement Equalization Action Card with Direction-Specific Buckets */}
       <div className="bg-[#FFFBEB] rounded-3xl p-4 sm:p-5 border border-amber-200 shadow-xs space-y-3 w-full">
         <div className="flex items-center justify-between border-b border-amber-100 pb-2">
-          <span className="text-xs font-extrabold text-amber-900">Settlement Equalization (Independent 50/50 Buckets)</span>
+          <span className="text-xs font-extrabold text-amber-900">Settlement Equalization</span>
           <Users className="w-4 h-4 text-amber-800" />
         </div>
 
@@ -493,22 +437,6 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Current Cash Held Cards Below Settle Buttons */}
-        <div className="pt-3 border-t border-amber-200/80 grid grid-cols-2 gap-2 text-center">
-          <div className="p-2.5 bg-amber-50/90 rounded-2xl border border-amber-200/80 shadow-2xs">
-            <span className="text-[10px] font-extrabold text-amber-900/70 uppercase tracking-wider block">Praveen Current Amount</span>
-            <div className="mt-0.5">
-              {renderAmount(praveenCurrentAmount, 'text-xs sm:text-sm font-black text-[#0D2E14]')}
-            </div>
-          </div>
-          <div className="p-2.5 bg-amber-50/90 rounded-2xl border border-amber-200/80 shadow-2xs">
-            <span className="text-[10px] font-extrabold text-amber-900/70 uppercase tracking-wider block">Sarthak Current Amount</span>
-            <div className="mt-0.5">
-              {renderAmount(sarthakCurrentAmount, 'text-xs sm:text-sm font-black text-[#0D2E14]')}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
