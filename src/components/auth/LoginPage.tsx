@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppUser } from '../../types/finance';
-import { Lock, ArrowRight, ShieldCheck, Calculator, User } from 'lucide-react';
+import { Lock, ArrowRight, ShieldCheck, Calculator, User, Fingerprint } from 'lucide-react';
+import { checkBiometricAvailability, verifyDevicePasskey } from '../../utils/biometricAuth';
 
 interface Props {
   onLoginSuccess: (user: AppUser) => void;
@@ -17,6 +18,34 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
   const [passwordInput, setPasswordInput] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasPasskey, setHasPasskey] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
+
+  useEffect(() => {
+    checkBiometricAvailability().then(status => {
+      setHasPasskey(status.hasEnrolledPasskey);
+    });
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setErrorMsg(null);
+    setBiometricLoading(true);
+    const res = await verifyDevicePasskey();
+    setBiometricLoading(false);
+
+    if (res.success && res.username) {
+      const found = PRESET_USERS.find(
+        u => u.username.toLowerCase() === res.username!.toLowerCase()
+      );
+      if (found) {
+        onLoginSuccess({ id: found.id, username: found.username, name: found.name });
+      } else {
+        onLoginSuccess({ id: res.username, username: res.username, name: res.username });
+      }
+    } else if (res.error) {
+      setErrorMsg(res.error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,60 +108,82 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
         </div>
 
         {/* Form Container */}
-        <form onSubmit={handleSubmit} className="space-y-4 pt-1 font-inter">
+        <div className="space-y-4 pt-1 font-inter">
           {errorMsg && (
             <div className="p-3 rounded-lg bg-red-50 border border-red-200/80 text-red-700 text-xs font-medium text-center animate-fadeIn font-inter">
               ⚠️ {errorMsg}
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label className="text-[12px] font-semibold text-slate-700 block font-inter">Username</label>
-            <div className="relative">
-              <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={usernameInput}
-                onChange={e => setUsernameInput(e.target.value)}
-                placeholder="Enter username"
-                required
-                className="w-full bg-white border border-slate-300 rounded-lg py-2.5 pl-9 pr-3.5 text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D2E14] focus:ring-4 focus:ring-[#0D2E14]/10 transition-all font-inter shadow-2xs"
-              />
-            </div>
-          </div>
+          {hasPasskey && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={handleBiometricLogin}
+                disabled={biometricLoading}
+                className="w-full py-2.5 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 font-extrabold text-xs flex items-center justify-center gap-2 shadow-2xs active:scale-[0.99] transition-all cursor-pointer"
+              >
+                <Fingerprint className="w-4 h-4 text-purple-700" />
+                <span>{biometricLoading ? 'Scanning Fingerprint...' : 'Unlock with Fingerprint / Face ID'}</span>
+              </button>
 
-          <div className="space-y-1.5">
-            <label className="text-[12px] font-semibold text-slate-700 flex items-center justify-between font-inter">
-              <span>Password</span>
-            </label>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="password"
-                value={passwordInput}
-                onChange={e => setPasswordInput(e.target.value)}
-                placeholder="Enter password"
-                required
-                className="w-full bg-white border border-slate-300 rounded-lg py-2.5 pl-9 pr-3.5 text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D2E14] focus:ring-4 focus:ring-[#0D2E14]/10 transition-all font-mono shadow-2xs"
-              />
+              <div className="flex items-center gap-2 my-2">
+                <div className="flex-1 h-px bg-slate-200" />
+                <span className="text-[10px] text-slate-400 font-bold uppercase">or enter password</span>
+                <div className="flex-1 h-px bg-slate-200" />
+              </div>
             </div>
-          </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-2.5 px-4 rounded-lg bg-[#0D2E14] hover:bg-[#12441d] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-2xs hover:shadow active:scale-[0.99] transition-all disabled:opacity-50 font-inter cursor-pointer mt-2"
-          >
-            {isLoading ? (
-              <span>Authenticating...</span>
-            ) : (
-              <>
-                <span>Sign In</span>
-                <ArrowRight className="w-3.5 h-3.5 text-white" />
-              </>
-            )}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-semibold text-slate-700 block font-inter">Username</label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={usernameInput}
+                  onChange={e => setUsernameInput(e.target.value)}
+                  placeholder="Enter username"
+                  required
+                  className="w-full bg-white border border-slate-300 rounded-lg py-2.5 pl-9 pr-3.5 text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D2E14] focus:ring-4 focus:ring-[#0D2E14]/10 transition-all font-inter shadow-2xs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-semibold text-slate-700 flex items-center justify-between font-inter">
+                <span>Password</span>
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={e => setPasswordInput(e.target.value)}
+                  placeholder="Enter password"
+                  required
+                  className="w-full bg-white border border-slate-300 rounded-lg py-2.5 pl-9 pr-3.5 text-xs text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:border-[#0D2E14] focus:ring-4 focus:ring-[#0D2E14]/10 transition-all font-mono shadow-2xs"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-2.5 px-4 rounded-lg bg-[#0D2E14] hover:bg-[#12441d] text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-2xs hover:shadow active:scale-[0.99] transition-all disabled:opacity-50 font-inter cursor-pointer mt-2"
+            >
+              {isLoading ? (
+                <span>Authenticating...</span>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-white" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
 
         {/* MNC Security Footer */}
         <div className="pt-3 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-medium font-inter">

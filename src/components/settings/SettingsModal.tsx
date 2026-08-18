@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFinance } from '../../context/FinanceContext';
 import { DEFAULT_OPENAI_KEY } from '../../utils/aiKeys';
 import { 
@@ -22,15 +22,29 @@ import {
   Lock,
   ShieldCheck,
   Smartphone,
-  Download
+  Download,
+  Bell,
+  Fingerprint,
+  RefreshCw,
+  Sparkles,
+  Volume2
 } from 'lucide-react';
 import { UserSettings } from '../../types/finance';
+import { 
+  checkBiometricAvailability, 
+  registerDevicePasskey, 
+  removeDevicePasskey 
+} from '../../utils/biometricAuth';
+import { 
+  requestNotificationPermission, 
+  sendNotification 
+} from '../../utils/notificationService';
 
 interface Props {
   onClose: () => void;
 }
 
-type TabType = 'ai' | 'avatars' | 'appearance' | 'account';
+type TabType = 'ai' | 'avatars' | 'appearance' | 'notifications' | 'account';
 
 const PRESET_BOT_AVATARS = [
   { name: 'Classic Bot', url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Felix' },
@@ -170,12 +184,20 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
             🎨 Theme
           </button>
           <button
+            onClick={() => setActiveTab('notifications')}
+            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
+              activeTab === 'notifications' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            }`}
+          >
+            🔔 Alerts
+          </button>
+          <button
             onClick={() => setActiveTab('account')}
             className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
               activeTab === 'account' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
-            🔐 Password
+            🔐 Security
           </button>
         </div>
 
@@ -234,6 +256,19 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     placeholder="My Accountant"
                     className="w-full bg-slate-50 border border-gray-200 text-xs text-gray-900 rounded-lg py-2 px-3 outline-none focus:border-[#0D2E14] transition-all font-medium"
                   />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">Speech Voice Language</label>
+                  <select
+                    value={draft.voiceLanguage || 'en-IN'}
+                    onChange={e => updateDraft({ voiceLanguage: e.target.value as any })}
+                    className="w-full bg-slate-50 border border-gray-200 text-xs text-gray-900 rounded-lg py-2 px-3 outline-none focus:border-[#0D2E14]"
+                  >
+                    <option value="en-IN">Indian English (en-IN)</option>
+                    <option value="hi-IN">Hindi (hi-IN)</option>
+                    <option value="hinglish">Hinglish / Mixed</option>
+                  </select>
                 </div>
 
                 <div className="h-px bg-gray-100" />
@@ -530,15 +565,152 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
             </div>
           )}
 
-          {/* TAB 4: ACCOUNT & SECURITY */}
+          {/* TAB 4: NOTIFICATIONS & ALERTS */}
+          {activeTab === 'notifications' && (
+            <div className="space-y-3 font-outfit">
+              {/* Daily 9 PM Reconciliation Recap */}
+              <section className="bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                      <Bell className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-900">Daily Evening Recap</h4>
+                      <p className="text-[10px] text-gray-400">9:00 PM summary of today's total expenses</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={draft.dailyRecapEnabled !== false}
+                      onChange={e => updateDraft({ dailyRecapEnabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0D2E14]"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-gray-600">Recap Schedule Time:</span>
+                  <input
+                    type="time"
+                    value={draft.dailyRecapTime || '21:00'}
+                    onChange={e => updateDraft({ dailyRecapTime: e.target.value })}
+                    className="bg-slate-50 border border-gray-200 rounded-lg px-2.5 py-1 text-xs font-bold text-gray-800 outline-none focus:border-[#0D2E14]"
+                  />
+                </div>
+              </section>
+
+              {/* Partner Business Real-time Alerts */}
+              <section className="bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
+                      <Building2 className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-900">Partner Business Activity Alerts</h4>
+                      <p className="text-[10px] text-gray-400">Instant notification when partner logs entries</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={draft.partnerAlertsEnabled !== false}
+                      onChange={e => updateDraft({ partnerAlertsEnabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0D2E14]"></div>
+                  </label>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const granted = await requestNotificationPermission();
+                    if (granted) {
+                      sendNotification({
+                        title: '🔔 Funds Logger Notification Test',
+                        body: 'Alerts are successfully enabled for your device!',
+                        icon: '/logo.png'
+                      });
+                    } else {
+                      alert('Please allow notification permissions in your browser/device settings.');
+                    }
+                  }}
+                  className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold border border-emerald-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                  <span>Send Test Notification</span>
+                </button>
+              </section>
+            </div>
+          )}
+
+          {/* TAB 5: SECURITY, PASSKEY & APP VERSION */}
           {activeTab === 'account' && (
-            <div className="space-y-3">
-              <section className="bg-white border border-gray-200/80 rounded-xl p-3.5 space-y-3 shadow-2xs font-outfit">
+            <div className="space-y-3 font-outfit">
+              {/* Biometric Passkey Device Lock (PhonePe-Style) */}
+              <section className="bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center">
+                      <Fingerprint className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-900">Device Biometric Lock</h4>
+                      <p className="text-[10px] text-gray-400">Unlock with phone's Fingerprint / Face ID</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const isCurrentlyEnabled = draft.biometricPasskeyEnabled;
+                      if (!isCurrentlyEnabled) {
+                        const res = await registerDevicePasskey(currentUser?.username || 'praveen', currentUser?.name || 'Praveen');
+                        if (res.success) {
+                          updateDraft({ 
+                            biometricPasskeyEnabled: true, 
+                            biometricCredentialId: res.credentialId,
+                            biometricUserName: currentUser?.username 
+                          });
+                          alert('✅ Device Fingerprint / Face ID Passkey registered successfully!');
+                        } else {
+                          alert(`⚠️ ${res.error}`);
+                        }
+                      } else {
+                        removeDevicePasskey();
+                        updateDraft({ 
+                          biometricPasskeyEnabled: false, 
+                          biometricCredentialId: undefined,
+                          biometricUserName: undefined 
+                        });
+                        alert('Device biometric passkey removed.');
+                      }
+                    }}
+                    className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer ${
+                      draft.biometricPasskeyEnabled 
+                        ? 'bg-emerald-600 text-white shadow-2xs' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {draft.biometricPasskeyEnabled ? 'Active (Tap to Disable)' : 'Enable Passkey'}
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  Uses your phone's built-in secure biometric hardware (Fingerprint, Face Unlock, or Screen Lock PIN) matching banking standards.
+                </p>
+              </section>
+
+              {/* Password Change Card */}
+              <section className="bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-3 shadow-2xs">
                 <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
                   <ShieldCheck className="w-4 h-4 text-[#0D2E14]" />
                   <div>
                     <h4 className="text-xs font-bold text-gray-900">Change Account Password</h4>
-                    <p className="text-[10px] text-gray-400">Update security password for {currentUser?.name} ({currentUser?.username})</p>
+                    <p className="text-[10px] text-gray-400">Update security password for {currentUser?.name}</p>
                   </div>
                 </div>
 
@@ -591,12 +763,41 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <button
                     type="submit"
                     disabled={passLoading}
-                    className="w-full py-2.5 rounded-lg bg-[#0D2E14] hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all disabled:opacity-50"
+                    className="w-full py-2.5 rounded-lg bg-[#0D2E14] hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all disabled:opacity-50 cursor-pointer"
                   >
                     <Lock className="w-3.5 h-3.5" />
                     <span>{passLoading ? 'Updating Password...' : 'Update Password'}</span>
                   </button>
                 </form>
+              </section>
+
+              {/* App Version & OTA Update Checker */}
+              <section className="bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-2 shadow-2xs text-left">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-emerald-700" />
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-900">Funds Logger App Version</h4>
+                      <p className="text-[10px] text-gray-400">v1.2.0 (Build 2026.08.18 - Stable)</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.getRegistrations().then(regs => {
+                          for (const reg of regs) reg.update();
+                        });
+                      }
+                      window.location.reload();
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Check for Updates</span>
+                  </button>
+                </div>
               </section>
             </div>
           )}

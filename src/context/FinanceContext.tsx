@@ -77,6 +77,16 @@ interface FinanceContextType {
 }
 
 import { DEFAULT_OPENAI_KEY, getActiveOpenAIKey } from '../utils/aiKeys';
+import { 
+  queueOfflineTransaction, 
+  queueOfflineDelete, 
+  syncOfflineQueueWithServer,
+  getOfflineTransactionQueue 
+} from '../utils/syncService';
+import { 
+  sendPartnerBusinessAlert, 
+  checkAndTriggerDailyRecap 
+} from '../utils/notificationService';
 
 const DEFAULT_SETTINGS: UserSettings = {
   autoSaveHighConfidence: false,
@@ -97,6 +107,11 @@ const DEFAULT_SETTINGS: UserSettings = {
   chatBubbleStyle: 'flat',
   chatBubbleSize: 'normal',
   floatingBubbleSize: 'md',
+  dailyRecapEnabled: true,
+  dailyRecapTime: '21:00',
+  partnerAlertsEnabled: true,
+  notificationSoundEnabled: true,
+  biometricPasskeyEnabled: false,
 };
 
 const INITIAL_WELCOME_MESSAGES: ChatMessage[] = [
@@ -144,23 +159,41 @@ const saveSettingsToDb = async (s: UserSettings, userId: string) => {
 
 const saveTransactionToDb = async (tx: Transaction, userId: string) => {
   const enteredBy = tx.enteredBy || (userId === 'sarthak' ? 'Sarthak' : 'Praveen');
-  await fetch(`/api/transactions?userId=${userId}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...tx, userId, enteredBy })
-  });
+  const enriched = { ...tx, userId, enteredBy };
+  try {
+    const res = await fetch(`/api/transactions?userId=${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(enriched)
+    });
+    if (!res.ok) throw new Error('Network error');
+  } catch (err) {
+    console.warn('Network issue: queued transaction offline', err);
+    queueOfflineTransaction(enriched);
+  }
 };
 
 const saveTransactionsBatchToDb = async (txList: Transaction[], userId: string) => {
-  await fetch(`/api/transactions?userId=${userId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(txList.map(t => ({ ...t, userId })))
-  });
+  const enrichedList = txList.map(t => ({ ...t, userId, enteredBy: t.enteredBy || (userId === 'sarthak' ? 'Sarthak' : 'Praveen') }));
+  try {
+    const res = await fetch(`/api/transactions?userId=${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(enrichedList)
+    });
+    if (!res.ok) throw new Error('Network error');
+  } catch (err) {
+    enrichedList.forEach(t => queueOfflineTransaction(t));
+  }
 };
 
 const deleteTransactionFromDb = async (id: string, userId: string) => {
-  await fetch(`/api/transactions?id=${id}&userId=${userId}`, { method: 'DELETE' });
+  try {
+    const res = await fetch(`/api/transactions?id=${id}&userId=${userId}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Network error');
+  } catch {
+    queueOfflineDelete(id);
+  }
 };
 
 const fetchMessagesFromDb = async (userId: string): Promise<ChatMessage[] | null> => {
@@ -275,6 +308,32 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [currentUser, loadUserBucket]);
 
+  const knownBusinessTxIdsRef = React.useRef<Set<string>>(new Set());
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  // Online / Offline auto-sync event listener
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      syncOfflineQueueWithServer((syncedTx) => {
+        setTransactions(prev => [syncedTx, ...prev.filter(t => t.id !== syncedTx.id)]);
+      });
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      handleOnline();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // ── Real-time polling every 5s — syncs user's transactions + chat messages ──
   useEffect(() => {
     if (!currentUser) return;
@@ -285,6 +344,30 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Poll Transactions — merge local unsynced pending items to prevent table flickering!
       const dbTx = await fetchTransactions(uid);
       if (dbTx !== null) {
+        // Check for new partner business transactions to trigger instant alert
+        if (settings.partnerAlertsEnabled !== false) {
+          const isCurrentPraveen = (currentUser.name || '').toLowerCase().includes('praveen');
+          dbTx.forEach(t => {
+            if (t.mode === 'business' && !t.isPending) {
+              const isEntryPraveen = (t.enteredBy || '').toLowerCase().includes('praveen');
+              if (isEntryPraveen !== isCurrentPraveen && !knownBusinessTxIdsRef.current.has(t.id)) {
+                if (Date.now() - (t.timestamp || 0) < 15 * 60 * 1000) {
+                  sendPartnerBusinessAlert(t.enteredBy || 'Partner', t.type, t.amount, t.title);
+                }
+              }
+              knownBusinessTxIdsRef.current.add(t.id);
+            }
+          });
+        }
+
+        // Daily 9:00 PM reconciliation recap trigger
+        if (settings.dailyRecapEnabled !== false) {
+          const startOfToday = getStartOfTodayTimestamp();
+          const todayExpenses = dbTx.filter(t => t.type === 'expense' && Number(t.timestamp) >= startOfToday && !t.isPending);
+          const todayExpenseTotal = todayExpenses.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+          checkAndTriggerDailyRecap(todayExpenses.length, todayExpenseTotal);
+        }
+
         setTransactions(prev => {
           const dbIds = new Set(dbTx.map(t => t.id));
           const localPendingUnsynced = prev.filter(t => t.isPending && !dbIds.has(t.id));
@@ -330,7 +413,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [currentUser]);
+  }, [currentUser, settings.partnerAlertsEnabled, settings.dailyRecapEnabled]);
 
   // Apply theme styling dynamically
   useEffect(() => {

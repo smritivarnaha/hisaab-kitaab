@@ -131,6 +131,15 @@ export interface UserSettings {
   chatBubbleStyle?: 'glass' | 'flat' | 'bordered';
   chatBubbleSize?: 'compact' | 'normal' | 'spacious';
   floatingBubbleSize?: 'sm' | 'md' | 'lg';
+  // Notifications & Alerts
+  dailyRecapEnabled?: boolean;
+  dailyRecapTime?: string; // "21:00"
+  partnerAlertsEnabled?: boolean;
+  notificationSoundEnabled?: boolean;
+  // Biometric Device Passkey
+  biometricPasskeyEnabled?: boolean;
+  biometricCredentialId?: string;
+  biometricUserName?: string;
 }
 
 export interface AppUser {

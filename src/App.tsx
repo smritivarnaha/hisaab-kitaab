@@ -7,6 +7,7 @@ import { ReceiptScannerModal } from './components/ocr/ReceiptScannerModal';
 import { StatementImporterModal } from './components/import/StatementImporterModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { ExportDataModal } from './components/common/ExportDataModal';
+import { UpdatePromptBanner } from './components/common/UpdatePromptBanner';
 import { LoginPage } from './components/auth/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { X, Bot, Calculator } from 'lucide-react';
@@ -55,6 +56,9 @@ export const AppContent: React.FC = () => {
     <div className="min-h-screen w-full bg-[#F3F5F1] text-[#0D2E14] font-outfit antialiased flex flex-col justify-between">
       {/* Centered Application Shell */}
       <div className="w-full max-w-6xl mx-auto flex flex-col h-screen overflow-hidden shadow-2xl sm:border-x border-[#E2E8E0] bg-[#F3F5F1] relative">
+        {/* Floating Live OTA Update Banner */}
+        <UpdatePromptBanner />
+
         {/* Top Header Navbar */}
         <Header
           onOpenSettings={() => setIsSettingsOpen(true)}
