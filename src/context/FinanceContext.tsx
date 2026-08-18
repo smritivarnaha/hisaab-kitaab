@@ -89,7 +89,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   openaiApiKey: DEFAULT_OPENAI_KEY,
   aiProvider: 'openai',
   customAIPrompt: '',
-  botAvatarUrl: '',
+  botAvatarUrl: '/logo.png',
   userAvatarUrl: '',
   aiAccountantName: 'My Accountant',
   accentColor: 'emerald',

@@ -1,18 +1,37 @@
 {
+  "id": "com.hisaabkitab.app",
   "short_name": "Hisaab Kitab",
-  "name": "Hisaab Kitab AI - Personal Finance",
+  "name": "Hisaab Kitab AI - Finance & Passbook",
   "icons": [
     {
       "src": "/pwa-192x192.png",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/pwa-512x512.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "409x409",
+      "purpose": "any"
     }
   ],
   "start_url": "/",

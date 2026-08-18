@@ -70,18 +70,18 @@ export const AppContent: React.FC = () => {
         {!isChatOpen && (
           <button
             onClick={() => setIsChatOpen(true)}
-            className={`fixed bottom-6 right-6 z-50 ${bubbleSizeClass} rounded-full bg-accent-primary text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105 overflow-hidden border-2 border-white`}
+            className={`fixed bottom-6 right-6 z-50 ${bubbleSizeClass} rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105 overflow-hidden border-2 border-white p-1`}
             title={settings.aiAccountantName || 'My Accountant'}
           >
             {botAvatar && !botAvatarError ? (
               <img
                 src={botAvatar}
                 alt="Bot"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain drop-shadow-xs"
                 onError={() => setBotAvatarError(true)}
               />
             ) : (
-              <Bot className="w-6 h-6 text-white" />
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain drop-shadow-xs" />
             )}
           </button>
         )}
@@ -94,12 +94,14 @@ export const AppContent: React.FC = () => {
         >
           {/* Mini Drawer Header */}
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white flex-shrink-0">
-            <div>
-              <h4 className="font-extrabold text-sm text-[#0D2E14] flex items-center gap-1.5 capitalize">
-                <Calculator className="w-4 h-4 text-emerald-700" />
-                {settings.aiAccountantName || 'My Accountant'}
-              </h4>
-              <p className="text-[10px] text-gray-400 mt-0.5">Enter transaction or ask summary</p>
+            <div className="flex items-center gap-2.5">
+              <img src="/logo.png" alt="Logo" className="w-7 h-7 object-contain rounded-full drop-shadow-xs" />
+              <div>
+                <h4 className="font-extrabold text-sm text-[#0D2E14] flex items-center gap-1.5 capitalize">
+                  {settings.aiAccountantName || 'My Accountant'}
+                </h4>
+                <p className="text-[10px] text-gray-400 mt-0.5">Enter transaction or ask summary</p>
+              </div>
             </div>
             <button
               onClick={() => setIsChatOpen(false)}
