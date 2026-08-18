@@ -70,18 +70,18 @@ export const AppContent: React.FC = () => {
         {!isChatOpen && (
           <button
             onClick={() => setIsChatOpen(true)}
-            className={`fixed bottom-6 right-6 z-50 ${bubbleSizeClass} rounded-full bg-[#0D2E14] text-white flex items-center justify-center shadow-xl active:scale-95 transition-all hover:scale-105 overflow-hidden border-2 border-white p-1`}
+            className={`fixed bottom-6 right-6 z-50 ${bubbleSizeClass} rounded-full bg-white flex items-center justify-center shadow-2xl active:scale-95 transition-all hover:scale-110 overflow-hidden ring-2 ring-white/90 p-0 cursor-pointer`}
             title={settings.aiAccountantName || 'My Accountant'}
           >
             {botAvatar && !botAvatarError ? (
               <img
                 src={botAvatar}
                 alt="Bot"
-                className="w-full h-full object-contain drop-shadow-xs"
+                className="w-full h-full object-cover rounded-full"
                 onError={() => setBotAvatarError(true)}
               />
             ) : (
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain drop-shadow-xs" />
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover rounded-full" />
             )}
           </button>
         )}
