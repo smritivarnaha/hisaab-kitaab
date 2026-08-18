@@ -11,7 +11,7 @@ interface Props {
 }
 
 export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions }) => {
-  const { settings } = useFinance();
+  const { settings, accountMode, currentUser } = useFinance();
   const [exportType, setExportType] = useState<'all' | 'monthly'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
@@ -21,9 +21,28 @@ export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions
 
   if (!isOpen) return null;
 
-  // Extract available unique months from transactions
+  // Strictly scope transactions to active mode and logged-in user:
+  const scopedTransactions = transactions.filter(t => {
+    if (t.isPending) return false;
+    if (accountMode === 'business') {
+      return t.mode === 'business';
+    }
+    // Personal mode: strictly logged-in user's personal records
+    const currentUserName = (currentUser?.name || '').toLowerCase();
+    const currentUserId = (currentUser?.id || '').toLowerCase();
+    const enteredByName = (t.enteredBy || '').toLowerCase();
+    const txUserId = (t.userId || '').toLowerCase();
+
+    return t.mode !== 'business' && (
+      txUserId === currentUserId ||
+      (currentUserName && enteredByName.includes(currentUserName)) ||
+      (!t.enteredBy && !t.userId)
+    );
+  });
+
+  // Extract available unique months from scoped transactions
   const availableMonthsMap: Record<string, string> = {};
-  transactions.forEach(t => {
+  scopedTransactions.forEach(t => {
     const dStr = t.date || (t.timestamp ? new Date(t.timestamp).toISOString().split('T')[0] : '');
     if (dStr && dStr.length >= 7) {
       const monthKey = dStr.substring(0, 7); // e.g. "2026-08"
@@ -37,7 +56,10 @@ export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions
   const availableMonths = Object.entries(availableMonthsMap);
 
   const handleDownload = () => {
-    exportToExcel(transactions, exportType, selectedMonth, (settings as any).userName || 'User');
+    const reportUser = accountMode === 'business' 
+      ? 'Business (50-50 Ledger)' 
+      : `${currentUser?.name || 'User'} (Personal)`;
+    exportToExcel(scopedTransactions, exportType, selectedMonth, reportUser);
     onClose();
   };
 
@@ -51,8 +73,14 @@ export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions
               <FileSpreadsheet className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm sm:text-base text-[#0D2E14]">Export Data to Excel</h3>
-              <p className="text-[10px] text-gray-500 font-medium">Download multi-sheet organized spreadsheet</p>
+              <h3 className="font-bold text-sm sm:text-base text-[#0D2E14]">
+                {accountMode === 'business' ? 'Export Business Excel' : `Export ${currentUser?.name || 'Personal'} Excel`}
+              </h3>
+              <p className="text-[10px] text-gray-500 font-medium">
+                {accountMode === 'business' 
+                  ? `50/50 Business Ledger (${scopedTransactions.length} records)` 
+                  : `${currentUser?.name || 'Personal'} Account (${scopedTransactions.length} records)`}
+              </p>
             </div>
           </div>
 
@@ -62,6 +90,14 @@ export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* Active Mode Pill */}
+        <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-between text-xs">
+          <span className="font-bold text-slate-700">Export Scope:</span>
+          <span className="font-extrabold text-[#0D2E14] flex items-center gap-1 capitalize">
+            {accountMode === 'business' ? '🏢 Business Ledger' : `👤 ${currentUser?.name || 'Personal'} Ledger`}
+          </span>
         </div>
 
         {/* Selection Options */}

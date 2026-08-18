@@ -17,7 +17,6 @@ export const Header: React.FC<Props> = ({
     <header className="px-3 sm:px-5 py-2.5 bg-[#F3F5F1] border-b border-[#E2E8E0] flex items-center justify-between sticky top-0 z-30 font-outfit shadow-2xs">
       {/* Brand Title */}
       <div className="flex items-center gap-2">
-        <img src="/logo.png" alt="Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-full drop-shadow-xs" />
         <h1 className="font-bold text-[#0D2E14] text-base sm:text-lg tracking-tight flex items-center gap-1.5 font-outfit">
           <span>Funds Log</span>
           {dbStatus === 'loading' && <Loader2 className="w-3 h-3 animate-spin text-amber-500" />}

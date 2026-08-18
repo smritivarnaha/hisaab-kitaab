@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 export const BusinessPartnerSummaryCard: React.FC = () => {
-  const { businessSettlement, addTransaction, dbStatus } = useFinance();
+  const { transactions, currentUser, addTransaction, dbStatus } = useFinance();
   const [isIncomeOpen, setIsIncomeOpen] = useState(true);
   const [isExpenseOpen, setIsExpenseOpen] = useState(true);
   const [isDirectOpen, setIsDirectOpen] = useState(true);
@@ -29,6 +29,51 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
     return <span className={colorClass}>{prefix}{amount.toLocaleString('en-IN')}</span>;
   };
 
+  // Filter business transactions by selected period
+  const periodFilteredTransactions = React.useMemo(() => {
+    const bTxList = transactions.filter(t => t.mode === 'business' && !t.isPending);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed
+    const todayStr = now.toISOString().split('T')[0];
+
+    return bTxList.filter(t => {
+      if (selectedPeriod === 'all') return true;
+
+      let tDate: Date;
+      if (t.date) {
+        const parts = t.date.split('T')[0].split('-');
+        if (parts.length === 3) {
+          tDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        } else {
+          tDate = new Date(t.timestamp || t.date);
+        }
+      } else if (t.timestamp) {
+        tDate = new Date(t.timestamp);
+      } else {
+        return true;
+      }
+
+      if (selectedPeriod === 'today') {
+        const tDateStr = t.date ? t.date.split('T')[0] : tDate.toISOString().split('T')[0];
+        return tDateStr === todayStr;
+      }
+      if (selectedPeriod === 'this_month') {
+        return tDate.getFullYear() === currentYear && tDate.getMonth() === currentMonth;
+      }
+      if (selectedPeriod === 'last_month') {
+        const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+        const lastMonthIndex = currentMonth === 0 ? 11 : currentMonth - 1;
+        return tDate.getFullYear() === lastMonthYear && tDate.getMonth() === lastMonthIndex;
+      }
+      if (selectedPeriod === 'this_year') {
+        return tDate.getFullYear() === currentYear;
+      }
+      return true;
+    });
+  }, [transactions, selectedPeriod]);
+
+  // Compute 50/50 Settlement for the selected period
   const {
     totalIncome,
     totalExpense,
@@ -42,7 +87,66 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
     sarthakOperatingDue,
     praveenOwesSarthak,
     sarthakOwesPraveen
-  } = businessSettlement;
+  } = React.useMemo(() => {
+    let totalIncome = 0;
+    let totalExpense = 0;
+    let praveenIncome = 0;
+    let praveenExpense = 0;
+    let sarthakIncome = 0;
+    let sarthakExpense = 0;
+    let praveenDirectGiven = 0;
+    let sarthakDirectGiven = 0;
+
+    periodFilteredTransactions.filter(t => !t.title?.startsWith('Settlement:')).forEach(t => {
+      const amt = Number(t.amount || 0);
+      const isPraveen = (t.enteredBy || '').toLowerCase().includes('praveen') || (!t.enteredBy && currentUser?.name?.toLowerCase().includes('praveen'));
+      
+      if (t.type === 'income') {
+        totalIncome += amt;
+        if (isPraveen) praveenIncome += amt;
+        else sarthakIncome += amt;
+      } else if (t.type === 'expense') {
+        totalExpense += amt;
+        if (isPraveen) praveenExpense += amt;
+        else sarthakExpense += amt;
+      } else if (t.type === 'lent') {
+        if (isPraveen) praveenDirectGiven += amt;
+        else sarthakDirectGiven += amt;
+      } else if (t.type === 'borrowed') {
+        if (isPraveen) sarthakDirectGiven += amt;
+        else praveenDirectGiven += amt;
+      }
+    });
+
+    // ── BUCKET A: PRAVEEN ➔ SARTHAK (Expense Equalization) ────────────────────
+    const praveenBase = (praveenIncome - totalExpense) / 2;
+    const praveenFairExpense = totalExpense / 2;
+    const praveenExpenseSurplus = Math.max(0, praveenExpense - praveenFairExpense);
+    const praveenOperatingSettlement = praveenBase - praveenExpenseSurplus;
+    const praveenOwesSarthak = Math.max(0, Math.round(praveenOperatingSettlement - praveenDirectGiven));
+
+    // ── BUCKET B: SARTHAK ➔ PRAVEEN (50% Income - Sarthak Direct Transfers) ───
+    const sarthakBase = sarthakIncome / 2;
+    const sarthakOwesPraveen = Math.max(0, Math.round(sarthakBase - sarthakDirectGiven));
+
+    const praveenOperatingDue = Math.round(praveenOperatingSettlement);
+    const sarthakOperatingDue = Math.round(sarthakBase);
+
+    return {
+      totalIncome,
+      totalExpense,
+      praveenIncome,
+      praveenExpense,
+      praveenDirectGiven,
+      sarthakIncome,
+      sarthakExpense,
+      sarthakDirectGiven,
+      praveenOperatingDue,
+      sarthakOperatingDue,
+      praveenOwesSarthak,
+      sarthakOwesPraveen
+    };
+  }, [periodFilteredTransactions, currentUser]);
 
   const getPeriodLabel = () => {
     const now = new Date();
