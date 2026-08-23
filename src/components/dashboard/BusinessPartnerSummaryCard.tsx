@@ -9,11 +9,13 @@ import {
   Users, 
   ArrowRight,
   CheckCircle2,
+  Check,
   Calendar
 } from 'lucide-react';
 
 export const BusinessPartnerSummaryCard: React.FC = () => {
   const { transactions, currentUser, addTransaction, dbStatus } = useFinance();
+  const isAdmin = currentUser?.id === 'praveen' || currentUser?.id === 'sarthak' || (currentUser?.name || '').toLowerCase().includes('praveen') || (currentUser?.name || '').toLowerCase().includes('sarthak');
   const [isIncomeOpen, setIsIncomeOpen] = useState(true);
   const [isExpenseOpen, setIsExpenseOpen] = useState(true);
   const [isDirectOpen, setIsDirectOpen] = useState(true);
@@ -485,17 +487,22 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               </div>
 
               {praveenOwesSarthak > 0 ? (
-                <button
-                  onClick={handleSettlePraveenToSarthak}
-                  className="w-full py-2 bg-[#0D2E14] hover:bg-[#14471f] text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
-                >
-                  <ArrowRight className="w-3.5 h-3.5" />
-                  <span>Settle Praveen ➔ Sarthak</span>
-                </button>
+                isAdmin && (
+                  <button
+                    onClick={handleSettlePraveenToSarthak}
+                    className="w-full py-2 bg-[#0D2E14] hover:bg-[#14471f] text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>Settle Praveen ➔ Sarthak</span>
+                  </button>
+                )
               ) : (
-                <div className="py-1.5 bg-emerald-50 text-emerald-800 rounded-xl text-center text-xs font-bold border border-emerald-200">
-                  ✅ Fully Settled
-                </div>
+                isAdmin ? (
+                  <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-600 py-1">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                    <span>Settled</span>
+                  </div>
+                ) : null
               )}
             </div>
 
@@ -526,17 +533,22 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
               </div>
 
               {sarthakOwesPraveen > 0 ? (
-                <button
-                  onClick={handleSettleSarthakToPraveen}
-                  className="w-full py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
-                >
-                  <ArrowRight className="w-3.5 h-3.5" />
-                  <span>Settle Sarthak ➔ Praveen</span>
-                </button>
+                isAdmin && (
+                  <button
+                    onClick={handleSettleSarthakToPraveen}
+                    className="w-full py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    <span>Settle Sarthak ➔ Praveen</span>
+                  </button>
+                )
               ) : (
-                <div className="py-1.5 bg-emerald-50 text-emerald-800 rounded-xl text-center text-xs font-bold border border-emerald-200">
-                  ✅ Fully Settled
-                </div>
+                isAdmin ? (
+                  <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-600 py-1">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                    <span>Settled</span>
+                  </div>
+                ) : null
               )}
             </div>
           </div>
