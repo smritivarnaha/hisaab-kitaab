@@ -25,6 +25,7 @@ import {
   ChevronDown,
   CheckCircle2
 } from 'lucide-react';
+import { PeriodSelector } from '../common/PeriodSelector';
 
 export const DashboardOverview: React.FC = () => {
   const { transactions, updateTransaction, currentUser, dbStatus, accountMode, businessSettlement } = useFinance();
@@ -35,8 +36,7 @@ export const DashboardOverview: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'passbook' | 'analytics'>('passbook');
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
-  const [selectedPeriod, setSelectedPeriod] = useState<'this_month' | 'today' | 'last_month' | 'this_year' | 'all'>('this_month');
-  const [isCalendarMenuOpen, setIsCalendarMenuOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('this_month');
 
   // Compute period range label
   const getPeriodLabel = () => {
@@ -62,6 +62,12 @@ export const DashboardOverview: React.FC = () => {
       const lmYearShort = String(lm.getFullYear()).slice(-2);
       const lmLastDay = new Date(lm.getFullYear(), lm.getMonth() + 1, 0).getDate();
       return `01 ${lmMonth} ${lmYearShort} - ${String(lmLastDay).padStart(2, '0')} ${lmMonth} ${lmYearShort}`;
+    }
+    if (/^\d{4}-\d{2}$/.test(selectedPeriod)) {
+      const [y, m] = selectedPeriod.split('-').map(Number);
+      const month = monthNames[m - 1];
+      const lastDay = new Date(y, m, 0).getDate();
+      return `01 ${month} ${String(y).slice(-2)} - ${String(lastDay).padStart(2, '0')} ${month} ${String(y).slice(-2)}`;
     }
     if (selectedPeriod === 'this_year') {
       return `Year ${currentYear}`;
@@ -112,6 +118,10 @@ export const DashboardOverview: React.FC = () => {
         const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
         const lastMonthIndex = currentMonth === 0 ? 11 : currentMonth - 1;
         return tDate.getFullYear() === lastMonthYear && tDate.getMonth() === lastMonthIndex;
+      }
+      if (/^\d{4}-\d{2}$/.test(selectedPeriod)) {
+        const [y, m] = selectedPeriod.split('-').map(Number);
+        return tDate.getFullYear() === y && tDate.getMonth() === m - 1;
       }
       if (selectedPeriod === 'this_year') {
         return tDate.getFullYear() === currentYear;
@@ -213,62 +223,12 @@ export const DashboardOverview: React.FC = () => {
             </div>
 
             {/* Right Controls: Period Selector */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              {/* Period Dropdown */}
-              <div className="relative z-50">
-                <button 
-                  onClick={() => setIsCalendarMenuOpen(prev => !prev)}
-                  className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-full bg-[#14471f] hover:bg-[#1a5526] border border-[#93E044]/50 text-emerald-100 text-[11px] sm:text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95 transition-all"
-                >
-                  <Calendar className="w-3 h-3 text-[#93E044]" />
-                  <span>{selectedPeriod === 'this_month' ? 'This Month' : selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'last_month' ? 'Last Month' : selectedPeriod === 'this_year' ? 'This Year' : 'All Time'}</span>
-                  <ChevronDown className="w-2.5 h-2.5 text-emerald-300" />
-                </button>
-
-                {isCalendarMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 z-[100] py-1.5 animate-fadeIn">
-                    <div className="px-3 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100 mb-1">
-                      Select Period
-                    </div>
-                    <button
-                      onClick={() => { setSelectedPeriod('this_month'); setIsCalendarMenuOpen(false); }}
-                      className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'this_month' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
-                    >
-                      <span>This Month</span>
-                      {selectedPeriod === 'this_month' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                    </button>
-                    <button
-                      onClick={() => { setSelectedPeriod('today'); setIsCalendarMenuOpen(false); }}
-                      className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'today' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
-                    >
-                      <span>Today</span>
-                      {selectedPeriod === 'today' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                    </button>
-                    <button
-                      onClick={() => { setSelectedPeriod('last_month'); setIsCalendarMenuOpen(false); }}
-                      className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'last_month' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
-                    >
-                      <span>Last Month</span>
-                      {selectedPeriod === 'last_month' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                    </button>
-                    <button
-                      onClick={() => { setSelectedPeriod('this_year'); setIsCalendarMenuOpen(false); }}
-                      className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'this_year' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
-                    >
-                      <span>This Year</span>
-                      {selectedPeriod === 'this_year' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                    </button>
-                    <button
-                      onClick={() => { setSelectedPeriod('all'); setIsCalendarMenuOpen(false); }}
-                      className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'all' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
-                    >
-                      <span>All Time</span>
-                      {selectedPeriod === 'all' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <PeriodSelector
+              selectedPeriod={selectedPeriod}
+              onPeriodChange={setSelectedPeriod}
+              transactions={transactions.filter(t => t.mode !== 'business')}
+              theme="emerald"
+            />
           </div>
 
           {/* Single White Card Container */}

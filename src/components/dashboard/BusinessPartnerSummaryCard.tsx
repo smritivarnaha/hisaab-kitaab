@@ -11,10 +11,11 @@ import {
   Calendar,
   History
 } from 'lucide-react';
+import { PeriodSelector } from '../common/PeriodSelector';
 
 interface Props {
-  selectedPeriod?: 'this_month' | 'today' | 'last_month' | 'this_year' | 'all';
-  onPeriodChange?: (period: 'this_month' | 'today' | 'last_month' | 'this_year' | 'all') => void;
+  selectedPeriod?: string;
+  onPeriodChange?: (period: string) => void;
 }
 
 export const BusinessPartnerSummaryCard: React.FC<Props> = ({
@@ -27,17 +28,15 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
   const [isExpenseOpen, setIsExpenseOpen] = useState(true);
   const [isDirectOpen, setIsDirectOpen] = useState(true);
 
-  const [internalPeriod, setInternalPeriod] = useState<'this_month' | 'today' | 'last_month' | 'this_year' | 'all'>('this_month');
+  const [internalPeriod, setInternalPeriod] = useState<string>('this_month');
   const selectedPeriod = propSelectedPeriod !== undefined ? propSelectedPeriod : internalPeriod;
-  const setSelectedPeriod = (period: 'this_month' | 'today' | 'last_month' | 'this_year' | 'all') => {
+  const setSelectedPeriod = (period: string) => {
     if (onPeriodChange) {
       onPeriodChange(period);
     } else {
       setInternalPeriod(period);
     }
   };
-
-  const [isCalendarMenuOpen, setIsCalendarMenuOpen] = useState(false);
 
   const renderAmount = (amount: number, colorClass: string, prefix = '₹', skeletonWidth = 'w-16') => {
     if (dbStatus === 'loading') {
@@ -206,6 +205,31 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
       };
     }
 
+    if (/^\d{4}-\d{2}$/.test(selectedPeriod)) {
+      const [targetYear, targetMonth] = selectedPeriod.split('-').map(Number);
+      const targetMonthIndex = targetMonth - 1;
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const prevMonthName = targetMonthIndex === 0 ? 'Dec' : monthNames[targetMonthIndex - 1];
+      const startOfTargetMonth = new Date(targetYear, targetMonthIndex, 1);
+      const endOfTargetMonth = new Date(targetYear, targetMonthIndex + 1, 0, 23, 59, 59, 999);
+
+      const prior: Transaction[] = [];
+      const current: Transaction[] = [];
+      bTxList.forEach(t => {
+        const { dateObj } = getTDateInfo(t);
+        if (dateObj < startOfTargetMonth) {
+          prior.push(t);
+        } else if (dateObj <= endOfTargetMonth) {
+          current.push(t);
+        }
+      });
+      return {
+        priorTransactions: prior,
+        periodFilteredTransactions: current,
+        priorPeriodLabel: `Carryover (up to ${prevMonthName})`
+      };
+    }
+
     if (selectedPeriod === 'this_year') {
       const startOfYear = new Date(currentYear, 0, 1);
       const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
@@ -291,6 +315,12 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
       const lmLastDay = new Date(lm.getFullYear(), lm.getMonth() + 1, 0).getDate();
       return `01 ${lmMonth} ${lmYearShort} - ${String(lmLastDay).padStart(2, '0')} ${lmMonth} ${lmYearShort}`;
     }
+    if (/^\d{4}-\d{2}$/.test(selectedPeriod)) {
+      const [y, m] = selectedPeriod.split('-').map(Number);
+      const month = monthNames[m - 1];
+      const lastDay = new Date(y, m, 0).getDate();
+      return `01 ${month} ${String(y).slice(-2)} - ${String(lastDay).padStart(2, '0')} ${month} ${String(y).slice(-2)}`;
+    }
     if (selectedPeriod === 'this_year') {
       return `Year ${currentYear}`;
     }
@@ -331,59 +361,12 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
             </span>
           </div>
 
-          <div className="relative z-50">
-            <button 
-              onClick={() => setIsCalendarMenuOpen(prev => !prev)}
-              className="px-3 py-1.5 rounded-full bg-[#FAFCF9] hover:bg-white border border-gray-200 text-gray-800 text-xs font-bold flex items-center gap-1.5 flex-shrink-0 shadow-2xs cursor-pointer active:scale-95 transition-all"
-            >
-              <Calendar className="w-3.5 h-3.5 text-gray-600" />
-              <span className="text-gray-800 font-bold">{selectedPeriod === 'this_month' ? 'This Month' : selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'last_month' ? 'Last Month' : selectedPeriod === 'this_year' ? 'This Year' : 'All Time'}</span>
-              <ChevronDown className="w-3 h-3 text-gray-500" />
-            </button>
-
-            {isCalendarMenuOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 z-[100] py-1.5 animate-fadeIn">
-                <div className="px-3 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100 mb-1">
-                  Select Period
-                </div>
-                <button
-                  onClick={() => { setSelectedPeriod('this_month'); setIsCalendarMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'this_month' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
-                >
-                  <span>This Month</span>
-                  {selectedPeriod === 'this_month' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                </button>
-                <button
-                  onClick={() => { setSelectedPeriod('today'); setIsCalendarMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'today' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
-                >
-                  <span>Today</span>
-                  {selectedPeriod === 'today' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                </button>
-                <button
-                  onClick={() => { setSelectedPeriod('last_month'); setIsCalendarMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'last_month' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
-                >
-                  <span>Last Month</span>
-                  {selectedPeriod === 'last_month' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                </button>
-                <button
-                  onClick={() => { setSelectedPeriod('this_year'); setIsCalendarMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'this_year' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
-                >
-                  <span>This Year</span>
-                  {selectedPeriod === 'this_year' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                </button>
-                <button
-                  onClick={() => { setSelectedPeriod('all'); setIsCalendarMenuOpen(false); }}
-                  className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'all' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
-                >
-                  <span>All Time</span>
-                  {selectedPeriod === 'all' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                </button>
-              </div>
-            )}
-          </div>
+          <PeriodSelector
+            selectedPeriod={selectedPeriod}
+            onPeriodChange={setSelectedPeriod}
+            transactions={transactions.filter(t => t.mode === 'business')}
+            theme="light"
+          />
         </div>
 
         {/* Inner White Card: Income, Expenses & Direct Personal Transfers */}
