@@ -653,21 +653,21 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
         </div>
 
         {/* Live Equation Summary Strip */}
-        <div className="p-2.5 rounded-xl bg-amber-100/70 border border-amber-200/90 text-[10px] text-amber-950 font-medium flex items-center justify-between flex-wrap gap-1">
-          <span className="font-bold">Summary Equation:</span>
-          <span>
+        <div className="py-1.5 px-2.5 rounded-lg bg-gray-100 border border-gray-200/90 text-[9px] sm:text-[10px] text-black font-medium flex items-center justify-between flex-wrap gap-1 leading-tight">
+          <span className="font-bold text-black">Summary Equation:</span>
+          <span className="text-black">
             {priorNetPtoS !== 0 ? (
               <>
                 Past Carryover ({priorNetPtoS > 0 ? `+₹${priorNetPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(priorNetPtoS).toLocaleString('en-IN')}`})
                 {' '}+ Period Net ({periodNetPtoS >= 0 ? `+₹${periodNetPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(periodNetPtoS).toLocaleString('en-IN')}`})
-                {' '}= <b className="font-black">{totalCumulativeNetPtoS >= 0 ? `Praveen owes Sarthak ₹${totalCumulativeNetPtoS.toLocaleString('en-IN')}` : `Sarthak owes Praveen ₹${Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')}`}</b>
+                {' '}= <b className="font-black text-black">{totalCumulativeNetPtoS >= 0 ? `Praveen owes Sarthak ₹${totalCumulativeNetPtoS.toLocaleString('en-IN')}` : `Sarthak owes Praveen ₹${Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')}`}</b>
               </>
             ) : (
               <>
                 Income Share ({incomeDuePtoS >= 0 ? `+₹${incomeDuePtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(incomeDuePtoS).toLocaleString('en-IN')}`})
                 {' '}- Expense Offset ({expenseDeficitStoP >= 0 ? `₹${expenseDeficitStoP.toLocaleString('en-IN')}` : `-₹${Math.abs(expenseDeficitStoP).toLocaleString('en-IN')}`})
                 {' '}+ Pure Loans ({netDirectLoanPtoS >= 0 ? `+₹${netDirectLoanPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(netDirectLoanPtoS).toLocaleString('en-IN')}`})
-                {' '}= <b className="font-black">{periodNetPtoS >= 0 ? `Praveen owes Sarthak ₹${periodNetPtoS.toLocaleString('en-IN')}` : `Sarthak owes Praveen ₹${Math.abs(periodNetPtoS).toLocaleString('en-IN')}`}</b>
+                {' '}= <b className="font-black text-black">{periodNetPtoS >= 0 ? `Praveen owes Sarthak ₹${periodNetPtoS.toLocaleString('en-IN')}` : `Sarthak owes Praveen ₹${Math.abs(periodNetPtoS).toLocaleString('en-IN')}`}</b>
               </>
             )}
           </span>
