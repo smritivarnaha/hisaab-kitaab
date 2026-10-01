@@ -1,15 +1,16 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 
-const DEFAULT_POSTGRES_URL = 'postgresql://neondb_owner:npg_1RA4uDHvqGTO@ep-steep-band-azw2jzqj-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
-
 function getDb() {
   const connectionString =
     process.env.POSTGRES_URL ||
     process.env.DATABASE_URL ||
     process.env.NEON_DATABASE_URL ||
-    process.env.POSTGRES_URL_NON_POOLING ||
-    DEFAULT_POSTGRES_URL;
+    process.env.POSTGRES_URL_NON_POOLING;
+
+  if (!connectionString) {
+    throw new Error('Database connection string is missing. Please set POSTGRES_URL in environment variables.');
+  }
 
   return neon(connectionString);
 }
