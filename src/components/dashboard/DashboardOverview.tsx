@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Transaction } from '../../types/finance';
+import { Transaction, isBusinessPartner } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
 import { DebtLentLedger } from './DebtLentLedger';
 import { InsightsCard } from './InsightsCard';
@@ -186,7 +186,7 @@ export const DashboardOverview: React.FC = () => {
 
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden px-[18px] sm:px-6 py-3 sm:py-4 pb-24 sm:pb-16 no-scrollbar bg-[#F3F5F1] font-outfit space-y-3 sm:space-y-4 w-full max-w-4xl mx-auto">
-      {accountMode === 'business' ? (
+      {accountMode === 'business' && isBusinessPartner(currentUser) ? (
         <BusinessPartnerSummaryCard selectedPeriod={selectedPeriod} onPeriodChange={setSelectedPeriod} />
       ) : (
         /* 1. Personal Top Summary Card with Spreading Bottom-Left Green Gradient & Grid Overlay */
@@ -401,7 +401,7 @@ export const DashboardOverview: React.FC = () => {
                       <div className="flex items-center justify-between gap-2">
                         {/* Left: Initiator Avatar (Business Mode) or Category Icon (Personal Mode) */}
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          {accountMode === 'business' ? (
+                          {accountMode === 'business' && isBusinessPartner(currentUser) ? (
                             <UserAvatarBadge userName={tx.enteredBy || 'Praveen'} size="md" />
                           ) : (
                             <CategoryIcon category={tx.category} size="sm" />

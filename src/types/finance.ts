@@ -149,3 +149,10 @@ export interface AppUser {
   username: string;
   name: string;
 }
+
+export const isBusinessPartner = (user?: AppUser | null): boolean => {
+  if (!user) return false;
+  const id = (user.id || '').toLowerCase();
+  const name = (user.name || '').toLowerCase();
+  return id === 'praveen' || id === 'sarthak' || name.includes('praveen') || name.includes('sarthak');
+};

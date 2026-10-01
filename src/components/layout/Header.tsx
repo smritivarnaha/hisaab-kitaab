@@ -1,6 +1,7 @@
 import React from 'react';
 import { Settings, Wifi, WifiOff, Loader2, LogOut, Download } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
+import { isBusinessPartner } from '../../types/finance';
 
 interface Props {
   onOpenSettings: () => void;
@@ -12,6 +13,7 @@ export const Header: React.FC<Props> = ({
   onOpenExport
 }) => {
   const { dbStatus, currentUser, logout, accountMode, setAccountMode } = useFinance();
+  const isPartner = isBusinessPartner(currentUser);
 
   return (
     <header className="px-3 sm:px-5 py-2.5 bg-[#F3F5F1] border-b border-[#E2E8E0] flex items-center justify-between sticky top-0 z-30 font-outfit shadow-2xs">
@@ -28,7 +30,7 @@ export const Header: React.FC<Props> = ({
       {/* Centered Faded Account Name */}
       <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none px-2 max-w-[150px] sm:max-w-[240px]">
         <span className="text-[11px] sm:text-xs font-bold text-gray-400 font-outfit uppercase tracking-wider block truncate">
-          {currentUser?.name || 'Praveen'} {accountMode === 'business' ? '(Business)' : '(Personal)'}
+          {currentUser?.name || 'Personal'} {isPartner ? (accountMode === 'business' ? '(Business)' : '(Personal)') : ''}
         </span>
       </div>
 

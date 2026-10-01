@@ -1,10 +1,15 @@
 import React from 'react';
 import { User, Building2 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
+import { isBusinessPartner } from '../../types/finance';
 
 export const Footer: React.FC = () => {
   const { accountMode, setAccountMode, currentUser } = useFinance();
   const userName = currentUser?.name || 'Praveen';
+
+  if (!isBusinessPartner(currentUser)) {
+    return null;
+  }
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-50 bg-[#FAFBF9] border-t border-[#E2E8E0] px-3 py-2 font-outfit shadow-2xl">

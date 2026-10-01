@@ -55,7 +55,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await ensureTable(sql);
     }
 
-    const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
+    const rawUserId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
+    const userId = rawUserId.toLowerCase();
+    const isPartner = userId === 'praveen' || userId === 'sarthak';
 
     if (req.method === 'GET') {
       const sinceParam = req.query.since ? Number(req.query.since) : NaN;
@@ -71,12 +73,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.warn('Error purging old chat messages:', cleanErr);
       }
 
-      const rows: any = await sql`
-        SELECT * FROM chat_messages 
-        WHERE ("userId" = ${userId} OR "mode" = 'business')
-          AND "timestamp" >= ${minTimestamp}
-        ORDER BY timestamp ASC LIMIT 200
-      `;
+      const rows: any = isPartner
+        ? await sql`
+            SELECT * FROM chat_messages 
+            WHERE ("userId" = ${userId} OR "mode" = 'business')
+              AND "timestamp" >= ${minTimestamp}
+            ORDER BY timestamp ASC LIMIT 200
+          `
+        : await sql`
+            SELECT * FROM chat_messages 
+            WHERE "userId" = ${userId}
+              AND ("mode" IS NULL OR "mode" != 'business')
+              AND "timestamp" >= ${minTimestamp}
+            ORDER BY timestamp ASC LIMIT 200
+          `;
+
       const parsed = rows.map((row: any) => ({
         ...row,
         timestamp: Number(row.timestamp),
@@ -93,10 +104,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await Promise.all(msgs.map((m: any) => {
         if (!m?.id) return Promise.resolve();
         const msgUserId = m.userId || userId;
+        const msgMode = isPartner ? (m.mode || 'personal') : 'personal';
         const pendingJson = m.pendingReviewItems ? JSON.stringify(m.pendingReviewItems) : null;
         return sql`
           INSERT INTO chat_messages ("id","sender","text","timestamp","isVoice","audioLevel","userId","mode","senderName","pendingReviewItems")
-          VALUES (${m.id}, ${m.sender}, ${m.text}, ${m.timestamp}, ${m.isVoice || false}, ${m.audioLevel || null}, ${msgUserId}, ${m.mode || 'personal'}, ${m.senderName || null}, ${pendingJson}::jsonb)
+          VALUES (${m.id}, ${m.sender}, ${m.text}, ${m.timestamp}, ${m.isVoice || false}, ${m.audioLevel || null}, ${msgUserId}, ${msgMode}, ${m.senderName || null}, ${pendingJson}::jsonb)
           ON CONFLICT ("id") DO UPDATE SET "text" = EXCLUDED."text", "mode" = EXCLUDED."mode", "senderName" = EXCLUDED."senderName", "pendingReviewItems" = EXCLUDED."pendingReviewItems"
         `;
       }));

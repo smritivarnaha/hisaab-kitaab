@@ -75,11 +75,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await ensureTableExists(sql);
     }
 
-    const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
+    const rawUserId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
+    const userId = rawUserId.toLowerCase();
+    const isPartner = userId === 'praveen' || userId === 'sarthak';
 
-    // ── GET — fetch all transactions for specific user & shared business mode ──────
+    // ── GET — fetch all transactions for specific user & shared business mode (partners only) ──────
     if (req.method === 'GET') {
-      const rows: any = await sql`SELECT * FROM transactions WHERE "userId" = ${userId} OR "mode" = 'business' ORDER BY timestamp DESC`;
+      const rows: any = isPartner
+        ? await sql`SELECT * FROM transactions WHERE "userId" = ${userId} OR "mode" = 'business' ORDER BY timestamp DESC`
+        : await sql`SELECT * FROM transactions WHERE "userId" = ${userId} AND ("mode" IS NULL OR "mode" != 'business') ORDER BY timestamp DESC`;
       const parsed = rows.map((row: any) => ({
         ...row,
         amount: Number(row.amount),
@@ -98,6 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!body?.id) return res.status(400).json({ error: 'Missing transaction id' });
 
       const txUserId = body.userId || userId;
+      const safeMode = isPartner ? (body.mode || 'personal') : 'personal';
 
       await sql`
         INSERT INTO transactions (
@@ -110,7 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ${body.paymentMethod || 'UPI'}, ${body.date}, ${body.relativeDateText || null},
           ${body.timestamp}, ${body.confidenceScore || null}, ${body.rawInput || null},
           ${body.shortDisplayTitle || null}, ${body.notes || null},
-          ${body.isPending || false}, ${body.person || null}, ${txUserId}, ${body.mode || 'personal'}, ${body.enteredBy || null}
+          ${body.isPending || false}, ${body.person || null}, ${txUserId}, ${safeMode}, ${body.enteredBy || null}
         )
         ON CONFLICT ("id") DO UPDATE SET
           "amount" = EXCLUDED."amount",
@@ -144,6 +149,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await Promise.all(list.map((body: any) => {
         if (!body?.id) return Promise.resolve();
         const txUserId = body.userId || userId;
+        const safeMode = isPartner ? (body.mode || 'personal') : 'personal';
         return sql`
           INSERT INTO transactions (
             "id","amount","currency","type","category","title","merchant",
@@ -155,7 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ${body.paymentMethod || 'UPI'}, ${body.date}, ${body.relativeDateText || null},
             ${body.timestamp}, ${body.confidenceScore || null}, ${body.rawInput || null},
             ${body.shortDisplayTitle || null}, ${body.notes || null},
-            ${body.isPending || false}, ${body.person || null}, ${txUserId}, ${body.mode || 'personal'}, ${body.enteredBy || null}
+            ${body.isPending || false}, ${body.person || null}, ${txUserId}, ${safeMode}, ${body.enteredBy || null}
           )
           ON CONFLICT ("id") DO UPDATE SET
             "amount" = EXCLUDED."amount",

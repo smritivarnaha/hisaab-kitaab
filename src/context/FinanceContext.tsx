@@ -7,7 +7,8 @@ import {
   AIClarificationQuestion,
   Category,
   PaymentMethod,
-  AppUser
+  AppUser,
+  isBusinessPartner
 } from '../types/finance';
 import { parseMultiInput, buildClarification, applySelfCorrection } from '../services/ai/parser';
 import { getAIMemory, learnMerchantCategory, learnPaymentPreference, saveUserFact, saveGoal, saveMonthlyBudget } from '../services/ai/memory';
@@ -563,7 +564,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   });
 
+  // Guard accountMode: Non-partners (like Nandini) can NEVER view or remain in business mode
+  useEffect(() => {
+    if (currentUser && !isBusinessPartner(currentUser) && accountMode === 'business') {
+      setAccountModeState('personal');
+      try {
+        localStorage.setItem('hisaab_account_mode', 'personal');
+      } catch {}
+    }
+  }, [currentUser, accountMode]);
+
   const setAccountMode = (mode: 'personal' | 'business') => {
+    if (mode === 'business' && !isBusinessPartner(currentUser)) {
+      setAccountModeState('personal');
+      try {
+        localStorage.setItem('hisaab_account_mode', 'personal');
+      } catch {}
+      return;
+    }
     setAccountModeState(mode);
     try {
       localStorage.setItem('hisaab_account_mode', mode);

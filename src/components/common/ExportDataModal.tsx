@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, FileSpreadsheet, Download, Calendar, Layers } from 'lucide-react';
-import { Transaction } from '../../types/finance';
+import { Transaction, isBusinessPartner } from '../../types/finance';
 import { exportToExcel } from '../../utils/excelExport';
 import { useFinance } from '../../context/FinanceContext';
 
@@ -21,10 +21,13 @@ export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions
 
   if (!isOpen) return null;
 
+  const isPartner = isBusinessPartner(currentUser);
+  const effectiveMode = (accountMode === 'business' && isPartner) ? 'business' : 'personal';
+
   // Strictly scope transactions to active mode and logged-in user:
   const scopedTransactions = transactions.filter(t => {
     if (t.isPending) return false;
-    if (accountMode === 'business') {
+    if (effectiveMode === 'business') {
       return t.mode === 'business';
     }
     // Personal mode: strictly logged-in user's personal records
@@ -56,7 +59,7 @@ export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions
   const availableMonths = Object.entries(availableMonthsMap);
 
   const handleDownload = () => {
-    const reportUser = accountMode === 'business' 
+    const reportUser = effectiveMode === 'business' 
       ? 'Business (50-50 Ledger)' 
       : `${currentUser?.name || 'User'} (Personal)`;
     exportToExcel(scopedTransactions, exportType, selectedMonth, reportUser);
@@ -74,10 +77,10 @@ export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions
             </div>
             <div>
               <h3 className="font-bold text-sm sm:text-base text-[#0D2E14]">
-                {accountMode === 'business' ? 'Export Business Excel' : `Export ${currentUser?.name || 'Personal'} Excel`}
+                {effectiveMode === 'business' ? 'Export Business Excel' : `Export ${currentUser?.name || 'Personal'} Excel`}
               </h3>
               <p className="text-[10px] text-gray-500 font-medium">
-                {accountMode === 'business' 
+                {effectiveMode === 'business' 
                   ? `50/50 Business Ledger (${scopedTransactions.length} records)` 
                   : `${currentUser?.name || 'Personal'} Account (${scopedTransactions.length} records)`}
               </p>
@@ -96,7 +99,7 @@ export const ExportDataModal: React.FC<Props> = ({ isOpen, onClose, transactions
         <div className="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-between text-xs">
           <span className="font-bold text-slate-700">Export Scope:</span>
           <span className="font-extrabold text-[#0D2E14] flex items-center gap-1 capitalize">
-            {accountMode === 'business' ? '🏢 Business Ledger' : `👤 ${currentUser?.name || 'Personal'} Ledger`}
+            {effectiveMode === 'business' ? '🏢 Business Ledger' : `👤 ${currentUser?.name || 'Personal'} Ledger`}
           </span>
         </div>
 
