@@ -10,7 +10,8 @@ interface Props {
 
 // Single Transaction Confirmation Card (Spelling & Details Editor)
 const InlineTransactionEditor: React.FC<{ item: Transaction; onConfirmed?: () => void }> = ({ item, onConfirmed }) => {
-  const { updateTransaction, deleteTransaction, accountMode } = useFinance();
+  const { updateTransaction, deleteTransaction, accountMode, currentUser } = useFinance();
+  const partnerName = (currentUser?.name || '').toLowerCase().includes('sarthak') ? 'Praveen' : 'Sarthak';
   const [title, setTitle] = useState(item.title === 'Reason Missing' ? '' : item.title);
   const [amount, setAmount] = useState(String(item.amount || ''));
   const [type, setType] = useState<Transaction['type']>(item.type || 'expense');
@@ -68,8 +69,8 @@ const InlineTransactionEditor: React.FC<{ item: Transaction; onConfirmed?: () =>
             >
               <option value="expense">Spent 🔴</option>
               <option value="income">Income 🟢</option>
-              <option value="lent">Lent to him 🤝 (100%)</option>
-              <option value="borrowed">Borrowed from him 🤝 (100%)</option>
+              <option value="lent">Lent to {partnerName} 🤝 (100%)</option>
+              <option value="borrowed">Borrowed from {partnerName} 🤝 (100%)</option>
             </select>
           </div>
 
@@ -131,7 +132,8 @@ const InlineTransactionEditor: React.FC<{ item: Transaction; onConfirmed?: () =>
 
 // Tabular & Card Editable Form for Multiple Entries
 const MultiInlineTransactionEditor: React.FC<{ items: Transaction[]; onConfirmed?: () => void }> = ({ items, onConfirmed }) => {
-  const { confirmPendingItemsBatch, deleteTransaction, accountMode } = useFinance();
+  const { confirmPendingItemsBatch, deleteTransaction, accountMode, currentUser } = useFinance();
+  const partnerName = (currentUser?.name || '').toLowerCase().includes('sarthak') ? 'Praveen' : 'Sarthak';
   const [drafts, setDrafts] = useState<Transaction[]>(items);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
@@ -165,7 +167,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[]; onConfirmed
   const getTypeStyle = (t: string) => {
     switch (t) {
       case 'income': return 'bg-green-100 text-green-800 border-green-200';
-      case 'lent': return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'lent': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'borrowed': return 'bg-purple-100 text-purple-800 border-purple-200';
       default: return 'bg-red-100 text-red-800 border-red-200';
     }
@@ -201,8 +203,8 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[]; onConfirmed
               >
                 <option value="expense">Spent 🔴</option>
                 <option value="income">Income 🟢</option>
-                <option value="lent">Lent to him 🤝 (100%)</option>
-                <option value="borrowed">Borrowed from him 🤝 (100%)</option>
+                <option value="lent">Lent to {partnerName} 🤝 (100%)</option>
+                <option value="borrowed">Borrowed from {partnerName} 🤝 (100%)</option>
               </select>
 
               {/* Amount Input Box (Centered Text) */}

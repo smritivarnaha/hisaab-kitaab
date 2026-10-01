@@ -125,6 +125,8 @@ export interface UserSettings {
   customAIPrompt?: string;
   botAvatarUrl?: string;
   userAvatarUrl?: string;
+  praveenAvatarUrl?: string;
+  sarthakAvatarUrl?: string;
   aiAccountantName?: string;
   accentColor?: 'emerald' | 'blue' | 'indigo' | 'violet' | 'rose' | 'amber';
   fontSize?: 'sm' | 'base' | 'lg';

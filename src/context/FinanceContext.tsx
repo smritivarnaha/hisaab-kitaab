@@ -614,31 +614,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const praveenCashHeld = praveenIncome - praveenExpense;
     const sarthakCashHeld = sarthakIncome - sarthakExpense;
 
-    // ── BUCKET A: PRAVEEN ➔ SARTHAK (Expense Equalization + Direct Transfers) ─
-    const praveenBase = (praveenIncome - totalExpense) / 2;
-    const praveenFairExpense = totalExpense / 2;
-    const praveenExpenseSurplus = Math.max(0, praveenExpense - praveenFairExpense);
-    const praveenOperatingSettlement = praveenBase - praveenExpenseSurplus;
-    const praveenOwesSarthak = Math.max(0, Math.round(praveenOperatingSettlement - praveenDirectGiven + sarthakDirectGiven));
+    // ── SYMMETRICAL PARTNERSHIP FORMULA (INCOME + EXPENSE + DIRECT LOANS) ──
+    // 1. 50% Income Split:
+    const incomeDuePtoS = (praveenIncome - sarthakIncome) / 2;
+    // 2. 50% Expense Equalization:
+    const expenseDeficitStoP = (praveenExpense - sarthakExpense) / 2;
+    // 3. Operating Balance (Income share minus Expense deficit offset):
+    const operatingNetPtoS = incomeDuePtoS - expenseDeficitStoP;
+    // 4. Direct Partner Transfers (Pure Loans):
+    const netDirectLoanPtoS = sarthakDirectGiven - praveenDirectGiven;
+    // 5. Final Net Payable from Praveen to Sarthak:
+    const finalNetPtoS = Math.round(operatingNetPtoS + netDirectLoanPtoS);
 
-    // ── BUCKET B: SARTHAK ➔ PRAVEEN (50% Income - Sarthak Direct Transfers) ───
-    const sarthakBase = sarthakIncome / 2;
-    const sarthakOwesPraveen = Math.max(0, Math.round(sarthakBase - sarthakDirectGiven + praveenDirectGiven));
+    const praveenOwesSarthak = Math.max(0, finalNetPtoS);
+    const sarthakOwesPraveen = Math.max(0, -finalNetPtoS);
 
-    const praveenOperatingDue = Math.round(praveenOperatingSettlement);
-    const sarthakOperatingDue = Math.round(sarthakBase);
+    const praveenOperatingDue = Math.round(operatingNetPtoS);
+    const sarthakOperatingDue = Math.round(-operatingNetPtoS);
 
     const praveenNetDue = -praveenOwesSarthak;
     const sarthakNetDue = -sarthakOwesPraveen;
 
     let settlementText = 'No transactions recorded yet in Business Mode.';
     if (bTxList.length > 0) {
-      if (praveenOwesSarthak === 0 && sarthakOwesPraveen === 0) {
-        settlementText = '✅ Both partner ledgers are fully settled!';
+      if (finalNetPtoS === 0) {
+        settlementText = '✅ Both partner ledgers are fully balanced!';
+      } else if (finalNetPtoS > 0) {
+        settlementText = `🤝 Praveen owes Sarthak: ₹${praveenOwesSarthak.toLocaleString('en-IN')}`;
       } else {
-        const pText = praveenOwesSarthak > 0 ? `Praveen ➔ Sarthak: ₹${praveenOwesSarthak.toLocaleString('en-IN')}` : 'Praveen ➔ Sarthak: Settled';
-        const sText = sarthakOwesPraveen > 0 ? `Sarthak ➔ Praveen: ₹${sarthakOwesPraveen.toLocaleString('en-IN')}` : 'Sarthak ➔ Praveen: Settled';
-        settlementText = `🤝 ${pText} | ${sText}`;
+        settlementText = `🤝 Sarthak owes Praveen: ₹${sarthakOwesPraveen.toLocaleString('en-IN')}`;
       }
     }
 

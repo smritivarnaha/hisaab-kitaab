@@ -120,7 +120,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'botAvatarUrl' | 'userAvatarUrl') => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'botAvatarUrl' | 'userAvatarUrl' | 'praveenAvatarUrl' | 'sarthakAvatarUrl') => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 1.2 * 1024 * 1024) {
@@ -451,6 +451,90 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                         <span className="text-[8px] font-medium text-gray-500 truncate w-full text-center">{preset.name}</span>
                       </button>
                     ))}
+                  </div>
+                </div>
+              </section>
+
+              {/* Partner Business Avatars (Praveen & Sarthak) */}
+              <section className="bg-white border border-gray-200/80 rounded-xl p-3.5 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-1.5">
+                  <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                    👥 Business Partner Avatars
+                  </span>
+                  <span className="text-[9px] font-semibold text-gray-400">Used on Business Ledgers</span>
+                </div>
+
+                {/* Praveen Avatar */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-emerald-800 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
+                    Praveen's Avatar
+                  </span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full border-2 border-emerald-500 overflow-hidden flex-shrink-0 shadow-2xs bg-emerald-50">
+                      <img 
+                        src={draft.praveenAvatarUrl || '/avatars/praveen.jpg'} 
+                        alt="Praveen" 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <input
+                        type="text"
+                        value={draft.praveenAvatarUrl || ''}
+                        onChange={e => updateDraft({ praveenAvatarUrl: e.target.value })}
+                        placeholder="Image URL or default (/avatars/praveen.jpg)..."
+                        className="w-full bg-slate-50 border border-gray-200 text-[10px] rounded-md py-1 px-2 outline-none focus:border-emerald-600"
+                      />
+                      <label className="flex items-center justify-center gap-1 px-2 py-0.5 rounded-md border border-dashed border-gray-300 text-gray-600 hover:bg-gray-50 cursor-pointer text-[10px] font-semibold transition-all">
+                        <Upload className="w-3 h-3 text-emerald-600" />
+                        <span>Upload Praveen photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={e => handleFileUpload(e, 'praveenAvatarUrl')}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-px bg-gray-100" />
+
+                {/* Sarthak Avatar */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-indigo-800 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-indigo-600 inline-block" />
+                    Sarthak's Avatar
+                  </span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-full border-2 border-indigo-500 overflow-hidden flex-shrink-0 shadow-2xs bg-indigo-50">
+                      <img 
+                        src={draft.sarthakAvatarUrl || '/avatars/sarthak.jpg'} 
+                        alt="Sarthak" 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <input
+                        type="text"
+                        value={draft.sarthakAvatarUrl || ''}
+                        onChange={e => updateDraft({ sarthakAvatarUrl: e.target.value })}
+                        placeholder="Image URL or default (/avatars/sarthak.jpg)..."
+                        className="w-full bg-slate-50 border border-gray-200 text-[10px] rounded-md py-1 px-2 outline-none focus:border-indigo-600"
+                      />
+                      <label className="flex items-center justify-center gap-1 px-2 py-0.5 rounded-md border border-dashed border-gray-300 text-gray-600 hover:bg-gray-50 cursor-pointer text-[10px] font-semibold transition-all">
+                        <Upload className="w-3 h-3 text-indigo-600" />
+                        <span>Upload Sarthak photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={e => handleFileUpload(e, 'sarthakAvatarUrl')}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
               </section>

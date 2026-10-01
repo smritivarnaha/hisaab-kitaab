@@ -22,6 +22,7 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
 
   const creatorName = transaction.enteredBy || 'Praveen';
   const currentUserName = currentUser?.name || 'Praveen';
+  const partnerName = currentUserName.toLowerCase().includes('sarthak') ? 'Praveen' : 'Sarthak';
 
   const isCreator = !transaction.enteredBy ||
     creatorName.toLowerCase().includes(currentUserName.toLowerCase()) ||
@@ -145,7 +146,7 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
                     type === 'lent' ? 'bg-blue-700 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  Lent to him 🤝
+                  Lent to {partnerName} 🤝
                 </button>
                 <button
                   type="button"
@@ -154,7 +155,7 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
                     type === 'borrowed' ? 'bg-purple-700 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
-                  Borrowed from him 🤝
+                  Borrowed from {partnerName} 🤝
                 </button>
               </div>
             ) : (

@@ -439,18 +439,19 @@ export const DashboardOverview: React.FC = () => {
                       className="p-2.5 sm:p-3 rounded-2xl border border-[#E2E8E0] bg-[#FAFCF9] hover:bg-white hover:border-[#0D2E14] transition-all shadow-2xs cursor-pointer group relative"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        {/* Left: Category Icon + Title + Plain Text Date & Method */}
+                        {/* Left: Initiator Avatar (Business Mode) or Category Icon (Personal Mode) */}
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <CategoryIcon category={tx.category} size="sm" />
+                          {accountMode === 'business' ? (
+                            <UserAvatarBadge userName={tx.enteredBy || 'Praveen'} size="md" />
+                          ) : (
+                            <CategoryIcon category={tx.category} size="sm" />
+                          )}
 
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <h4 className="text-xs font-bold text-[#0D2E14] font-outfit leading-tight truncate group-hover:text-emerald-900">
                                 {tx.title || tx.category} {tx.person ? `(${tx.person})` : ''}
                               </h4>
-                              {accountMode === 'business' && (
-                                <UserAvatarBadge userName={tx.enteredBy || 'Praveen'} size="sm" />
-                              )}
                               {partnerTransfer && (
                                 <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 ${partnerTransfer.badgeStyle}`}>
                                   {partnerTransfer.label}

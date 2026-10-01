@@ -7,9 +7,7 @@ import {
   ChevronDown, 
   ChevronUp, 
   Users, 
-  ArrowRight,
   CheckCircle2,
-  Check,
   Calendar
 } from 'lucide-react';
 
@@ -22,12 +20,11 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
   selectedPeriod: propSelectedPeriod,
   onPeriodChange
 }) => {
-  const { transactions, currentUser, addTransaction, dbStatus } = useFinance();
+  const { transactions, currentUser, dbStatus } = useFinance();
   const isAdmin = currentUser?.id === 'praveen' || currentUser?.id === 'sarthak' || (currentUser?.name || '').toLowerCase().includes('praveen') || (currentUser?.name || '').toLowerCase().includes('sarthak');
   const [isIncomeOpen, setIsIncomeOpen] = useState(true);
   const [isExpenseOpen, setIsExpenseOpen] = useState(true);
   const [isDirectOpen, setIsDirectOpen] = useState(true);
-  const [settled, setSettled] = useState(false);
 
   const [internalPeriod, setInternalPeriod] = useState<'this_month' | 'today' | 'last_month' | 'this_year' | 'all'>('this_month');
   const selectedPeriod = propSelectedPeriod !== undefined ? propSelectedPeriod : internalPeriod;
@@ -102,8 +99,12 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
     sarthakIncome,
     sarthakExpense,
     sarthakDirectGiven,
-    praveenOperatingDue,
-    sarthakOperatingDue,
+    fairExpensePerPartner,
+    incomeDuePtoS,
+    expenseDeficitStoP,
+    operatingNetPtoS,
+    netDirectLoanPtoS,
+    finalNetPtoS,
     praveenOwesSarthak,
     sarthakOwesPraveen
   } = React.useMemo(() => {
@@ -137,19 +138,21 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
       }
     });
 
-    // ── BUCKET A: PRAVEEN ➔ SARTHAK (Expense Equalization + Direct Transfers) ─
-    const praveenBase = (praveenIncome - totalExpense) / 2;
-    const praveenFairExpense = totalExpense / 2;
-    const praveenExpenseSurplus = Math.max(0, praveenExpense - praveenFairExpense);
-    const praveenOperatingSettlement = praveenBase - praveenExpenseSurplus;
-    const praveenOwesSarthak = Math.max(0, Math.round(praveenOperatingSettlement - praveenDirectGiven + sarthakDirectGiven));
+    // ── SYMMETRICAL PARTNERSHIP FORMULA (INCOME + EXPENSE + DIRECT LOANS) ──
+    // 1. 50% Income Split:
+    const incomeDuePtoS = (praveenIncome - sarthakIncome) / 2;
+    // 2. 50% Expense Equalization:
+    const fairExpensePerPartner = totalExpense / 2;
+    const expenseDeficitStoP = (praveenExpense - sarthakExpense) / 2;
+    // 3. Net Operating Balance:
+    const operatingNetPtoS = incomeDuePtoS - expenseDeficitStoP;
+    // 4. Direct Partner Transfers (Pure Loans):
+    const netDirectLoanPtoS = sarthakDirectGiven - praveenDirectGiven;
+    // 5. Final Net Balance (Positive = Praveen owes Sarthak, Negative = Sarthak owes Praveen):
+    const finalNetPtoS = Math.round(operatingNetPtoS + netDirectLoanPtoS);
 
-    // ── BUCKET B: SARTHAK ➔ PRAVEEN (50% Income - Sarthak Direct Transfers) ───
-    const sarthakBase = sarthakIncome / 2;
-    const sarthakOwesPraveen = Math.max(0, Math.round(sarthakBase - sarthakDirectGiven + praveenDirectGiven));
-
-    const praveenOperatingDue = Math.round(praveenOperatingSettlement);
-    const sarthakOperatingDue = Math.round(sarthakBase);
+    const praveenOwesSarthak = Math.max(0, finalNetPtoS);
+    const sarthakOwesPraveen = Math.max(0, -finalNetPtoS);
 
     return {
       totalIncome,
@@ -160,8 +163,12 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
       sarthakIncome,
       sarthakExpense,
       sarthakDirectGiven,
-      praveenOperatingDue,
-      sarthakOperatingDue,
+      fairExpensePerPartner,
+      incomeDuePtoS,
+      expenseDeficitStoP,
+      operatingNetPtoS,
+      netDirectLoanPtoS,
+      finalNetPtoS,
       praveenOwesSarthak,
       sarthakOwesPraveen
     };
@@ -195,54 +202,6 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
       return `Year ${currentYear}`;
     }
     return 'All Time';
-  };
-
-  const handleSettlePraveenToSarthak = () => {
-    if (praveenOwesSarthak <= 0) return;
-    const newTx: Transaction = {
-      id: `tx_settle_${Date.now()}`,
-      amount: praveenOwesSarthak,
-      currency: '₹',
-      type: 'income',
-      category: 'Others',
-      title: `Settlement: Praveen paid Sarthak`,
-      date: new Date().toISOString().split('T')[0],
-      relativeDateText: 'Today',
-      timestamp: Date.now(),
-      confidenceScore: 100,
-      paymentMethod: 'UPI',
-      notes: `Settled Praveen ➔ Sarthak business obligation`,
-      isPending: false,
-      mode: 'business',
-      enteredBy: 'Praveen'
-    };
-    addTransaction(newTx);
-    setSettled(true);
-    setTimeout(() => setSettled(false), 4000);
-  };
-
-  const handleSettleSarthakToPraveen = () => {
-    if (sarthakOwesPraveen <= 0) return;
-    const newTx: Transaction = {
-      id: `tx_settle_${Date.now()}`,
-      amount: sarthakOwesPraveen,
-      currency: '₹',
-      type: 'income',
-      category: 'Others',
-      title: `Settlement: Sarthak paid Praveen`,
-      date: new Date().toISOString().split('T')[0],
-      relativeDateText: 'Today',
-      timestamp: Date.now(),
-      confidenceScore: 100,
-      paymentMethod: 'UPI',
-      notes: `Settled Sarthak ➔ Praveen business obligation`,
-      isPending: false,
-      mode: 'business',
-      enteredBy: 'Sarthak'
-    };
-    addTransaction(newTx);
-    setSettled(true);
-    setTimeout(() => setSettled(false), 4000);
   };
 
   return (
@@ -448,7 +407,7 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
                 <div className="flex-1 pr-2 flex items-center justify-between min-w-0">
                   <span className="flex items-center gap-1 font-semibold text-gray-500 truncate text-[11px] sm:text-xs">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block flex-shrink-0" />
-                    Praveen
+                    Praveen Lent
                   </span>
                   {renderAmount(praveenDirectGiven, 'font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs')}
                 </div>
@@ -457,7 +416,7 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
                 <div className="flex-1 pl-2 flex items-center justify-between min-w-0">
                   <span className="flex items-center gap-1 font-semibold text-gray-500 truncate text-[11px] sm:text-xs">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block flex-shrink-0" />
-                    Sarthak
+                    Sarthak Lent
                   </span>
                   {renderAmount(sarthakDirectGiven, 'font-extrabold text-gray-900 ml-1 text-[11px] sm:text-xs')}
                 </div>
@@ -467,129 +426,163 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* 2. Settlement Equalization Action Card with Direction-Specific Buckets */}
-      <div className="bg-[#FFFBEB] rounded-3xl p-4 sm:p-5 border border-amber-200 shadow-xs space-y-3 w-full">
-        <div className="flex items-center justify-between border-b border-amber-100 pb-2">
-          <span className="text-xs font-extrabold text-amber-900">Settlement Equalization</span>
-          <Users className="w-4 h-4 text-amber-800" />
+      {/* 2. Clean Partnership Equalization & Net Standing Card */}
+      <div className="bg-[#FFFBEB] rounded-3xl p-4 sm:p-5 border border-amber-200 shadow-xs space-y-3.5 w-full">
+        <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-amber-900" />
+            <span className="text-xs sm:text-sm font-black text-amber-950">
+              Partnership Equalization & Net Standing
+            </span>
+          </div>
+          <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200">
+            50/50 Split Rule
+          </span>
         </div>
 
-        {settled ? (
-          <div className="p-3 bg-emerald-100 border border-emerald-300 rounded-2xl text-center space-y-1 animate-fadeIn">
-            <CheckCircle2 className="w-6 h-6 text-emerald-700 mx-auto" />
-            <p className="text-xs font-black text-emerald-900">Settlement Recorded to Business Passbook!</p>
+        {/* Big Outcome Banner: Who owes Whom and Net Amount */}
+        <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-amber-200 shadow-2xs space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+              Net Live Settlement
+            </span>
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+              finalNetPtoS > 0
+                ? 'bg-rose-100 text-rose-900 border-rose-200'
+                : finalNetPtoS < 0
+                  ? 'bg-emerald-100 text-emerald-900 border-emerald-200'
+                  : 'bg-green-100 text-green-900 border-green-200'
+            }`}>
+              {finalNetPtoS > 0
+                ? 'Praveen ➔ Sarthak Due'
+                : finalNetPtoS < 0
+                  ? 'Sarthak ➔ Praveen Due'
+                  : 'All Balanced (₹0)'}
+            </span>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* BUCKET A: Praveen ➔ Sarthak */}
-            <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-amber-200 shadow-2xs space-y-2.5 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between border-b border-gray-100 pb-1.5 mb-1.5">
-                  <span className="text-xs font-bold text-gray-800 flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
-                    Praveen ➔ Sarthak
-                  </span>
-                  <span className="text-[10px] font-semibold text-gray-500 uppercase">Expense Equalized</span>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[11px] text-gray-500 font-medium">Due Amount:</span>
-                  {renderAmount(praveenOwesSarthak, 'text-base sm:text-lg font-black text-rose-700')}
-                </div>
-                <div className="text-[10px] text-gray-500 bg-slate-50 rounded-lg p-1.5 mt-1.5 space-y-0.5 border border-gray-100">
-                  <div className="flex justify-between">
-                    <span>Operating Share:</span>
-                    <span className="font-semibold text-gray-700">₹{praveenOperatingDue.toLocaleString('en-IN')}</span>
-                  </div>
-                  {sarthakDirectGiven > 0 && (
-                    <div className="flex justify-between text-rose-600">
-                      <span>Taken from Sarthak:</span>
-                      <span className="font-semibold">+₹{sarthakDirectGiven.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  {praveenDirectGiven > 0 && (
-                    <div className="flex justify-between text-emerald-600">
-                      <span>Praveen ➔ Sarthak Paid:</span>
-                      <span className="font-semibold">-₹{praveenDirectGiven.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
 
-              {praveenOwesSarthak > 0 ? (
-                isAdmin && (
-                  <button
-                    onClick={handleSettlePraveenToSarthak}
-                    className="w-full py-2 bg-[#0D2E14] hover:bg-[#14471f] text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
-                  >
-                    <ArrowRight className="w-3.5 h-3.5" />
-                    <span>Settle Praveen ➔ Sarthak</span>
-                  </button>
-                )
-              ) : (
-                isAdmin ? (
-                  <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-600 py-1">
-                    <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                    <span>Settled</span>
-                  </div>
-                ) : null
-              )}
-            </div>
-
-            {/* BUCKET B: Sarthak ➔ Praveen */}
-            <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-amber-200 shadow-2xs space-y-2.5 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between border-b border-gray-100 pb-1.5 mb-1.5">
-                  <span className="text-xs font-bold text-gray-800 flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                    Sarthak ➔ Praveen
-                  </span>
-                  <span className="text-[10px] font-semibold text-gray-500 uppercase">50% Income Split</span>
-                </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-[11px] text-gray-500 font-medium">Due Amount:</span>
-                  {renderAmount(sarthakOwesPraveen, 'text-base sm:text-lg font-black text-emerald-700')}
-                </div>
-                <div className="text-[10px] text-gray-500 bg-slate-50 rounded-lg p-1.5 mt-1.5 space-y-0.5 border border-gray-100">
-                  <div className="flex justify-between">
-                    <span>50% Sarthak Income:</span>
-                    <span className="font-semibold text-gray-700">₹{sarthakOperatingDue.toLocaleString('en-IN')}</span>
-                  </div>
-                  {praveenDirectGiven > 0 && (
-                    <div className="flex justify-between text-emerald-600">
-                      <span>Taken from Praveen:</span>
-                      <span className="font-semibold">+₹{praveenDirectGiven.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  {sarthakDirectGiven > 0 && (
-                    <div className="flex justify-between text-emerald-600">
-                      <span>Sarthak ➔ Praveen Paid:</span>
-                      <span className="font-semibold">-₹{sarthakDirectGiven.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {sarthakOwesPraveen > 0 ? (
-                isAdmin && (
-                  <button
-                    onClick={handleSettleSarthakToPraveen}
-                    className="w-full py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
-                  >
-                    <ArrowRight className="w-3.5 h-3.5" />
-                    <span>Settle Sarthak ➔ Praveen</span>
-                  </button>
-                )
-              ) : (
-                isAdmin ? (
-                  <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-600 py-1">
-                    <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                    <span>Settled</span>
-                  </div>
-                ) : null
-              )}
+          <div className="flex items-baseline justify-between gap-2">
+            <div>
+              <p className="text-xl sm:text-2xl font-black text-gray-900">
+                {renderAmount(Math.abs(finalNetPtoS), finalNetPtoS !== 0 ? (finalNetPtoS > 0 ? 'text-rose-700' : 'text-emerald-700') : 'text-gray-900')}
+              </p>
+              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+                {finalNetPtoS > 0 ? (
+                  <span><b>Praveen</b> needs to pay <b>Sarthak</b> ₹{Math.abs(finalNetPtoS).toLocaleString('en-IN')} to fully balance profit and personal loans.</span>
+                ) : finalNetPtoS < 0 ? (
+                  <span><b>Sarthak</b> needs to pay <b>Praveen</b> ₹{Math.abs(finalNetPtoS).toLocaleString('en-IN')} to fully balance profit and personal loans.</span>
+                ) : (
+                  <span>Both partner accounts are perfectly balanced down to the rupee.</span>
+                )}
+              </p>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* 3-Step Clear Calculation Breakdown */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          {/* Step 1: 50% Income Split */}
+          <div className="bg-white rounded-2xl p-3 border border-amber-200/80 shadow-2xs space-y-1.5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-gray-100 pb-1 mb-1">
+                <span className="text-[11px] font-bold text-gray-800 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                  1. Income Share
+                </span>
+                <span className="text-[9px] font-semibold text-gray-400">50/50</span>
+              </div>
+              <div className="text-[10px] text-gray-600 space-y-1">
+                <div className="flex justify-between">
+                  <span>Praveen collected:</span>
+                  <span className="font-semibold text-gray-800">₹{praveenIncome.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Sarthak collected:</span>
+                  <span className="font-semibold text-gray-800">₹{sarthakIncome.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+            <div className="pt-1.5 border-t border-gray-100 flex justify-between items-center text-[10px]">
+              <span className="font-bold text-gray-700">Income Due to Sarthak:</span>
+              <span className="font-black text-emerald-700">
+                {incomeDuePtoS >= 0 ? `+₹${incomeDuePtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(incomeDuePtoS).toLocaleString('en-IN')}`}
+              </span>
+            </div>
+          </div>
+
+          {/* Step 2: 50% Expense Equalization */}
+          <div className="bg-white rounded-2xl p-3 border border-amber-200/80 shadow-2xs space-y-1.5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-gray-100 pb-1 mb-1">
+                <span className="text-[11px] font-bold text-gray-800 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+                  2. Expense Equalization
+                </span>
+                <span className="text-[9px] font-semibold text-gray-400">50/50</span>
+              </div>
+              <div className="text-[10px] text-gray-600 space-y-1">
+                <div className="flex justify-between">
+                  <span>Praveen paid:</span>
+                  <span className="font-semibold text-gray-800">₹{praveenExpense.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Sarthak paid:</span>
+                  <span className="font-semibold text-gray-800">₹{sarthakExpense.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-gray-400 text-[9px]">
+                  <span>Fair share each:</span>
+                  <span>₹{Math.round(fairExpensePerPartner).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+            <div className="pt-1.5 border-t border-gray-100 flex justify-between items-center text-[10px]">
+              <span className="font-bold text-gray-700">Sarthak Expense Share:</span>
+              <span className="font-black text-rose-700">
+                {expenseDeficitStoP >= 0 ? `-₹${expenseDeficitStoP.toLocaleString('en-IN')}` : `+₹${Math.abs(expenseDeficitStoP).toLocaleString('en-IN')}`}
+              </span>
+            </div>
+          </div>
+
+          {/* Step 3: Pure Personal Loans */}
+          <div className="bg-white rounded-2xl p-3 border border-amber-200/80 shadow-2xs space-y-1.5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-gray-100 pb-1 mb-1">
+                <span className="text-[11px] font-bold text-gray-800 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
+                  3. Pure Partner Loans
+                </span>
+                <span className="text-[9px] font-semibold text-gray-400">100% Direct</span>
+              </div>
+              <div className="text-[10px] text-gray-600 space-y-1">
+                <div className="flex justify-between">
+                  <span>Taken from Sarthak:</span>
+                  <span className="font-semibold text-gray-800">₹{sarthakDirectGiven.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Given to Sarthak:</span>
+                  <span className="font-semibold text-gray-800">₹{praveenDirectGiven.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+            <div className="pt-1.5 border-t border-gray-100 flex justify-between items-center text-[10px]">
+              <span className="font-bold text-gray-700">Net Personal Loan:</span>
+              <span className="font-black text-purple-700">
+                {netDirectLoanPtoS >= 0 ? `+₹${netDirectLoanPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(netDirectLoanPtoS).toLocaleString('en-IN')}`}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Equation Summary Strip */}
+        <div className="p-2.5 rounded-xl bg-amber-100/70 border border-amber-200/90 text-[10px] text-amber-950 font-medium flex items-center justify-between flex-wrap gap-1">
+          <span className="font-bold">Formula:</span>
+          <span>
+            Income Share ({incomeDuePtoS >= 0 ? `+₹${incomeDuePtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(incomeDuePtoS).toLocaleString('en-IN')}`})
+            {' '}- Expense Offset ({expenseDeficitStoP >= 0 ? `₹${expenseDeficitStoP.toLocaleString('en-IN')}` : `-₹${Math.abs(expenseDeficitStoP).toLocaleString('en-IN')}`})
+            {' '}+ Pure Loans ({netDirectLoanPtoS >= 0 ? `+₹${netDirectLoanPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(netDirectLoanPtoS).toLocaleString('en-IN')}`})
+            {' '}= <b className="font-black">{finalNetPtoS >= 0 ? `Praveen owes Sarthak ₹${finalNetPtoS.toLocaleString('en-IN')}` : `Sarthak owes Praveen ₹${Math.abs(finalNetPtoS).toLocaleString('en-IN')}`}</b>
+          </span>
+        </div>
       </div>
     </div>
   );
