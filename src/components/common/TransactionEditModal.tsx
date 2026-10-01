@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Transaction, Category, PaymentMethod, TransactionType, CATEGORIES_LIST } from '../../types/finance';
 import { useFinance } from '../../context/FinanceContext';
 import { X, Save, Trash2, Calendar, Tag, CreditCard, User, FileText, Check, Lock } from 'lucide-react';
+import { UserAvatarBadge } from './UserAvatarBadge';
 
 interface Props {
   transaction: Transaction;
@@ -80,7 +81,12 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
               ✏️
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-sm">Edit Entry</h3>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-bold text-gray-900 text-sm">Edit Entry</h3>
+                {transaction.mode === 'business' && (
+                  <UserAvatarBadge userName={creatorName} size="xs" />
+                )}
+              </div>
               <p className="text-[10px] text-gray-400 font-medium">Update details or remove entry from ledger</p>
             </div>
           </div>
@@ -98,42 +104,90 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
           {!isCreator && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2.5 text-xs font-bold text-amber-900 shadow-2xs">
               <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <span>🔒 Read-Only: Initiated by <b>{creatorName}</b>. Only <b>{creatorName}</b> can edit or delete this entry.</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span>🔒 Read-Only: Initiated by</span>
+                <span className="inline-flex items-center gap-1">
+                  <UserAvatarBadge userName={creatorName} size="xs" />
+                  <b>{creatorName}</b>
+                </span>
+                <span>. Only <b>{creatorName}</b> can edit or delete this entry.</span>
+              </div>
             </div>
           )}
 
-          {/* Type Selector (Expense, Income, Lent) */}
+          {/* Type Selector (Expense, Income, Lent, Borrowed) */}
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Transaction Type</label>
-            <div className="flex bg-gray-200/70 p-1 rounded-xl gap-1">
-              <button
-                type="button"
-                onClick={() => setType('expense')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  type === 'expense' ? 'bg-[#D93025] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Expense (Debit)
-              </button>
-              <button
-                type="button"
-                onClick={() => setType('income')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  type === 'income' ? 'bg-green-700 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Income (Credit)
-              </button>
-              <button
-                type="button"
-                onClick={() => setType('lent')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                  type === 'lent' ? 'bg-amber-700 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Lent Out
-              </button>
-            </div>
+            {transaction.mode === 'business' ? (
+              <div className="grid grid-cols-2 gap-1.5 bg-gray-200/70 p-1.5 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setType('expense')}
+                  className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    type === 'expense' ? 'bg-[#D93025] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Expense 🔴
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType('income')}
+                  className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    type === 'income' ? 'bg-green-700 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Income 🟢
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType('lent')}
+                  className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    type === 'lent' ? 'bg-blue-700 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Lent to him 🤝
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType('borrowed')}
+                  className={`py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    type === 'borrowed' ? 'bg-purple-700 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Borrowed from him 🤝
+                </button>
+              </div>
+            ) : (
+              <div className="flex bg-gray-200/70 p-1 rounded-xl gap-1">
+                <button
+                  type="button"
+                  onClick={() => setType('expense')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    type === 'expense' ? 'bg-[#D93025] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Expense (Debit)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType('income')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    type === 'income' ? 'bg-green-700 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Income (Credit)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType('lent')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    type === 'lent' ? 'bg-amber-700 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Lent Out
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Description / Title Input */}

@@ -1,50 +1,57 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 
+const DEFAULT_POSTGRES_URL = 'postgresql://neondb_owner:npg_1RA4uDHvqGTO@ep-steep-band-azw2jzqj-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+
 function getDb() {
   const connectionString =
     process.env.POSTGRES_URL ||
     process.env.DATABASE_URL ||
     process.env.NEON_DATABASE_URL ||
-    process.env.POSTGRES_URL_NON_POOLING;
+    process.env.POSTGRES_URL_NON_POOLING ||
+    DEFAULT_POSTGRES_URL;
 
-  if (!connectionString) throw new Error('No database connection string found in environment variables.');
   return neon(connectionString);
 }
 
+let tableInitialized = false;
+
 async function ensureTableExists(sql: ReturnType<typeof neon>) {
-  await sql`
-    CREATE TABLE IF NOT EXISTS transactions (
-      "id" TEXT PRIMARY KEY,
-      "amount" NUMERIC NOT NULL,
-      "currency" TEXT NOT NULL DEFAULT '₹',
-      "type" TEXT NOT NULL,
-      "category" TEXT NOT NULL,
-      "title" TEXT NOT NULL,
-      "merchant" TEXT,
-      "paymentMethod" TEXT NOT NULL DEFAULT 'UPI',
-      "date" TEXT NOT NULL,
-      "relativeDateText" TEXT,
-      "timestamp" BIGINT NOT NULL,
-      "confidenceScore" NUMERIC,
-      "rawInput" TEXT,
-      "shortDisplayTitle" TEXT,
-      "notes" TEXT,
-      "isPending" BOOLEAN NOT NULL DEFAULT FALSE,
-      "person" TEXT,
-      "userId" TEXT NOT NULL DEFAULT 'nandini',
-      "mode" TEXT DEFAULT 'personal',
-      "enteredBy" TEXT
-    )
-  `;
+  if (tableInitialized) return;
   try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS transactions (
+        "id" TEXT PRIMARY KEY,
+        "amount" NUMERIC NOT NULL,
+        "currency" TEXT NOT NULL DEFAULT '₹',
+        "type" TEXT NOT NULL,
+        "category" TEXT NOT NULL,
+        "title" TEXT NOT NULL,
+        "merchant" TEXT,
+        "paymentMethod" TEXT NOT NULL DEFAULT 'UPI',
+        "date" TEXT NOT NULL,
+        "relativeDateText" TEXT,
+        "timestamp" BIGINT NOT NULL,
+        "confidenceScore" NUMERIC,
+        "rawInput" TEXT,
+        "shortDisplayTitle" TEXT,
+        "notes" TEXT,
+        "isPending" BOOLEAN NOT NULL DEFAULT FALSE,
+        "person" TEXT,
+        "userId" TEXT NOT NULL DEFAULT 'nandini',
+        "mode" TEXT DEFAULT 'personal',
+        "enteredBy" TEXT
+      )
+    `;
     await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "isPending" BOOLEAN NOT NULL DEFAULT FALSE`;
     await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "person" TEXT`;
     await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
     await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "mode" TEXT DEFAULT 'personal'`;
     await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "enteredBy" TEXT`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_tx_query ON transactions ("userId", "mode", "timestamp" DESC)`;
+    tableInitialized = true;
   } catch (err) {
-    console.warn("Alter table error:", err);
+    console.warn("Table initialization error:", err);
   }
 }
 
@@ -56,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  let sql: ReturnType<typeof neon>;
+  let sql: any;
   try {
     sql = getDb();
   } catch (err: any) {
@@ -64,13 +71,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    await ensureTableExists(sql);
+    if (!tableInitialized) {
+      await ensureTableExists(sql);
+    }
 
     const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
 
     // ── GET — fetch all transactions for specific user & shared business mode ──────
     if (req.method === 'GET') {
-      const rows = await sql`SELECT * FROM transactions WHERE "userId" = ${userId} OR "mode" = 'business' ORDER BY timestamp DESC`;
+      const rows: any = await sql`SELECT * FROM transactions WHERE "userId" = ${userId} OR "mode" = 'business' ORDER BY timestamp DESC`;
       const parsed = rows.map((row: any) => ({
         ...row,
         amount: Number(row.amount),

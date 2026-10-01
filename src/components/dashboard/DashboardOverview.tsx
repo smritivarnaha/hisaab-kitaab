@@ -9,6 +9,8 @@ import { CategoryIcon } from '../common/CategoryIcon';
 import { PaymentMethodIcon } from '../common/PaymentMethodIcon';
 import { AnalyticsPanel } from './AnalyticsPanel';
 import { TransactionEditModal } from '../common/TransactionEditModal';
+import { UserAvatarBadge } from '../common/UserAvatarBadge';
+import { getPartnerTransferPerspective } from '../../utils/transferPerspective';
 import { formatGlobalDate, sortTransactionsLatestFirst } from '../../utils/dateUtils';
 import { 
   Search, 
@@ -18,7 +20,10 @@ import {
   History,
   User,
   ChevronRight,
-  Loader2
+  Loader2,
+  Calendar,
+  ChevronDown,
+  CheckCircle2
 } from 'lucide-react';
 
 export const DashboardOverview: React.FC = () => {
@@ -30,39 +35,111 @@ export const DashboardOverview: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'passbook' | 'analytics'>('passbook');
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
-  // Compute period range e.g. "01 Aug 26 - 03 Aug 26"
-  const getCurrentPeriodRange = () => {
+  const [selectedPeriod, setSelectedPeriod] = useState<'this_month' | 'today' | 'last_month' | 'this_year' | 'all'>('this_month');
+  const [isCalendarMenuOpen, setIsCalendarMenuOpen] = useState(false);
+
+  // Compute period range label
+  const getPeriodLabel = () => {
     const now = new Date();
-    const year = String(now.getFullYear()).slice(-2);
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = monthNames[now.getMonth()] || 'Aug';
-    const day = String(now.getDate()).padStart(2, '0');
-    return `01 ${month} ${year} - ${day} ${month} ${year}`;
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const yearShort = String(currentYear).slice(-2);
+
+    if (selectedPeriod === 'today') {
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = monthNames[currentMonth];
+      return `Today (${day} ${month} ${yearShort})`;
+    }
+    if (selectedPeriod === 'this_month') {
+      const month = monthNames[currentMonth];
+      const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+      return `01 ${month} ${yearShort} - ${String(lastDay).padStart(2, '0')} ${month} ${yearShort}`;
+    }
+    if (selectedPeriod === 'last_month') {
+      const lm = new Date(currentYear, currentMonth - 1, 1);
+      const lmMonth = monthNames[lm.getMonth()];
+      const lmYearShort = String(lm.getFullYear()).slice(-2);
+      const lmLastDay = new Date(lm.getFullYear(), lm.getMonth() + 1, 0).getDate();
+      return `01 ${lmMonth} ${lmYearShort} - ${String(lmLastDay).padStart(2, '0')} ${lmMonth} ${lmYearShort}`;
+    }
+    if (selectedPeriod === 'this_year') {
+      return `Year ${currentYear}`;
+    }
+    return 'All Time';
   };
 
-  const periodRange = getCurrentPeriodRange();
+  const periodRange = getPeriodLabel();
 
   // Mode Filter: Personal vs Business
   const modeFiltered = transactions.filter(t => !t.isPending && (accountMode === 'business' ? t.mode === 'business' : t.mode !== 'business'));
   const finalizedTransactions = sortTransactionsLatestFirst(modeFiltered);
 
-  const totalExpense = finalizedTransactions
+  // Filter transactions for Net Overview summary based on selected period
+  const periodFilteredTransactions = React.useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed
+    const todayStr = now.toISOString().split('T')[0];
+
+    return finalizedTransactions.filter(t => {
+      if (selectedPeriod === 'all') return true;
+
+      let tDate: Date;
+      if (t.date) {
+        const parts = t.date.split('T')[0].split('-');
+        if (parts.length === 3) {
+          tDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        } else {
+          tDate = new Date(t.timestamp || t.date);
+        }
+      } else if (t.timestamp) {
+        tDate = new Date(t.timestamp);
+      } else {
+        return true;
+      }
+
+      if (isNaN(tDate.getTime())) return true;
+
+      if (selectedPeriod === 'today') {
+        const tDateStr = t.date ? t.date.split('T')[0] : tDate.toISOString().split('T')[0];
+        return tDateStr === todayStr;
+      }
+      if (selectedPeriod === 'this_month') {
+        return tDate.getFullYear() === currentYear && tDate.getMonth() === currentMonth;
+      }
+      if (selectedPeriod === 'last_month') {
+        const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+        const lastMonthIndex = currentMonth === 0 ? 11 : currentMonth - 1;
+        return tDate.getFullYear() === lastMonthYear && tDate.getMonth() === lastMonthIndex;
+      }
+      if (selectedPeriod === 'this_year') {
+        return tDate.getFullYear() === currentYear;
+      }
+      return true;
+    });
+  }, [finalizedTransactions, selectedPeriod]);
+
+  const totalExpense = periodFilteredTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
-  const totalIncome = finalizedTransactions
+  const totalIncome = periodFilteredTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
-  const totalLent = finalizedTransactions
+  const totalLent = periodFilteredTransactions
     .filter(t => t.type === 'lent')
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const currentBalance = totalIncome - totalExpense - totalLent;
 
-  const filteredTransactions = finalizedTransactions.filter(t => {
-    const isDebit = t.type === 'expense' || t.type === 'lent';
-    const isCredit = t.type === 'income';
+  const filteredTransactions = periodFilteredTransactions.filter(t => {
+    const pt = (t.type === 'borrowed' || t.type === 'lent')
+      ? getPartnerTransferPerspective(t, currentUser?.name)
+      : null;
+    const isDebit = t.type === 'expense' || (pt ? pt.type === 'lent' : t.type === 'lent');
+    const isCredit = t.type === 'income' || (pt ? pt.type === 'borrowed' : t.type === 'borrowed');
 
     if (txTypeFilter === 'debit' && !isDebit) return false;
     if (txTypeFilter === 'credit' && !isCredit) return false;
@@ -100,7 +177,7 @@ export const DashboardOverview: React.FC = () => {
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden px-[18px] sm:px-6 py-3 sm:py-4 pb-24 sm:pb-16 no-scrollbar bg-[#F3F5F1] font-outfit space-y-3 sm:space-y-4 w-full max-w-4xl mx-auto">
       {accountMode === 'business' ? (
-        <BusinessPartnerSummaryCard />
+        <BusinessPartnerSummaryCard selectedPeriod={selectedPeriod} onPeriodChange={setSelectedPeriod} />
       ) : (
         /* 1. Personal Top Summary Card with Spreading Bottom-Left Green Gradient & Grid Overlay */
         <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3.5 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] max-w-4xl mx-auto">
@@ -125,7 +202,7 @@ export const DashboardOverview: React.FC = () => {
 
         {/* Content Container */}
         <div className="relative z-10">
-          <div className="flex items-center justify-between gap-3 mb-2.5 sm:mb-3">
+          <div className="flex items-center justify-between gap-2.5 mb-2.5 sm:mb-3">
             <div>
               <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight font-outfit">
                 Net Overview
@@ -134,10 +211,63 @@ export const DashboardOverview: React.FC = () => {
                 Period: {periodRange}
               </span>
             </div>
-            {/* Active Username / Account Pill */}
-            <div className="px-3 py-1 rounded-full bg-[#14471f] border border-[#93E044]/50 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 flex-shrink-0 shadow-xs">
-              <User className="w-3.5 h-3.5 text-white" />
-              <span className="text-white font-bold capitalize">{currentUser?.name || 'Praveen'}</span>
+
+            {/* Right Controls: Period Selector */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* Period Dropdown */}
+              <div className="relative z-50">
+                <button 
+                  onClick={() => setIsCalendarMenuOpen(prev => !prev)}
+                  className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-full bg-[#14471f] hover:bg-[#1a5526] border border-[#93E044]/50 text-emerald-100 text-[11px] sm:text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95 transition-all"
+                >
+                  <Calendar className="w-3 h-3 text-[#93E044]" />
+                  <span>{selectedPeriod === 'this_month' ? 'This Month' : selectedPeriod === 'today' ? 'Today' : selectedPeriod === 'last_month' ? 'Last Month' : selectedPeriod === 'this_year' ? 'This Year' : 'All Time'}</span>
+                  <ChevronDown className="w-2.5 h-2.5 text-emerald-300" />
+                </button>
+
+                {isCalendarMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white text-gray-800 rounded-2xl shadow-2xl border border-gray-200 z-[100] py-1.5 animate-fadeIn">
+                    <div className="px-3 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100 mb-1">
+                      Select Period
+                    </div>
+                    <button
+                      onClick={() => { setSelectedPeriod('this_month'); setIsCalendarMenuOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'this_month' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
+                    >
+                      <span>This Month</span>
+                      {selectedPeriod === 'this_month' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                    </button>
+                    <button
+                      onClick={() => { setSelectedPeriod('today'); setIsCalendarMenuOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'today' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
+                    >
+                      <span>Today</span>
+                      {selectedPeriod === 'today' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                    </button>
+                    <button
+                      onClick={() => { setSelectedPeriod('last_month'); setIsCalendarMenuOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'last_month' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
+                    >
+                      <span>Last Month</span>
+                      {selectedPeriod === 'last_month' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                    </button>
+                    <button
+                      onClick={() => { setSelectedPeriod('this_year'); setIsCalendarMenuOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'this_year' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
+                    >
+                      <span>This Year</span>
+                      {selectedPeriod === 'this_year' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                    </button>
+                    <button
+                      onClick={() => { setSelectedPeriod('all'); setIsCalendarMenuOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 text-xs font-bold flex items-center justify-between hover:bg-emerald-50 ${selectedPeriod === 'all' ? 'text-emerald-800 bg-emerald-50/80 font-black' : 'text-gray-700'}`}
+                    >
+                      <span>All Time</span>
+                      {selectedPeriod === 'all' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -258,7 +388,7 @@ export const DashboardOverview: React.FC = () => {
                       txTypeFilter === 'all' ? 'bg-[#0D2E14] text-white shadow-xs' : 'text-gray-600'
                     }`}
                   >
-                    All ({finalizedTransactions.length})
+                    All ({periodFilteredTransactions.length})
                   </button>
                   <button
                     onClick={() => setTxTypeFilter('debit')}
@@ -298,6 +428,9 @@ export const DashboardOverview: React.FC = () => {
                   const hasSpecialNotes = !!tx.notes && tx.notes !== tx.title;
                   const isExpanded = !!expandedNotes[tx.id];
                   const displayDate = formatDateDisplay(tx.date, tx.relativeDateText);
+                  const partnerTransfer = (tx.type === 'borrowed' || tx.type === 'lent')
+                    ? getPartnerTransferPerspective(tx, currentUser?.name)
+                    : null;
 
                   return (
                     <div 
@@ -316,12 +449,11 @@ export const DashboardOverview: React.FC = () => {
                                 {tx.title || tx.category} {tx.person ? `(${tx.person})` : ''}
                               </h4>
                               {accountMode === 'business' && (
-                                <span className={`text-[9px] font-black px-1.5 py-0.2 rounded-full border flex items-center gap-0.5 ${
-                                  (tx.enteredBy || '').toLowerCase().includes('sarthak')
-                                    ? 'bg-indigo-100 text-indigo-900 border-indigo-200'
-                                    : 'bg-emerald-100 text-emerald-900 border-emerald-200'
-                                }`}>
-                                  {(!tx.enteredBy || (tx.enteredBy || '').toLowerCase().includes((currentUser?.name || 'Praveen').toLowerCase()) || (currentUser?.name || 'Praveen').toLowerCase().includes((tx.enteredBy || '').toLowerCase())) ? '👤' : '🔒'} {tx.enteredBy || 'Praveen'}
+                                <UserAvatarBadge userName={tx.enteredBy || 'Praveen'} size="sm" />
+                              )}
+                              {partnerTransfer && (
+                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 ${partnerTransfer.badgeStyle}`}>
+                                  {partnerTransfer.label}
                                 </span>
                               )}
                               {hasSpecialNotes && (
@@ -351,7 +483,11 @@ export const DashboardOverview: React.FC = () => {
                           <div className="text-right">
                             <span
                               className={`text-xs sm:text-sm font-bold font-outfit block ${
-                                isCredit ? 'text-green-700' : 'text-[#D93025]'
+                                tx.type === 'income' 
+                                  ? 'text-green-700' 
+                                  : partnerTransfer 
+                                    ? partnerTransfer.amountColor 
+                                    : 'text-[#D93025]'
                               }`}
                             >
                               ₹{Number(tx.amount || 0).toLocaleString('en-IN')}
@@ -373,28 +509,56 @@ export const DashboardOverview: React.FC = () => {
                 })}
 
                 {filteredTransactions.length === 0 && (
-                  <div className="p-6 text-center text-xs text-gray-500 font-semibold flex items-center justify-center gap-2">
+                  <div className="p-6 text-center text-xs text-gray-500 font-semibold flex flex-col items-center justify-center gap-2.5">
                     {dbStatus === 'loading' ? (
-                      <>
+                      <div className="flex items-center justify-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin text-[#0D2E14]" />
                         <span>Syncing passbook from cloud...</span>
-                      </>
+                      </div>
                     ) : (
-                      <span>No transactions match your search filter.</span>
+                      <>
+                        <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-800 font-bold text-sm">
+                          📅
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-700">No transactions recorded for {selectedPeriod === 'this_month' ? 'September 2026' : 'this period'} yet.</p>
+                          <p className="text-[11px] text-gray-400 font-normal mt-0.5">A fresh month has started. All historical records are safely stored.</p>
+                        </div>
+                        {finalizedTransactions.length > 0 && selectedPeriod !== 'all' && (
+                          <div className="flex items-center gap-2 pt-1">
+                            {selectedPeriod === 'this_month' && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPeriod('last_month')}
+                                className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-bold text-xs active:scale-95 transition-all cursor-pointer shadow-2xs"
+                              >
+                                ⏪ View August (Last Month)
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPeriod('all')}
+                              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-bold text-xs active:scale-95 transition-all cursor-pointer shadow-2xs"
+                            >
+                              📂 View All Time ({finalizedTransactions.length})
+                            </button>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <AnalyticsPanel transactions={finalizedTransactions} />
+            <AnalyticsPanel transactions={periodFilteredTransactions} />
           )}
         </div>
 
         {/* Right 1-Column - Hidden in Business Mode */}
         {accountMode !== 'business' && (
           <div className="space-y-3 sm:space-y-4">
-            <DebtLentLedger transactions={finalizedTransactions} onSettle={handleSettle} />
+            <DebtLentLedger transactions={periodFilteredTransactions} onSettle={handleSettle} />
           </div>
         )}
       </div>

@@ -1,26 +1,35 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 
+const DEFAULT_POSTGRES_URL = 'postgresql://neondb_owner:npg_1RA4uDHvqGTO@ep-steep-band-azw2jzqj-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+
 function getDb() {
   const connectionString =
     process.env.POSTGRES_URL ||
     process.env.DATABASE_URL ||
-    process.env.NEON_DATABASE_URL;
-  if (!connectionString) throw new Error('No database connection string found.');
+    process.env.NEON_DATABASE_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    DEFAULT_POSTGRES_URL;
+
   return neon(connectionString);
 }
 
+let tableInitialized = false;
+
 async function ensureTable(sql: ReturnType<typeof neon>) {
-  await sql`
-    CREATE TABLE IF NOT EXISTS ai_memory (
-      "id" TEXT PRIMARY KEY,
-      "memoryJson" TEXT NOT NULL,
-      "updatedAt" BIGINT NOT NULL,
-      "userId" TEXT NOT NULL DEFAULT 'nandini'
-    )
-  `;
+  if (tableInitialized) return;
   try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS ai_memory (
+        "id" TEXT PRIMARY KEY,
+        "memoryJson" TEXT NOT NULL,
+        "updatedAt" BIGINT NOT NULL,
+        "userId" TEXT NOT NULL DEFAULT 'nandini'
+      )
+    `;
     await sql`ALTER TABLE ai_memory ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_memory_user ON ai_memory ("userId")`;
+    tableInitialized = true;
   } catch {}
 }
 
@@ -30,16 +39,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  let sql: ReturnType<typeof neon>;
+  let sql: any;
   try { sql = getDb(); } catch (err: any) { return res.status(500).json({ error: err.message }); }
 
   try {
-    await ensureTable(sql);
+    if (!tableInitialized) {
+      await ensureTable(sql);
+    }
 
     const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
 
     if (req.method === 'GET') {
-      const rows = await sql`
+      const rows: any = await sql`
         SELECT * FROM ai_memory WHERE "userId" = ${userId} OR "id" = ${'memory_' + userId} LIMIT 1
       `;
       if (!rows.length) return res.status(200).json(null);

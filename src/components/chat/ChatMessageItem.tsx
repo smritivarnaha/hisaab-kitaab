@@ -9,37 +9,38 @@ interface Props {
 }
 
 // Single Transaction Confirmation Card (Spelling & Details Editor)
-const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
+const InlineTransactionEditor: React.FC<{ item: Transaction; onConfirmed?: () => void }> = ({ item, onConfirmed }) => {
   const { updateTransaction, deleteTransaction, accountMode } = useFinance();
   const [title, setTitle] = useState(item.title === 'Reason Missing' ? '' : item.title);
   const [amount, setAmount] = useState(String(item.amount || ''));
   const [type, setType] = useState<Transaction['type']>(item.type || 'expense');
   const [notes, setNotes] = useState(item.notes || '');
-  const [isConfirmed, setIsConfirmed] = useState(!item.isPending);
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const [isDiscarded, setIsDiscarded] = useState(false);
 
-  if (isDiscarded || isConfirmed || !item.isPending) return null;
+  if (isDiscarded || isConfirmed) return null;
 
   const handleConfirm = () => {
+    setIsConfirmed(true);
     updateTransaction(item.id, {
-      title: title.trim() || (type === 'income' ? 'Income' : type === 'lent' ? 'Lent Money' : 'Expense'),
+      title: title.trim() || (type === 'income' ? 'Income' : type === 'lent' ? 'Lent Money' : type === 'borrowed' ? 'Borrowed Money' : 'Expense'),
       amount: Number(amount) || 0,
       type,
       notes: notes.trim() || undefined,
       isPending: false // Confirmed and added to Passbook!
     });
-    setIsConfirmed(true);
+    onConfirmed?.();
   };
 
   const handleDiscard = () => {
-    deleteTransaction(item.id);
     setIsDiscarded(true);
+    deleteTransaction(item.id);
   };
 
   const getTypeStyle = (t: string) => {
     switch (t) {
       case 'income': return 'bg-green-100 text-green-800 border-green-200';
-      case 'lent': return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'lent': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'borrowed': return 'bg-purple-100 text-purple-800 border-purple-200';
       default: return 'bg-red-100 text-red-800 border-red-200';
     }
@@ -67,8 +68,8 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
             >
               <option value="expense">Spent 🔴</option>
               <option value="income">Income 🟢</option>
-              <option value="lent">Direct Give 🤝 (100%)</option>
-              <option value="borrowed">Direct Take 🤝 (100%)</option>
+              <option value="lent">Lent to him 🤝 (100%)</option>
+              <option value="borrowed">Borrowed from him 🤝 (100%)</option>
             </select>
           </div>
 
@@ -129,7 +130,7 @@ const InlineTransactionEditor: React.FC<{ item: Transaction }> = ({ item }) => {
 };
 
 // Tabular & Card Editable Form for Multiple Entries
-const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ items }) => {
+const MultiInlineTransactionEditor: React.FC<{ items: Transaction[]; onConfirmed?: () => void }> = ({ items, onConfirmed }) => {
   const { confirmPendingItemsBatch, deleteTransaction, accountMode } = useFinance();
   const [drafts, setDrafts] = useState<Transaction[]>(items);
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -143,6 +144,7 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
   };
 
   const handleConfirmAll = () => {
+    setIsConfirmed(true);
     const ready = drafts.map(item => ({
       ...item,
       title: item.title.trim() || 'Expense',
@@ -151,10 +153,11 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
       isPending: false
     }));
     confirmPendingItemsBatch(ready);
-    setIsConfirmed(true);
+    onConfirmed?.();
   };
 
   const handleDiscardAll = () => {
+    setIsConfirmed(true);
     drafts.forEach(d => deleteTransaction(d.id));
     setDrafts([]);
   };
@@ -198,8 +201,8 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
               >
                 <option value="expense">Spent 🔴</option>
                 <option value="income">Income 🟢</option>
-                <option value="lent">Direct Give 🤝 (100%)</option>
-                <option value="borrowed">Direct Take 🤝 (100%)</option>
+                <option value="lent">Lent to him 🤝 (100%)</option>
+                <option value="borrowed">Borrowed from him 🤝 (100%)</option>
               </select>
 
               {/* Amount Input Box (Centered Text) */}
@@ -269,14 +272,15 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[] }> = ({ item
 export const ChatMessageItem: React.FC<Props> = ({ message }) => {
   const { settings, transactions, currentUser, accountMode } = useFinance();
   const [avatarError, setAvatarError] = useState(false);
+  const [isLocallyConfirmed, setIsLocallyConfirmed] = useState(false);
   const isUser = message.sender === 'user';
 
   // Only render pending items attached specifically to THIS message that are still pending in transactions state
   const messagePending = message.pendingReviewItems || [];
-  const pendingItems = messagePending.filter(item => {
+  const pendingItems = isLocallyConfirmed ? [] : messagePending.filter(item => {
     const liveTx = transactions.find(t => t.id === item.id);
-    if (liveTx && liveTx.isPending === false) return false;
-    return item.isPending !== false;
+    if (liveTx) return liveTx.isPending === true;
+    return item.isPending === true;
   });
 
   const formatTime = (ts: any) => {
@@ -367,11 +371,17 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
 
           {/* Inline Confirmation Editor Card */}
           {pendingItems.length === 1 && (
-            <InlineTransactionEditor item={pendingItems[0]} />
+            <InlineTransactionEditor 
+              item={pendingItems[0]} 
+              onConfirmed={() => setIsLocallyConfirmed(true)}
+            />
           )}
 
           {pendingItems.length > 1 && (
-            <MultiInlineTransactionEditor items={pendingItems} />
+            <MultiInlineTransactionEditor 
+              items={pendingItems} 
+              onConfirmed={() => setIsLocallyConfirmed(true)}
+            />
           )}
 
           {/* Green Tick Confirmation Acknowledgment Banner */}

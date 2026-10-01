@@ -254,51 +254,131 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const activeUserId = currentUser?.id || 'nandini';
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [dbStatus, setDbStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  // Instant 0ms cache-first state initialization
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    try {
+      const user = localStorage.getItem('hk_active_user');
+      const uid = user ? JSON.parse(user)?.id : 'nandini';
+      const cached = localStorage.getItem(`hk_cached_tx_${uid}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [dbStatus, setDbStatus] = useState<'loading' | 'ok' | 'error'>(() => {
+    try {
+      const user = localStorage.getItem('hk_active_user');
+      const uid = user ? JSON.parse(user)?.id : 'nandini';
+      const cached = localStorage.getItem(`hk_cached_tx_${uid}`);
+      return cached ? 'ok' : 'loading';
+    } catch {
+      return 'loading';
+    }
+  });
+
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_WELCOME_MESSAGES);
-  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
-  const [aiMemory, setAiMemory] = useState<AIMemoryMap>(() => getAIMemory());
+
+  const [settings, setSettings] = useState<UserSettings>(() => {
+    try {
+      const user = localStorage.getItem('hk_active_user');
+      const uid = user ? JSON.parse(user)?.id : 'nandini';
+      const cached = localStorage.getItem(`hk_cached_settings_${uid}`);
+      return cached ? { ...DEFAULT_SETTINGS, ...JSON.parse(cached) } : DEFAULT_SETTINGS;
+    } catch {
+      return DEFAULT_SETTINGS;
+    }
+  });
+
+  const [aiMemory, setAiMemory] = useState<AIMemoryMap>(() => {
+    try {
+      const user = localStorage.getItem('hk_active_user');
+      const uid = user ? JSON.parse(user)?.id : 'nandini';
+      const cached = localStorage.getItem(`hk_cached_memory_${uid}`);
+      return cached ? { ...getAIMemory(), ...JSON.parse(cached) } : getAIMemory();
+    } catch {
+      return getAIMemory();
+    }
+  });
+
   const [pendingReviewItems, setPendingReviewItems] = useState<Transaction[]>([]);
   const [activeClarification, setActiveClarification] = useState<AIClarificationQuestion | null>(null);
   const [isProcessingAI, setIsProcessingAI] = useState(false);
 
-  // ── Load user bucket from Neon on mount or activeUserId change ──────────────
+  // ── Parallel high-speed background synchronization with smart diffing ───────
   const loadUserBucket = useCallback(async (uid: string) => {
-    setDbStatus('loading');
+    try {
+      const [dbTx, dbSettings, dbMsgs, dbMemory] = await Promise.all([
+        fetchTransactions(uid),
+        fetchSettingsFromDb(uid),
+        fetchMessagesFromDb(uid),
+        fetchMemoryFromDb(uid)
+      ]);
 
-    // 1. Transactions
-    const dbTx = await fetchTransactions(uid);
-    if (dbTx !== null) { setTransactions(dbTx); setDbStatus('ok'); }
-    else setDbStatus('error');
+      // 1. Transactions — update only if new/different to prevent layout thrashing
+      if (dbTx !== null) {
+        setTransactions(prev => {
+          const isIdentical = prev.length === dbTx.length &&
+            prev[0]?.id === dbTx[0]?.id &&
+            prev[0]?.timestamp === dbTx[0]?.timestamp &&
+            prev[prev.length - 1]?.id === dbTx[dbTx.length - 1]?.id;
 
-    // 2. Settings
-    const dbSettings = await fetchSettingsFromDb(uid);
-    setSettings({
-      ...DEFAULT_SETTINGS,
-      ...(dbSettings || {})
-    });
+          if (isIdentical) {
+            return prev;
+          }
 
-    // 3. Chat messages (strictly today's messages only!)
-    const startOfToday = getStartOfTodayTimestamp();
-    const dbMsgs = await fetchMessagesFromDb(uid);
-    const todayMsgs = (dbMsgs || []).filter(m => Number(m.timestamp) >= startOfToday);
-    if (todayMsgs.length > 0) {
-      setChatMessages(todayMsgs);
-    } else {
-      setChatMessages(INITIAL_WELCOME_MESSAGES);
-    }
+          try {
+            localStorage.setItem(`hk_cached_tx_${uid}`, JSON.stringify(dbTx));
+          } catch {}
+          return dbTx;
+        });
+        setDbStatus('ok');
+      } else {
+        setDbStatus(prev => (prev === 'ok' ? 'ok' : 'error'));
+      }
 
-    // 4. AI memory
-    const dbMemory = await fetchMemoryFromDb(uid);
-    if (dbMemory && Object.keys(dbMemory).length > 0) {
-      setAiMemory(prev => ({
-        ...prev,
-        ...dbMemory,
-        merchants: { ...prev.merchants, ...(dbMemory.merchants || {}) },
-        contacts: { ...prev.contacts, ...(dbMemory.contacts || {}) },
-        paymentPreferences: { ...prev.paymentPreferences, ...(dbMemory.paymentPreferences || {}) }
-      }));
+      // 2. Settings
+      if (dbSettings) {
+        const mergedSettings = { ...DEFAULT_SETTINGS, ...dbSettings };
+        setSettings(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(mergedSettings)) return prev;
+          try {
+            localStorage.setItem(`hk_cached_settings_${uid}`, JSON.stringify(mergedSettings));
+          } catch {}
+          return mergedSettings;
+        });
+      }
+
+      // 3. Chat Messages (today only)
+      if (dbMsgs) {
+        const startOfToday = getStartOfTodayTimestamp();
+        const todayMsgs = dbMsgs.filter(m => Number(m.timestamp) >= startOfToday);
+        if (todayMsgs.length > 0) {
+          setChatMessages(todayMsgs);
+        } else {
+          setChatMessages(INITIAL_WELCOME_MESSAGES);
+        }
+      }
+
+      // 4. Memory
+      if (dbMemory && Object.keys(dbMemory).length > 0) {
+        setAiMemory(prev => {
+          const merged = {
+            ...prev,
+            ...dbMemory,
+            merchants: { ...prev.merchants, ...(dbMemory.merchants || {}) },
+            contacts: { ...prev.contacts, ...(dbMemory.contacts || {}) },
+            paymentPreferences: { ...prev.paymentPreferences, ...(dbMemory.paymentPreferences || {}) }
+          };
+          try {
+            localStorage.setItem(`hk_cached_memory_${uid}`, JSON.stringify(merged));
+          } catch {}
+          return merged;
+        });
+      }
+    } catch (err) {
+      console.warn('Background sync error:', err);
+      setDbStatus(prev => (prev === 'ok' ? 'ok' : 'error'));
     }
   }, []);
 
@@ -534,19 +614,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const praveenCashHeld = praveenIncome - praveenExpense;
     const sarthakCashHeld = sarthakIncome - sarthakExpense;
 
-    // ── BUCKET A: PRAVEEN ➔ SARTHAK (Expense Equalization) ────────────────────
+    // ── BUCKET A: PRAVEEN ➔ SARTHAK (Expense Equalization + Direct Transfers) ─
     const praveenBase = (praveenIncome - totalExpense) / 2;
     const praveenFairExpense = totalExpense / 2;
     const praveenExpenseSurplus = Math.max(0, praveenExpense - praveenFairExpense);
     const praveenOperatingSettlement = praveenBase - praveenExpenseSurplus;
-    // Only Praveen ➔ Sarthak direct transfers reduce this:
-    const praveenOwesSarthak = Math.max(0, Math.round(praveenOperatingSettlement - praveenDirectGiven));
+    const praveenOwesSarthak = Math.max(0, Math.round(praveenOperatingSettlement - praveenDirectGiven + sarthakDirectGiven));
 
     // ── BUCKET B: SARTHAK ➔ PRAVEEN (50% Income - Sarthak Direct Transfers) ───
-    // DO NOT subtract expenses. DO NOT calculate expense surplus.
     const sarthakBase = sarthakIncome / 2;
-    // Only Sarthak ➔ Praveen direct transfers reduce this:
-    const sarthakOwesPraveen = Math.max(0, Math.round(sarthakBase - sarthakDirectGiven));
+    const sarthakOwesPraveen = Math.max(0, Math.round(sarthakBase - sarthakDirectGiven + praveenDirectGiven));
 
     const praveenOperatingDue = Math.round(praveenOperatingSettlement);
     const sarthakOperatingDue = Math.round(sarthakBase);
@@ -616,6 +693,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, [transactions, currentUser]);
 
+  const persistLocalTransactions = (list: Transaction[]) => {
+    try {
+      localStorage.setItem(`hk_cached_tx_${activeUserId}`, JSON.stringify(list));
+    } catch {}
+  };
+
   const addTransaction = (tx: Transaction) => {
     const enriched: Transaction = {
       ...tx,
@@ -623,7 +706,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       mode: tx.mode || accountMode,
       enteredBy: tx.enteredBy || currentUser?.name || 'Praveen'
     };
-    setTransactions(prev => [enriched, ...prev]);
+    setTransactions(prev => {
+      const updated = [enriched, ...prev];
+      persistLocalTransactions(updated);
+      return updated;
+    });
     saveTransactionToDb(enriched, activeUserId);
 
     if (tx.merchant) learnMerchantCategory(tx.merchant, tx.category);
@@ -639,7 +726,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       mode: tx.mode || accountMode,
       enteredBy: tx.enteredBy || currentUser?.name || 'Praveen'
     }));
-    setTransactions(prev => [...enrichedList, ...prev]);
+    setTransactions(prev => {
+      const updated = [...enrichedList, ...prev];
+      persistLocalTransactions(updated);
+      return updated;
+    });
     saveTransactionsBatchToDb(enrichedList, activeUserId);
 
     enrichedList.forEach(tx => {
@@ -659,9 +750,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateTransaction = (id: string, updated: Partial<Transaction>) => {
     setTransactions(prev => {
+      let updatedList: Transaction[];
       const exists = prev.some(t => t.id === id);
       if (exists) {
-        return prev.map(t => {
+        updatedList = prev.map(t => {
           if (t.id === id) {
             const originalEnteredBy = t.enteredBy || updated.enteredBy || getEffectiveUserName();
             const full = { 
@@ -697,14 +789,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           isPending: false
         };
         saveTransactionToDb(full, activeUserId);
-        return [full, ...prev];
+        updatedList = [full, ...prev];
       }
+      persistLocalTransactions(updatedList);
+      return updatedList;
     });
+
+    // Also permanently mark confirmed in chat messages state so the verification form auto-removes cleanly
+    setChatMessages(prev =>
+      prev.map(msg => {
+        if (!msg.pendingReviewItems || !msg.pendingReviewItems.some(i => i.id === id)) return msg;
+        const updatedItems = msg.pendingReviewItems.map(i => i.id === id ? { ...i, ...updated, isPending: false } : i);
+        const updatedMsg = { ...msg, pendingReviewItems: updatedItems };
+        saveMessageToDb(updatedMsg, activeUserId);
+        return updatedMsg;
+      })
+    );
   };
 
   const deleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+    setTransactions(prev => {
+      const updated = prev.filter(t => t.id !== id);
+      persistLocalTransactions(updated);
+      return updated;
+    });
     deleteTransactionFromDb(id, activeUserId);
+    setChatMessages(prev =>
+      prev.map(msg => {
+        if (!msg.pendingReviewItems || !msg.pendingReviewItems.some(i => i.id === id)) return msg;
+        const updatedItems = msg.pendingReviewItems.filter(i => i.id !== id);
+        const updatedMsg = { ...msg, pendingReviewItems: updatedItems.length ? updatedItems : undefined };
+        saveMessageToDb(updatedMsg, activeUserId);
+        return updatedMsg;
+      })
+    );
   };
 
   const clearPendingReview = () => setPendingReviewItems([]);
@@ -740,6 +858,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     });
     setPendingReviewItems(prev => prev.filter(p => !clearedList.some(c => c.id === p.id)));
+
+    // Synchronize chat messages so verification tables are removed immediately
+    setChatMessages(prev =>
+      prev.map(msg => {
+        if (!msg.pendingReviewItems) return msg;
+        const clearedIds = new Set(clearedList.map(c => c.id));
+        const updatedItems = msg.pendingReviewItems.map(i => clearedIds.has(i.id) ? { ...i, isPending: false } : i);
+        const updatedMsg = { ...msg, pendingReviewItems: updatedItems };
+        saveMessageToDb(updatedMsg, activeUserId);
+        return updatedMsg;
+      })
+    );
   };
 
   const processUserInputText = async (text: string, isVoice = false, audioBlob?: Blob) => {

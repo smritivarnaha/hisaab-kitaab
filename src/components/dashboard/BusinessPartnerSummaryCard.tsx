@@ -13,7 +13,15 @@ import {
   Calendar
 } from 'lucide-react';
 
-export const BusinessPartnerSummaryCard: React.FC = () => {
+interface Props {
+  selectedPeriod?: 'this_month' | 'today' | 'last_month' | 'this_year' | 'all';
+  onPeriodChange?: (period: 'this_month' | 'today' | 'last_month' | 'this_year' | 'all') => void;
+}
+
+export const BusinessPartnerSummaryCard: React.FC<Props> = ({
+  selectedPeriod: propSelectedPeriod,
+  onPeriodChange
+}) => {
   const { transactions, currentUser, addTransaction, dbStatus } = useFinance();
   const isAdmin = currentUser?.id === 'praveen' || currentUser?.id === 'sarthak' || (currentUser?.name || '').toLowerCase().includes('praveen') || (currentUser?.name || '').toLowerCase().includes('sarthak');
   const [isIncomeOpen, setIsIncomeOpen] = useState(true);
@@ -21,7 +29,16 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
   const [isDirectOpen, setIsDirectOpen] = useState(true);
   const [settled, setSettled] = useState(false);
 
-  const [selectedPeriod, setSelectedPeriod] = useState<'this_month' | 'today' | 'last_month' | 'this_year' | 'all'>('this_month');
+  const [internalPeriod, setInternalPeriod] = useState<'this_month' | 'today' | 'last_month' | 'this_year' | 'all'>('this_month');
+  const selectedPeriod = propSelectedPeriod !== undefined ? propSelectedPeriod : internalPeriod;
+  const setSelectedPeriod = (period: 'this_month' | 'today' | 'last_month' | 'this_year' | 'all') => {
+    if (onPeriodChange) {
+      onPeriodChange(period);
+    } else {
+      setInternalPeriod(period);
+    }
+  };
+
   const [isCalendarMenuOpen, setIsCalendarMenuOpen] = useState(false);
 
   const renderAmount = (amount: number, colorClass: string, prefix = '₹', skeletonWidth = 'w-16') => {
@@ -120,16 +137,16 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
       }
     });
 
-    // ── BUCKET A: PRAVEEN ➔ SARTHAK (Expense Equalization) ────────────────────
+    // ── BUCKET A: PRAVEEN ➔ SARTHAK (Expense Equalization + Direct Transfers) ─
     const praveenBase = (praveenIncome - totalExpense) / 2;
     const praveenFairExpense = totalExpense / 2;
     const praveenExpenseSurplus = Math.max(0, praveenExpense - praveenFairExpense);
     const praveenOperatingSettlement = praveenBase - praveenExpenseSurplus;
-    const praveenOwesSarthak = Math.max(0, Math.round(praveenOperatingSettlement - praveenDirectGiven));
+    const praveenOwesSarthak = Math.max(0, Math.round(praveenOperatingSettlement - praveenDirectGiven + sarthakDirectGiven));
 
     // ── BUCKET B: SARTHAK ➔ PRAVEEN (50% Income - Sarthak Direct Transfers) ───
     const sarthakBase = sarthakIncome / 2;
-    const sarthakOwesPraveen = Math.max(0, Math.round(sarthakBase - sarthakDirectGiven));
+    const sarthakOwesPraveen = Math.max(0, Math.round(sarthakBase - sarthakDirectGiven + praveenDirectGiven));
 
     const praveenOperatingDue = Math.round(praveenOperatingSettlement);
     const sarthakOperatingDue = Math.round(sarthakBase);
@@ -153,25 +170,29 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
   const getPeriodLabel = () => {
     const now = new Date();
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const yearShort = String(currentYear).slice(-2);
 
     if (selectedPeriod === 'today') {
       const day = String(now.getDate()).padStart(2, '0');
-      const month = monthNames[now.getMonth()];
-      return `Today (${day} ${month})`;
+      const month = monthNames[currentMonth];
+      return `Today (${day} ${month} ${yearShort})`;
     }
     if (selectedPeriod === 'this_month') {
-      const month = monthNames[now.getMonth()];
-      const year = String(now.getFullYear()).slice(-2);
-      return `01 ${month} ${year} - 31 ${month} ${year}`;
+      const month = monthNames[currentMonth];
+      const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+      return `01 ${month} ${yearShort} - ${String(lastDay).padStart(2, '0')} ${month} ${yearShort}`;
     }
     if (selectedPeriod === 'last_month') {
-      const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const month = monthNames[lm.getMonth()];
-      const year = String(lm.getFullYear()).slice(-2);
-      return `01 ${month} ${year} - 31 ${month} ${year}`;
+      const lm = new Date(currentYear, currentMonth - 1, 1);
+      const lmMonth = monthNames[lm.getMonth()];
+      const lmYearShort = String(lm.getFullYear()).slice(-2);
+      const lmLastDay = new Date(lm.getFullYear(), lm.getMonth() + 1, 0).getDate();
+      return `01 ${lmMonth} ${lmYearShort} - ${String(lmLastDay).padStart(2, '0')} ${lmMonth} ${lmYearShort}`;
     }
     if (selectedPeriod === 'this_year') {
-      return `Year ${now.getFullYear()}`;
+      return `Year ${currentYear}`;
     }
     return 'All Time';
   };
@@ -479,10 +500,18 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                     <span>Operating Share:</span>
                     <span className="font-semibold text-gray-700">₹{praveenOperatingDue.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Praveen ➔ Sarthak Transfers:</span>
-                    <span className="font-semibold text-gray-700">-₹{praveenDirectGiven.toLocaleString('en-IN')}</span>
-                  </div>
+                  {sarthakDirectGiven > 0 && (
+                    <div className="flex justify-between text-rose-600">
+                      <span>Taken from Sarthak:</span>
+                      <span className="font-semibold">+₹{sarthakDirectGiven.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  {praveenDirectGiven > 0 && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span>Praveen ➔ Sarthak Paid:</span>
+                      <span className="font-semibold">-₹{praveenDirectGiven.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -525,10 +554,18 @@ export const BusinessPartnerSummaryCard: React.FC = () => {
                     <span>50% Sarthak Income:</span>
                     <span className="font-semibold text-gray-700">₹{sarthakOperatingDue.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Sarthak ➔ Praveen Transfers:</span>
-                    <span className="font-semibold text-gray-700">-₹{sarthakDirectGiven.toLocaleString('en-IN')}</span>
-                  </div>
+                  {praveenDirectGiven > 0 && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span>Taken from Praveen:</span>
+                      <span className="font-semibold">+₹{praveenDirectGiven.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  {sarthakDirectGiven > 0 && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span>Sarthak ➔ Praveen Paid:</span>
+                      <span className="font-semibold">-₹{sarthakDirectGiven.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -25,6 +25,13 @@ export const Header: React.FC<Props> = ({
         </h1>
       </div>
 
+      {/* Centered Faded Account Name */}
+      <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none px-2 max-w-[150px] sm:max-w-[240px]">
+        <span className="text-[11px] sm:text-xs font-bold text-gray-400 font-outfit uppercase tracking-wider block truncate">
+          {currentUser?.name || 'Praveen'} {accountMode === 'business' ? '(Business)' : '(Personal)'}
+        </span>
+      </div>
+
       {/* Top Action Controls */}
       <div className="flex items-center gap-1.5">
         {/* Export Data Symbol Button */}

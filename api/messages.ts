@@ -1,34 +1,43 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { neon } from '@neondatabase/serverless';
 
+const DEFAULT_POSTGRES_URL = 'postgresql://neondb_owner:npg_1RA4uDHvqGTO@ep-steep-band-azw2jzqj-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require';
+
 function getDb() {
   const connectionString =
     process.env.POSTGRES_URL ||
     process.env.DATABASE_URL ||
-    process.env.NEON_DATABASE_URL;
-  if (!connectionString) throw new Error('No database connection string found.');
+    process.env.NEON_DATABASE_URL ||
+    process.env.POSTGRES_URL_NON_POOLING ||
+    DEFAULT_POSTGRES_URL;
+
   return neon(connectionString);
 }
 
+let tableInitialized = false;
+
 async function ensureTable(sql: ReturnType<typeof neon>) {
-  await sql`
-    CREATE TABLE IF NOT EXISTS chat_messages (
-      "id" TEXT PRIMARY KEY,
-      "sender" TEXT NOT NULL,
-      "text" TEXT NOT NULL,
-      "timestamp" BIGINT NOT NULL,
-      "isVoice" BOOLEAN DEFAULT FALSE,
-      "audioLevel" NUMERIC,
-      "userId" TEXT NOT NULL DEFAULT 'nandini',
-      "mode" TEXT DEFAULT 'personal',
-      "senderName" TEXT
-    )
-  `;
+  if (tableInitialized) return;
   try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        "id" TEXT PRIMARY KEY,
+        "sender" TEXT NOT NULL,
+        "text" TEXT NOT NULL,
+        "timestamp" BIGINT NOT NULL,
+        "isVoice" BOOLEAN DEFAULT FALSE,
+        "audioLevel" NUMERIC,
+        "userId" TEXT NOT NULL DEFAULT 'nandini',
+        "mode" TEXT DEFAULT 'personal',
+        "senderName" TEXT
+      )
+    `;
     await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
     await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "mode" TEXT DEFAULT 'personal'`;
     await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "senderName" TEXT`;
     await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "pendingReviewItems" JSONB`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_messages_user_time ON chat_messages ("userId", "timestamp" DESC)`;
+    tableInitialized = true;
   } catch {}
 }
 
@@ -38,11 +47,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  let sql: ReturnType<typeof neon>;
+  let sql: any;
   try { sql = getDb(); } catch (err: any) { return res.status(500).json({ error: err.message }); }
 
   try {
-    await ensureTable(sql);
+    if (!tableInitialized) {
+      await ensureTable(sql);
+    }
 
     const userId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
 
@@ -60,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.warn('Error purging old chat messages:', cleanErr);
       }
 
-      const rows = await sql`
+      const rows: any = await sql`
         SELECT * FROM chat_messages 
         WHERE ("userId" = ${userId} OR "mode" = 'business')
           AND "timestamp" >= ${minTimestamp}
