@@ -8,7 +8,8 @@ import {
   ChevronUp, 
   Users, 
   CheckCircle2,
-  Calendar
+  Calendar,
+  History
 } from 'lucide-react';
 
 interface Props {
@@ -45,69 +46,8 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
     return <span className={colorClass}>{prefix}{amount.toLocaleString('en-IN')}</span>;
   };
 
-  // Filter business transactions by selected period
-  const periodFilteredTransactions = React.useMemo(() => {
-    const bTxList = transactions.filter(t => t.mode === 'business' && !t.isPending);
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth(); // 0-indexed
-    const todayStr = now.toISOString().split('T')[0];
-
-    return bTxList.filter(t => {
-      if (selectedPeriod === 'all') return true;
-
-      let tDate: Date;
-      if (t.date) {
-        const parts = t.date.split('T')[0].split('-');
-        if (parts.length === 3) {
-          tDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-        } else {
-          tDate = new Date(t.timestamp || t.date);
-        }
-      } else if (t.timestamp) {
-        tDate = new Date(t.timestamp);
-      } else {
-        return true;
-      }
-
-      if (selectedPeriod === 'today') {
-        const tDateStr = t.date ? t.date.split('T')[0] : tDate.toISOString().split('T')[0];
-        return tDateStr === todayStr;
-      }
-      if (selectedPeriod === 'this_month') {
-        return tDate.getFullYear() === currentYear && tDate.getMonth() === currentMonth;
-      }
-      if (selectedPeriod === 'last_month') {
-        const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-        const lastMonthIndex = currentMonth === 0 ? 11 : currentMonth - 1;
-        return tDate.getFullYear() === lastMonthYear && tDate.getMonth() === lastMonthIndex;
-      }
-      if (selectedPeriod === 'this_year') {
-        return tDate.getFullYear() === currentYear;
-      }
-      return true;
-    });
-  }, [transactions, selectedPeriod]);
-
-  // Compute 50/50 Settlement for the selected period
-  const {
-    totalIncome,
-    totalExpense,
-    praveenIncome,
-    praveenExpense,
-    praveenDirectGiven,
-    sarthakIncome,
-    sarthakExpense,
-    sarthakDirectGiven,
-    fairExpensePerPartner,
-    incomeDuePtoS,
-    expenseDeficitStoP,
-    operatingNetPtoS,
-    netDirectLoanPtoS,
-    finalNetPtoS,
-    praveenOwesSarthak,
-    sarthakOwesPraveen
-  } = React.useMemo(() => {
+  // Helper to compute partner balance components for a transaction slice
+  const calculatePartnerBalance = (txList: Transaction[], currentUserName?: string) => {
     let totalIncome = 0;
     let totalExpense = 0;
     let praveenIncome = 0;
@@ -117,9 +57,9 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
     let praveenDirectGiven = 0;
     let sarthakDirectGiven = 0;
 
-    periodFilteredTransactions.filter(t => !t.title?.startsWith('Settlement:')).forEach(t => {
+    txList.filter(t => !t.title?.startsWith('Settlement:')).forEach(t => {
       const amt = Number(t.amount || 0);
-      const isPraveen = (t.enteredBy || '').toLowerCase().includes('praveen') || (!t.enteredBy && currentUser?.name?.toLowerCase().includes('praveen'));
+      const isPraveen = (t.enteredBy || '').toLowerCase().includes('praveen') || (!t.enteredBy && currentUserName?.toLowerCase().includes('praveen'));
       
       if (t.type === 'income') {
         totalIncome += amt;
@@ -138,7 +78,6 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
       }
     });
 
-    // ── SYMMETRICAL PARTNERSHIP FORMULA (INCOME + EXPENSE + DIRECT LOANS) ──
     // 1. 50% Income Split:
     const incomeDuePtoS = (praveenIncome - sarthakIncome) / 2;
     // 2. 50% Expense Equalization:
@@ -150,9 +89,6 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
     const netDirectLoanPtoS = sarthakDirectGiven - praveenDirectGiven;
     // 5. Final Net Balance (Positive = Praveen owes Sarthak, Negative = Sarthak owes Praveen):
     const finalNetPtoS = Math.round(operatingNetPtoS + netDirectLoanPtoS);
-
-    const praveenOwesSarthak = Math.max(0, finalNetPtoS);
-    const sarthakOwesPraveen = Math.max(0, -finalNetPtoS);
 
     return {
       totalIncome,
@@ -168,11 +104,168 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
       expenseDeficitStoP,
       operatingNetPtoS,
       netDirectLoanPtoS,
-      finalNetPtoS,
-      praveenOwesSarthak,
-      sarthakOwesPraveen
+      finalNetPtoS
     };
+  };
+
+  // Split business transactions into prior carryover vs current period
+  const { priorTransactions, periodFilteredTransactions, priorPeriodLabel } = React.useMemo(() => {
+    const bTxList = transactions.filter(t => t.mode === 'business' && !t.isPending);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed
+    const todayStr = now.toISOString().split('T')[0];
+
+    const getTDateInfo = (t: Transaction): { dateObj: Date; dateStr: string } => {
+      if (t.date) {
+        const parts = t.date.split('T')[0].split('-');
+        if (parts.length === 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10);
+          return {
+            dateObj: new Date(y, m, d),
+            dateStr: `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`
+          };
+        }
+      }
+      const d = new Date(t.timestamp || t.date || Date.now());
+      return { dateObj: d, dateStr: d.toISOString().split('T')[0] };
+    };
+
+    if (selectedPeriod === 'all') {
+      return {
+        priorTransactions: [],
+        periodFilteredTransactions: bTxList,
+        priorPeriodLabel: ''
+      };
+    }
+
+    if (selectedPeriod === 'today') {
+      const prior: Transaction[] = [];
+      const current: Transaction[] = [];
+      bTxList.forEach(t => {
+        const { dateStr } = getTDateInfo(t);
+        if (dateStr === todayStr) {
+          current.push(t);
+        } else if (dateStr < todayStr) {
+          prior.push(t);
+        }
+      });
+      return {
+        priorTransactions: prior,
+        periodFilteredTransactions: current,
+        priorPeriodLabel: 'Carryover Before Today'
+      };
+    }
+
+    if (selectedPeriod === 'this_month') {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const prevMonthName = currentMonth === 0 ? 'Dec' : monthNames[currentMonth - 1];
+      const startOfCurrentMonth = new Date(currentYear, currentMonth, 1);
+      const endOfCurrentMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59, 999);
+
+      const prior: Transaction[] = [];
+      const current: Transaction[] = [];
+      bTxList.forEach(t => {
+        const { dateObj } = getTDateInfo(t);
+        if (dateObj < startOfCurrentMonth) {
+          prior.push(t);
+        } else if (dateObj <= endOfCurrentMonth) {
+          current.push(t);
+        }
+      });
+      return {
+        priorTransactions: prior,
+        periodFilteredTransactions: current,
+        priorPeriodLabel: `Past Months Carryover (up to ${prevMonthName})`
+      };
+    }
+
+    if (selectedPeriod === 'last_month') {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+      const lastMonthIndex = currentMonth === 0 ? 11 : currentMonth - 1;
+      const startOfLastMonth = new Date(lastMonthYear, lastMonthIndex, 1);
+      const endOfLastMonth = new Date(lastMonthYear, lastMonthIndex + 1, 0, 23, 59, 59, 999);
+
+      const prior: Transaction[] = [];
+      const current: Transaction[] = [];
+      bTxList.forEach(t => {
+        const { dateObj } = getTDateInfo(t);
+        if (dateObj < startOfLastMonth) {
+          prior.push(t);
+        } else if (dateObj <= endOfLastMonth) {
+          current.push(t);
+        }
+      });
+      return {
+        priorTransactions: prior,
+        periodFilteredTransactions: current,
+        priorPeriodLabel: `Carryover (before ${monthNames[lastMonthIndex]})`
+      };
+    }
+
+    if (selectedPeriod === 'this_year') {
+      const startOfYear = new Date(currentYear, 0, 1);
+      const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+
+      const prior: Transaction[] = [];
+      const current: Transaction[] = [];
+      bTxList.forEach(t => {
+        const { dateObj } = getTDateInfo(t);
+        if (dateObj < startOfYear) {
+          prior.push(t);
+        } else if (dateObj <= endOfYear) {
+          current.push(t);
+        }
+      });
+      return {
+        priorTransactions: prior,
+        periodFilteredTransactions: current,
+        priorPeriodLabel: `Carryover (before ${currentYear})`
+      };
+    }
+
+    return { priorTransactions: [], periodFilteredTransactions: bTxList, priorPeriodLabel: '' };
+  }, [transactions, selectedPeriod]);
+
+  // Compute balance components for selected period
+  const periodBalance = React.useMemo(() => {
+    return calculatePartnerBalance(periodFilteredTransactions, currentUser?.name);
   }, [periodFilteredTransactions, currentUser]);
+
+  // Compute balance components for prior carryover
+  const priorBalance = React.useMemo(() => {
+    if (selectedPeriod === 'all' || priorTransactions.length === 0) {
+      return { finalNetPtoS: 0 };
+    }
+    return calculatePartnerBalance(priorTransactions, currentUser?.name);
+  }, [priorTransactions, currentUser, selectedPeriod]);
+
+  const {
+    totalIncome,
+    totalExpense,
+    praveenIncome,
+    praveenExpense,
+    praveenDirectGiven,
+    sarthakIncome,
+    sarthakExpense,
+    sarthakDirectGiven,
+    fairExpensePerPartner,
+    incomeDuePtoS,
+    expenseDeficitStoP,
+    operatingNetPtoS,
+    netDirectLoanPtoS,
+    finalNetPtoS: periodNetPtoS
+  } = periodBalance;
+
+  const priorNetPtoS = priorBalance.finalNetPtoS;
+  const totalCumulativeNetPtoS = priorNetPtoS + periodNetPtoS;
+  const finalNetPtoS = totalCumulativeNetPtoS;
+
+  const praveenOwesSarthak = Math.max(0, totalCumulativeNetPtoS);
+  const sarthakOwesPraveen = Math.max(0, -totalCumulativeNetPtoS);
 
   const getPeriodLabel = () => {
     const now = new Date();
@@ -441,21 +534,28 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
         </div>
 
         {/* Big Outcome Banner: Who owes Whom and Net Amount */}
-        <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-amber-200 shadow-2xs space-y-2">
+        <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-amber-200 shadow-2xs space-y-2.5">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-              Net Live Settlement
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                {priorNetPtoS !== 0 ? 'Total Cumulative Settlement Due' : 'Net Live Settlement'}
+              </span>
+              {priorNetPtoS !== 0 && (
+                <span className="text-[10px] font-bold text-amber-800 bg-amber-100/90 border border-amber-200 px-2 py-0.5 rounded-full">
+                  Includes Past Carryover
+                </span>
+              )}
+            </div>
             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-              finalNetPtoS > 0
+              totalCumulativeNetPtoS > 0
                 ? 'bg-rose-100 text-rose-900 border-rose-200'
-                : finalNetPtoS < 0
+                : totalCumulativeNetPtoS < 0
                   ? 'bg-emerald-100 text-emerald-900 border-emerald-200'
                   : 'bg-green-100 text-green-900 border-green-200'
             }`}>
-              {finalNetPtoS > 0
+              {totalCumulativeNetPtoS > 0
                 ? 'Praveen ➔ Sarthak Due'
-                : finalNetPtoS < 0
+                : totalCumulativeNetPtoS < 0
                   ? 'Sarthak ➔ Praveen Due'
                   : 'All Balanced (₹0)'}
             </span>
@@ -464,19 +564,77 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
           <div className="flex items-baseline justify-between gap-2">
             <div>
               <p className="text-xl sm:text-2xl font-black text-gray-900">
-                {renderAmount(Math.abs(finalNetPtoS), finalNetPtoS !== 0 ? (finalNetPtoS > 0 ? 'text-rose-700' : 'text-emerald-700') : 'text-gray-900')}
+                {renderAmount(
+                  Math.abs(totalCumulativeNetPtoS), 
+                  totalCumulativeNetPtoS !== 0 ? (totalCumulativeNetPtoS > 0 ? 'text-rose-700' : 'text-emerald-700') : 'text-gray-900'
+                )}
               </p>
               <p className="text-[11px] text-gray-500 font-medium mt-0.5">
-                {finalNetPtoS > 0 ? (
-                  <span><b>Praveen</b> needs to pay <b>Sarthak</b> ₹{Math.abs(finalNetPtoS).toLocaleString('en-IN')} to fully balance profit and personal loans.</span>
-                ) : finalNetPtoS < 0 ? (
-                  <span><b>Sarthak</b> needs to pay <b>Praveen</b> ₹{Math.abs(finalNetPtoS).toLocaleString('en-IN')} to fully balance profit and personal loans.</span>
+                {totalCumulativeNetPtoS > 0 ? (
+                  <span><b>Praveen</b> needs to pay <b>Sarthak</b> ₹{Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')} overall to be 100% square.</span>
+                ) : totalCumulativeNetPtoS < 0 ? (
+                  <span><b>Sarthak</b> needs to pay <b>Praveen</b> ₹{Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')} overall to be 100% square.</span>
                 ) : (
                   <span>Both partner accounts are perfectly balanced down to the rupee.</span>
                 )}
               </p>
             </div>
           </div>
+
+          {/* Past Carryover vs Current Period Ledger Strip */}
+          {priorNetPtoS !== 0 && (
+            <div className="pt-2.5 border-t border-amber-100">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                {/* 1. Past Carryover */}
+                <div className="bg-amber-50/80 rounded-xl p-2.5 border border-amber-200 flex items-center justify-between">
+                  <div className="min-w-0 pr-1.5">
+                    <span className="text-[10px] font-bold text-amber-900 block truncate flex items-center gap-1">
+                      <History className="w-3 h-3 text-amber-700 inline flex-shrink-0" />
+                      {priorPeriodLabel}
+                    </span>
+                    <span className="text-[9px] text-amber-700/80 truncate block">
+                      {priorNetPtoS > 0 ? 'Praveen owed Sarthak' : 'Sarthak owed Praveen'}
+                    </span>
+                  </div>
+                  <span className="font-extrabold text-amber-950 text-xs sm:text-sm flex-shrink-0">
+                    ₹{Math.abs(priorNetPtoS).toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                {/* 2. Current Period Activity */}
+                <div className="bg-blue-50/80 rounded-xl p-2.5 border border-blue-200 flex items-center justify-between">
+                  <div className="min-w-0 pr-1.5">
+                    <span className="text-[10px] font-bold text-blue-900 block truncate">
+                      {selectedPeriod === 'this_month' ? 'This Month Net' : 'Period Net'}
+                    </span>
+                    <span className="text-[9px] text-blue-700/80 truncate block">
+                      {periodNetPtoS > 0 ? 'Praveen owes Sarthak' : periodNetPtoS < 0 ? 'Sarthak owes Praveen' : 'No net change'}
+                    </span>
+                  </div>
+                  <span className={`font-extrabold text-xs sm:text-sm flex-shrink-0 ${
+                    periodNetPtoS > 0 ? 'text-rose-700' : periodNetPtoS < 0 ? 'text-emerald-700' : 'text-gray-600'
+                  }`}>
+                    {periodNetPtoS === 0 ? '₹0' : (periodNetPtoS > 0 ? `+₹${periodNetPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(periodNetPtoS).toLocaleString('en-IN')}`)}
+                  </span>
+                </div>
+
+                {/* 3. Total Outstanding */}
+                <div className="bg-purple-50/80 rounded-xl p-2.5 border border-purple-200 flex items-center justify-between">
+                  <div className="min-w-0 pr-1.5">
+                    <span className="text-[10px] font-bold text-purple-900 block truncate">
+                      Total Outstanding
+                    </span>
+                    <span className="text-[9px] text-purple-700/80 truncate block">
+                      Past Due + Current Net
+                    </span>
+                  </div>
+                  <span className="font-black text-purple-950 text-xs sm:text-sm flex-shrink-0">
+                    ₹{Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 3-Step Clear Calculation Breakdown */}
@@ -575,12 +733,22 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
 
         {/* Live Equation Summary Strip */}
         <div className="p-2.5 rounded-xl bg-amber-100/70 border border-amber-200/90 text-[10px] text-amber-950 font-medium flex items-center justify-between flex-wrap gap-1">
-          <span className="font-bold">Formula:</span>
+          <span className="font-bold">Summary Equation:</span>
           <span>
-            Income Share ({incomeDuePtoS >= 0 ? `+₹${incomeDuePtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(incomeDuePtoS).toLocaleString('en-IN')}`})
-            {' '}- Expense Offset ({expenseDeficitStoP >= 0 ? `₹${expenseDeficitStoP.toLocaleString('en-IN')}` : `-₹${Math.abs(expenseDeficitStoP).toLocaleString('en-IN')}`})
-            {' '}+ Pure Loans ({netDirectLoanPtoS >= 0 ? `+₹${netDirectLoanPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(netDirectLoanPtoS).toLocaleString('en-IN')}`})
-            {' '}= <b className="font-black">{finalNetPtoS >= 0 ? `Praveen owes Sarthak ₹${finalNetPtoS.toLocaleString('en-IN')}` : `Sarthak owes Praveen ₹${Math.abs(finalNetPtoS).toLocaleString('en-IN')}`}</b>
+            {priorNetPtoS !== 0 ? (
+              <>
+                Past Carryover ({priorNetPtoS > 0 ? `+₹${priorNetPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(priorNetPtoS).toLocaleString('en-IN')}`})
+                {' '}+ Period Net ({periodNetPtoS >= 0 ? `+₹${periodNetPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(periodNetPtoS).toLocaleString('en-IN')}`})
+                {' '}= <b className="font-black">{totalCumulativeNetPtoS >= 0 ? `Praveen owes Sarthak ₹${totalCumulativeNetPtoS.toLocaleString('en-IN')}` : `Sarthak owes Praveen ₹${Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')}`}</b>
+              </>
+            ) : (
+              <>
+                Income Share ({incomeDuePtoS >= 0 ? `+₹${incomeDuePtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(incomeDuePtoS).toLocaleString('en-IN')}`})
+                {' '}- Expense Offset ({expenseDeficitStoP >= 0 ? `₹${expenseDeficitStoP.toLocaleString('en-IN')}` : `-₹${Math.abs(expenseDeficitStoP).toLocaleString('en-IN')}`})
+                {' '}+ Pure Loans ({netDirectLoanPtoS >= 0 ? `+₹${netDirectLoanPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(netDirectLoanPtoS).toLocaleString('en-IN')}`})
+                {' '}= <b className="font-black">{periodNetPtoS >= 0 ? `Praveen owes Sarthak ₹${periodNetPtoS.toLocaleString('en-IN')}` : `Sarthak owes Praveen ₹${Math.abs(periodNetPtoS).toLocaleString('en-IN')}`}</b>
+              </>
+            )}
           </span>
         </div>
       </div>
