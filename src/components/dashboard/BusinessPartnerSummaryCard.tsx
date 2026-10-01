@@ -653,9 +653,12 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
         </div>
 
         {/* Live Equation Summary Strip */}
-        <div className="py-1.5 px-2.5 rounded-lg bg-gray-100 border border-gray-200/90 text-[9px] sm:text-[10px] text-black font-medium flex items-center justify-between flex-wrap gap-1 leading-tight">
-          <span className="font-bold text-black">Summary Equation:</span>
-          <span className="text-black">
+        <div className="py-1.5 px-3 rounded-lg bg-[#EBFBD0] border border-[#86DF1E] text-[9.5px] sm:text-[10px] text-[#0D2E14] font-medium flex items-center justify-between flex-wrap gap-1 leading-tight shadow-[0_0_10px_rgba(147,224,68,0.22)]">
+          <span className="font-extrabold text-[#09220E] uppercase tracking-wider flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#65BA09] animate-pulse" />
+            Summary Equation:
+          </span>
+          <span className="text-[#0D2E14]">
             {priorNetPtoS !== 0 ? (
               <>
                 Past Carryover ({priorNetPtoS > 0 ? `+₹${priorNetPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(priorNetPtoS).toLocaleString('en-IN')}`})
