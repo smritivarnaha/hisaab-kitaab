@@ -519,16 +519,9 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
         {/* Big Outcome Banner: Who owes Whom and Net Amount */}
         <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-amber-200 shadow-2xs space-y-2.5">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                {priorNetPtoS !== 0 ? 'Total Cumulative Settlement Due' : 'Net Live Settlement'}
-              </span>
-              {priorNetPtoS !== 0 && (
-                <span className="text-[10px] font-bold text-amber-800 bg-amber-100/90 border border-amber-200 px-2 py-0.5 rounded-full">
-                  Includes Past Carryover
-                </span>
-              )}
-            </div>
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+              Net Live Settlement
+            </span>
             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
               totalCumulativeNetPtoS > 0
                 ? 'bg-rose-100 text-rose-900 border-rose-200'
@@ -554,70 +547,15 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
               </p>
               <p className="text-[11px] text-gray-500 font-medium mt-0.5">
                 {totalCumulativeNetPtoS > 0 ? (
-                  <span><b>Praveen</b> needs to pay <b>Sarthak</b> ₹{Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')} overall to be 100% square.</span>
+                  <span><b>Praveen</b> needs to pay <b>Sarthak</b> ₹{Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')} to fully balance profit and personal loans.</span>
                 ) : totalCumulativeNetPtoS < 0 ? (
-                  <span><b>Sarthak</b> needs to pay <b>Praveen</b> ₹{Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')} overall to be 100% square.</span>
+                  <span><b>Sarthak</b> needs to pay <b>Praveen</b> ₹{Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')} to fully balance profit and personal loans.</span>
                 ) : (
                   <span>Both partner accounts are perfectly balanced down to the rupee.</span>
                 )}
               </p>
             </div>
           </div>
-
-          {/* Past Carryover vs Current Period Ledger Strip */}
-          {priorNetPtoS !== 0 && (
-            <div className="pt-2.5 border-t border-amber-100">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                {/* 1. Past Carryover */}
-                <div className="bg-amber-50/80 rounded-xl p-2.5 border border-amber-200 flex items-center justify-between">
-                  <div className="min-w-0 pr-1.5">
-                    <span className="text-[10px] font-bold text-amber-900 block truncate flex items-center gap-1">
-                      <History className="w-3 h-3 text-amber-700 inline flex-shrink-0" />
-                      {priorPeriodLabel}
-                    </span>
-                    <span className="text-[9px] text-amber-700/80 truncate block">
-                      {priorNetPtoS > 0 ? 'Praveen owed Sarthak' : 'Sarthak owed Praveen'}
-                    </span>
-                  </div>
-                  <span className="font-extrabold text-amber-950 text-xs sm:text-sm flex-shrink-0">
-                    ₹{Math.abs(priorNetPtoS).toLocaleString('en-IN')}
-                  </span>
-                </div>
-
-                {/* 2. Current Period Activity */}
-                <div className="bg-blue-50/80 rounded-xl p-2.5 border border-blue-200 flex items-center justify-between">
-                  <div className="min-w-0 pr-1.5">
-                    <span className="text-[10px] font-bold text-blue-900 block truncate">
-                      {selectedPeriod === 'this_month' ? 'This Month Net' : 'Period Net'}
-                    </span>
-                    <span className="text-[9px] text-blue-700/80 truncate block">
-                      {periodNetPtoS > 0 ? 'Praveen owes Sarthak' : periodNetPtoS < 0 ? 'Sarthak owes Praveen' : 'No net change'}
-                    </span>
-                  </div>
-                  <span className={`font-extrabold text-xs sm:text-sm flex-shrink-0 ${
-                    periodNetPtoS > 0 ? 'text-rose-700' : periodNetPtoS < 0 ? 'text-emerald-700' : 'text-gray-600'
-                  }`}>
-                    {periodNetPtoS === 0 ? '₹0' : (periodNetPtoS > 0 ? `+₹${periodNetPtoS.toLocaleString('en-IN')}` : `-₹${Math.abs(periodNetPtoS).toLocaleString('en-IN')}`)}
-                  </span>
-                </div>
-
-                {/* 3. Total Outstanding */}
-                <div className="bg-purple-50/80 rounded-xl p-2.5 border border-purple-200 flex items-center justify-between">
-                  <div className="min-w-0 pr-1.5">
-                    <span className="text-[10px] font-bold text-purple-900 block truncate">
-                      Total Outstanding
-                    </span>
-                    <span className="text-[9px] text-purple-700/80 truncate block">
-                      Past Due + Current Net
-                    </span>
-                  </div>
-                  <span className="font-black text-purple-950 text-xs sm:text-sm flex-shrink-0">
-                    ₹{Math.abs(totalCumulativeNetPtoS).toLocaleString('en-IN')}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 3-Step Clear Calculation Breakdown */}
