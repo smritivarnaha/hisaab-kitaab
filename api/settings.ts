@@ -28,7 +28,6 @@ async function ensureTable(sql: ReturnType<typeof neon>) {
         "userId" TEXT NOT NULL DEFAULT 'nandini'
       )
     `;
-    await sql`ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
     await sql`CREATE INDEX IF NOT EXISTS idx_settings_user ON user_settings ("userId")`;
     tableInitialized = true;
   } catch {}

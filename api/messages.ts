@@ -30,14 +30,14 @@ async function ensureTable(sql: ReturnType<typeof neon>) {
         "audioLevel" NUMERIC,
         "userId" TEXT NOT NULL DEFAULT 'nandini',
         "mode" TEXT DEFAULT 'personal',
-        "senderName" TEXT
+        "senderName" TEXT,
+        "pendingReviewItems" JSONB
       )
     `;
-    await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
-    await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "mode" TEXT DEFAULT 'personal'`;
-    await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "senderName" TEXT`;
-    await sql`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS "pendingReviewItems" JSONB`;
     await sql`CREATE INDEX IF NOT EXISTS idx_messages_user_time ON chat_messages ("userId", "timestamp" DESC)`;
+    // Purge messages older than 36 hours once on cold start
+    const cutoff = Date.now() - 36 * 60 * 60 * 1000;
+    await sql`DELETE FROM chat_messages WHERE "timestamp" < ${cutoff}`;
     tableInitialized = true;
   } catch {}
 }
@@ -66,13 +66,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
       const minTimestamp = !isNaN(sinceParam) && sinceParam > 0 ? sinceParam : startOfToday.getTime();
-
-      // Automatically purge previous days' chat messages to save storage and keep chat super fast
-      try {
-        await sql`DELETE FROM chat_messages WHERE "timestamp" < ${minTimestamp}`;
-      } catch (cleanErr) {
-        console.warn('Error purging old chat messages:', cleanErr);
-      }
 
       const rows: any = isPartner
         ? await sql`

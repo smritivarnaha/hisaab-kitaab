@@ -96,7 +96,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   theme: 'system',
   voiceLanguage: 'en-IN',
   autoTTS: false,
-  apiKey: 'AQ.Ab8RN6Ie0wYTm7AqZrmWDg0LJfeu3IP-k9IKFAC8PPlgl7Yv5A-',
+  apiKey: '',
   openaiApiKey: DEFAULT_OPENAI_KEY,
   aiProvider: 'openai',
   customAIPrompt: '',
@@ -114,15 +114,6 @@ const DEFAULT_SETTINGS: UserSettings = {
   notificationSoundEnabled: true,
   biometricPasskeyEnabled: false,
 };
-
-const INITIAL_WELCOME_MESSAGES: ChatMessage[] = [
-  {
-    id: 'msg_welcome',
-    sender: 'assistant',
-    text: 'Namaste! 🙏 I am your **Funds Logger AI Accountant**.\n\nYou don\'t need to fill complex forms — just talk or type naturally in English, Hindi, or Hinglish!\n\nExamples:\n• *"I spent 2200 for petrol refill today"* \n• *"Rahul returned my 500"*\n• *"Kal grocery mein 1800 kharch hue"*',
-    timestamp: Date.now() - 1000
-  }
-];
 
 // ─── Neon DB API helpers (scoped by userId) ─────────────────────────────────
 const fetchTransactions = async (userId: string): Promise<Transaction[] | null> => {
@@ -278,7 +269,158 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   });
 
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_WELCOME_MESSAGES);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const user = localStorage.getItem('hk_active_user');
+      const uid = user ? JSON.parse(user)?.id : 'nandini';
+      const cached = localStorage.getItem(`hk_cached_msgs_${uid}`);
+      if (!cached) return [];
+      const parsed: ChatMessage[] = JSON.parse(cached);
+      const startOfToday = getStartOfTodayTimestamp();
+      return parsed.filter(
+        m => Number(m.timestamp) >= startOfToday && m.id !== 'msg_welcome' && m.id !== 'welcome_business_msg'
+      );
+    } catch {
+      return [];
+    }
+  });
+
+  // Track recent local mutations so background polls NEVER revert optimistic updates ("goes away and comes with jerk")
+  const inFlightMutationsRef = React.useRef<number>(0);
+  const lastMutationTsRef = React.useRef<number>(0);
+  const localTxOverridesRef = React.useRef<Map<string, { tx: Transaction; updatedAt: number }>>(new Map());
+  const deletedTxIdsRef = React.useRef<Map<string, number>>(new Map());
+  const localMsgOverridesRef = React.useRef<Map<string, { msg: ChatMessage; updatedAt: number }>>(new Map());
+
+  const persistLocalChatMessages = useCallback((list: ChatMessage[], uid: string) => {
+    try {
+      localStorage.setItem(`hk_cached_msgs_${uid}`, JSON.stringify(list));
+    } catch {}
+  }, []);
+
+  const mergeDbTransactions = useCallback((prev: Transaction[], dbTx: Transaction[], uid: string): Transaction[] => {
+    const now = Date.now();
+    const OVERRIDE_TTL = 20000; // Protect local changes for 20 seconds against stale DB reads
+
+    // Clean expired overrides
+    localTxOverridesRef.current.forEach((v, k) => {
+      if (now - v.updatedAt > OVERRIDE_TTL) localTxOverridesRef.current.delete(k);
+    });
+    deletedTxIdsRef.current.forEach((ts, k) => {
+      if (now - ts > OVERRIDE_TTL) deletedTxIdsRef.current.delete(k);
+    });
+
+    // Apply local overrides to DB rows and filter out recently deleted IDs
+    const processedDb = dbTx
+      .filter(t => !deletedTxIdsRef.current.has(t.id))
+      .map(t => {
+        const override = localTxOverridesRef.current.get(t.id);
+        return override ? override.tx : t;
+      });
+
+    const dbIds = new Set(processedDb.map(t => t.id));
+
+    // Include any local override items or unsynced pending items not yet in DB response
+    const missingLocal: Transaction[] = [];
+    localTxOverridesRef.current.forEach(({ tx }) => {
+      if (!dbIds.has(tx.id) && !deletedTxIdsRef.current.has(tx.id)) {
+        missingLocal.push(tx);
+        dbIds.add(tx.id);
+      }
+    });
+
+    prev.forEach(t => {
+      if (!dbIds.has(t.id) && !deletedTxIdsRef.current.has(t.id) && t.isPending) {
+        missingLocal.push(t);
+        dbIds.add(t.id);
+      }
+    });
+
+    const merged = [...missingLocal, ...processedDb];
+
+    // Deep check if anything actually changed to prevent unnecessary re-renders / scroll jumps
+    const isSame =
+      prev.length === merged.length &&
+      prev.every((p, i) => {
+        const m = merged[i];
+        return (
+          p.id === m?.id &&
+          p.amount === m?.amount &&
+          p.title === m?.title &&
+          Boolean(p.isPending) === Boolean(m?.isPending) &&
+          p.type === m?.type &&
+          p.category === m?.category
+        );
+      });
+
+    if (isSame) return prev;
+
+    try {
+      localStorage.setItem(`hk_cached_tx_${uid}`, JSON.stringify(merged));
+    } catch {}
+    return merged;
+  }, []);
+
+  const mergeDbMessages = useCallback((prev: ChatMessage[], dbMsgs: ChatMessage[], uid: string): ChatMessage[] => {
+    const now = Date.now();
+    const startOfToday = getStartOfTodayTimestamp();
+    const OVERRIDE_TTL = 20000;
+
+    localMsgOverridesRef.current.forEach((v, k) => {
+      if (now - v.updatedAt > OVERRIDE_TTL) localMsgOverridesRef.current.delete(k);
+    });
+
+    const todayDbMsgs = dbMsgs.filter(
+      m => Number(m.timestamp) >= startOfToday && m.id !== 'msg_welcome' && m.id !== 'welcome_business_msg'
+    );
+
+    const prevMap = new Map(prev.map(m => [m.id, m]));
+    const merged = todayDbMsgs.map(dbMsg => {
+      const override = localMsgOverridesRef.current.get(dbMsg.id);
+      if (override) return override.msg;
+      const existing = prevMap.get(dbMsg.id);
+      return {
+        ...dbMsg,
+        pendingReviewItems: existing?.pendingReviewItems ?? (dbMsg as any).pendingReviewItems,
+        actionSummary: existing?.actionSummary ?? (dbMsg as any).actionSummary,
+        clarification: existing?.clarification ?? (dbMsg as any).clarification
+      };
+    });
+
+    const dbMsgIds = new Set(merged.map(m => m.id));
+
+    // Preserve local messages created or updated recently that haven't appeared in DB poll yet
+    const localUnsynced: ChatMessage[] = [];
+    prev.forEach(m => {
+      if (
+        !dbMsgIds.has(m.id) &&
+        m.id !== 'msg_welcome' &&
+        m.id !== 'welcome_business_msg' &&
+        Number(m.timestamp) >= startOfToday
+      ) {
+        localUnsynced.push(m);
+        dbMsgIds.add(m.id);
+      }
+    });
+
+    const fullList = [...merged, ...localUnsynced].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+
+    const isSame =
+      prev.length === fullList.length &&
+      prev.every((p, i) => {
+        const f = fullList[i];
+        return (
+          p.id === f?.id &&
+          p.text === f?.text &&
+          JSON.stringify(p.pendingReviewItems || []) === JSON.stringify(f?.pendingReviewItems || [])
+        );
+      });
+
+    if (isSame) return prev;
+
+    persistLocalChatMessages(fullList, uid);
+    return fullList;
+  }, [persistLocalChatMessages]);
 
   const [settings, setSettings] = useState<UserSettings>(() => {
     try {
@@ -316,23 +458,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         fetchMemoryFromDb(uid)
       ]);
 
-      // 1. Transactions — update only if new/different to prevent layout thrashing
+      // 1. Transactions — merge safely with local overrides
       if (dbTx !== null) {
-        setTransactions(prev => {
-          const isIdentical = prev.length === dbTx.length &&
-            prev[0]?.id === dbTx[0]?.id &&
-            prev[0]?.timestamp === dbTx[0]?.timestamp &&
-            prev[prev.length - 1]?.id === dbTx[dbTx.length - 1]?.id;
-
-          if (isIdentical) {
-            return prev;
-          }
-
-          try {
-            localStorage.setItem(`hk_cached_tx_${uid}`, JSON.stringify(dbTx));
-          } catch {}
-          return dbTx;
-        });
+        setTransactions(prev => mergeDbTransactions(prev, dbTx, uid));
         setDbStatus('ok');
       } else {
         setDbStatus(prev => (prev === 'ok' ? 'ok' : 'error'));
@@ -350,15 +478,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
       }
 
-      // 3. Chat Messages (today only)
-      if (dbMsgs) {
-        const startOfToday = getStartOfTodayTimestamp();
-        const todayMsgs = dbMsgs.filter(m => Number(m.timestamp) >= startOfToday);
-        if (todayMsgs.length > 0) {
-          setChatMessages(todayMsgs);
-        } else {
-          setChatMessages(INITIAL_WELCOME_MESSAGES);
-        }
+      // 3. Chat Messages (today only, no welcome bubble)
+      if (dbMsgs !== null) {
+        setChatMessages(prev => mergeDbMessages(prev, dbMsgs, uid));
       }
 
       // 4. Memory
@@ -381,7 +503,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.warn('Background sync error:', err);
       setDbStatus(prev => (prev === 'ok' ? 'ok' : 'error'));
     }
-  }, []);
+  }, [mergeDbTransactions, mergeDbMessages]);
 
   useEffect(() => {
     if (currentUser) {
@@ -420,10 +542,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!currentUser) return;
 
     const interval = setInterval(async () => {
-      const uid = currentUser.id;
+      // Skip background poll if a local mutation is currently in flight or completed < 3s ago
+      if (inFlightMutationsRef.current > 0 || Date.now() - lastMutationTsRef.current < 3000) {
+        return;
+      }
 
-      // Poll Transactions — merge local unsynced pending items to prevent table flickering!
-      const dbTx = await fetchTransactions(uid);
+      const uid = currentUser.id;
+      const [dbTx, dbMsgs] = await Promise.all([
+        fetchTransactions(uid),
+        fetchMessagesFromDb(uid)
+      ]);
+
+      // Re-check after network await in case user submitted/confirmed while poll was in flight!
+      if (inFlightMutationsRef.current > 0 || Date.now() - lastMutationTsRef.current < 3000) {
+        return;
+      }
+
       if (dbTx !== null) {
         // Check for new partner business transactions to trigger instant alert
         if (settings.partnerAlertsEnabled !== false) {
@@ -449,52 +583,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           checkAndTriggerDailyRecap(todayExpenses.length, todayExpenseTotal);
         }
 
-        setTransactions(prev => {
-          const dbIds = new Set(dbTx.map(t => t.id));
-          const localPendingUnsynced = prev.filter(t => t.isPending && !dbIds.has(t.id));
-          const merged = [...localPendingUnsynced, ...dbTx];
-
-          const prevLatest = prev[0]?.timestamp ?? 0;
-          const mergedLatest = merged[0]?.timestamp ?? 0;
-          if (merged.length !== prev.length || prevLatest !== mergedLatest) {
-            return merged;
-          }
-          return prev;
-        });
+        setTransactions(prev => mergeDbTransactions(prev, dbTx, uid));
       }
 
-      // Poll Chat Messages — filter for today only & merge local unsynced messages!
-      const dbMsgs = await fetchMessagesFromDb(uid);
       if (dbMsgs !== null) {
-        const startOfToday = getStartOfTodayTimestamp();
-        const todayDbMsgs = dbMsgs.filter(m => Number(m.timestamp) >= startOfToday);
-
-        setChatMessages(prev => {
-          const dbMsgIds = new Set(todayDbMsgs.map(m => m.id));
-          const localUnsynced = prev.filter(m => !dbMsgIds.has(m.id) && m.id.startsWith('msg_') && Number(m.timestamp) >= startOfToday);
-
-          const prevMap = new Map(prev.map(m => [m.id, m]));
-          const merged = todayDbMsgs.map(dbMsg => {
-            const existing = prevMap.get(dbMsg.id);
-            return {
-              ...dbMsg,
-              pendingReviewItems: existing?.pendingReviewItems || (dbMsg as any).pendingReviewItems,
-              actionSummary: existing?.actionSummary || (dbMsg as any).actionSummary,
-              clarification: existing?.clarification || (dbMsg as any).clarification
-            };
-          });
-
-          const fullList = [...merged, ...localUnsynced];
-          if (fullList.length !== prev.length || prev[prev.length - 1]?.id !== fullList[fullList.length - 1]?.id) {
-            return fullList.length > 0 ? fullList : INITIAL_WELCOME_MESSAGES;
-          }
-          return prev;
-        });
+        setChatMessages(prev => mergeDbMessages(prev, dbMsgs, uid));
       }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [currentUser, settings.partnerAlertsEnabled, settings.dailyRecapEnabled]);
+  }, [currentUser, settings.partnerAlertsEnabled, settings.dailyRecapEnabled, mergeDbTransactions, mergeDbMessages]);
 
   // Apply theme styling dynamically
   useEffect(() => {
@@ -721,6 +819,56 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {}
   };
 
+  const trackTxSave = (tx: Transaction, uid: string) => {
+    const now = Date.now();
+    lastMutationTsRef.current = now;
+    localTxOverridesRef.current.set(tx.id, { tx, updatedAt: now });
+    deletedTxIdsRef.current.delete(tx.id);
+    inFlightMutationsRef.current++;
+    saveTransactionToDb(tx, uid).finally(() => {
+      inFlightMutationsRef.current = Math.max(0, inFlightMutationsRef.current - 1);
+      lastMutationTsRef.current = Date.now();
+    });
+  };
+
+  const trackTxBatchSave = (txList: Transaction[], uid: string) => {
+    if (!txList.length) return;
+    const now = Date.now();
+    lastMutationTsRef.current = now;
+    txList.forEach(tx => {
+      localTxOverridesRef.current.set(tx.id, { tx, updatedAt: now });
+      deletedTxIdsRef.current.delete(tx.id);
+    });
+    inFlightMutationsRef.current++;
+    saveTransactionsBatchToDb(txList, uid).finally(() => {
+      inFlightMutationsRef.current = Math.max(0, inFlightMutationsRef.current - 1);
+      lastMutationTsRef.current = Date.now();
+    });
+  };
+
+  const trackTxDelete = (id: string, uid: string) => {
+    const now = Date.now();
+    lastMutationTsRef.current = now;
+    localTxOverridesRef.current.delete(id);
+    deletedTxIdsRef.current.set(id, now);
+    inFlightMutationsRef.current++;
+    deleteTransactionFromDb(id, uid).finally(() => {
+      inFlightMutationsRef.current = Math.max(0, inFlightMutationsRef.current - 1);
+      lastMutationTsRef.current = Date.now();
+    });
+  };
+
+  const trackMsgSave = (msg: ChatMessage, uid: string) => {
+    const now = Date.now();
+    lastMutationTsRef.current = now;
+    localMsgOverridesRef.current.set(msg.id, { msg, updatedAt: now });
+    inFlightMutationsRef.current++;
+    saveMessageToDb(msg, uid).finally(() => {
+      inFlightMutationsRef.current = Math.max(0, inFlightMutationsRef.current - 1);
+      lastMutationTsRef.current = Date.now();
+    });
+  };
+
   const addTransaction = (tx: Transaction) => {
     const enriched: Transaction = {
       ...tx,
@@ -729,11 +877,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       enteredBy: tx.enteredBy || currentUser?.name || 'Praveen'
     };
     setTransactions(prev => {
-      const updated = [enriched, ...prev];
+      const updated = [enriched, ...prev.filter(t => t.id !== enriched.id)];
       persistLocalTransactions(updated);
       return updated;
     });
-    saveTransactionToDb(enriched, activeUserId);
+    trackTxSave(enriched, activeUserId);
 
     if (tx.merchant) learnMerchantCategory(tx.merchant, tx.category);
     if (tx.paymentMethod) learnPaymentPreference(tx.title, tx.paymentMethod);
@@ -742,18 +890,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const addTransactionsBatch = (txList: Transaction[]) => {
+    if (!txList.length) return;
     const enrichedList: Transaction[] = txList.map(tx => ({
       ...tx,
       userId: activeUserId,
       mode: tx.mode || accountMode,
       enteredBy: tx.enteredBy || currentUser?.name || 'Praveen'
     }));
+    const newIds = new Set(enrichedList.map(t => t.id));
     setTransactions(prev => {
-      const updated = [...enrichedList, ...prev];
+      const updated = [...enrichedList, ...prev.filter(t => !newIds.has(t.id))];
       persistLocalTransactions(updated);
       return updated;
     });
-    saveTransactionsBatchToDb(enrichedList, activeUserId);
+    trackTxBatchSave(enrichedList, activeUserId);
 
     enrichedList.forEach(tx => {
       if (tx.merchant) learnMerchantCategory(tx.merchant, tx.category);
@@ -778,7 +928,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updatedList = prev.map(t => {
           if (t.id === id) {
             const originalEnteredBy = t.enteredBy || updated.enteredBy || getEffectiveUserName();
-            const full = { 
+            const full: Transaction = { 
               ...t, 
               ...updated, 
               isPending: false,
@@ -786,7 +936,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
               mode: updated.mode || t.mode || accountMode,
               enteredBy: originalEnteredBy
             };
-            saveTransactionToDb(full, activeUserId);
+            trackTxSave(full, activeUserId);
             return full;
           }
           return t;
@@ -810,23 +960,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           ...updated,
           isPending: false
         };
-        saveTransactionToDb(full, activeUserId);
+        trackTxSave(full, activeUserId);
         updatedList = [full, ...prev];
       }
       persistLocalTransactions(updatedList);
       return updatedList;
     });
 
-    // Also permanently mark confirmed in chat messages state so the verification form auto-removes cleanly
-    setChatMessages(prev =>
-      prev.map(msg => {
+    // Permanently mark confirmed in chat messages state so the verification form auto-removes cleanly
+    setChatMessages(prev => {
+      const next = prev.map(msg => {
         if (!msg.pendingReviewItems || !msg.pendingReviewItems.some(i => i.id === id)) return msg;
         const updatedItems = msg.pendingReviewItems.map(i => i.id === id ? { ...i, ...updated, isPending: false } : i);
         const updatedMsg = { ...msg, pendingReviewItems: updatedItems };
-        saveMessageToDb(updatedMsg, activeUserId);
+        trackMsgSave(updatedMsg, activeUserId);
         return updatedMsg;
-      })
-    );
+      });
+      persistLocalChatMessages(next, activeUserId);
+      return next;
+    });
   };
 
   const deleteTransaction = (id: string) => {
@@ -835,16 +987,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       persistLocalTransactions(updated);
       return updated;
     });
-    deleteTransactionFromDb(id, activeUserId);
-    setChatMessages(prev =>
-      prev.map(msg => {
+    trackTxDelete(id, activeUserId);
+    setChatMessages(prev => {
+      const next = prev.map(msg => {
         if (!msg.pendingReviewItems || !msg.pendingReviewItems.some(i => i.id === id)) return msg;
         const updatedItems = msg.pendingReviewItems.filter(i => i.id !== id);
         const updatedMsg = { ...msg, pendingReviewItems: updatedItems.length ? updatedItems : undefined };
-        saveMessageToDb(updatedMsg, activeUserId);
+        trackMsgSave(updatedMsg, activeUserId);
         return updatedMsg;
-      })
-    );
+      });
+      persistLocalChatMessages(next, activeUserId);
+      return next;
+    });
   };
 
   const clearPendingReview = () => setPendingReviewItems([]);
@@ -864,214 +1018,301 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const resetAllData = () => {
     setTransactions([]);
-    setChatMessages(INITIAL_WELCOME_MESSAGES);
+    setChatMessages([]);
     setPendingReviewItems([]);
     setActiveClarification(null);
+    persistLocalChatMessages([], activeUserId);
     deleteAllMessagesFromDb(activeUserId);
   };
 
   const confirmPendingItemsBatch = (clearedList: Transaction[]) => {
-    clearedList.forEach(tx => {
-      updateTransaction(tx.id, { 
-        ...tx, 
-        isPending: false,
-        mode: tx.mode || accountMode,
-        enteredBy: tx.enteredBy || getEffectiveUserName()
+    if (!clearedList.length) return;
+    const clearedIds = new Set(clearedList.map(c => c.id));
+    const clearedMap = new Map(clearedList.map(c => [c.id, c]));
+
+    setTransactions(prev => {
+      const updatedList = prev.map(t => {
+        const cleared = clearedMap.get(t.id);
+        if (!cleared) return t;
+        const full: Transaction = {
+          ...t,
+          ...cleared,
+          isPending: false,
+          userId: activeUserId,
+          mode: cleared.mode || t.mode || accountMode,
+          enteredBy: cleared.enteredBy || t.enteredBy || getEffectiveUserName()
+        };
+        return full;
       });
+      const savedBatch = updatedList.filter(t => clearedIds.has(t.id));
+      trackTxBatchSave(savedBatch, activeUserId);
+      persistLocalTransactions(updatedList);
+      return updatedList;
     });
-    setPendingReviewItems(prev => prev.filter(p => !clearedList.some(c => c.id === p.id)));
+
+    setPendingReviewItems(prev => prev.filter(p => !clearedIds.has(p.id)));
 
     // Synchronize chat messages so verification tables are removed immediately
-    setChatMessages(prev =>
-      prev.map(msg => {
-        if (!msg.pendingReviewItems) return msg;
-        const clearedIds = new Set(clearedList.map(c => c.id));
-        const updatedItems = msg.pendingReviewItems.map(i => clearedIds.has(i.id) ? { ...i, isPending: false } : i);
+    setChatMessages(prev => {
+      const next = prev.map(msg => {
+        if (!msg.pendingReviewItems || !msg.pendingReviewItems.some(i => clearedIds.has(i.id))) return msg;
+        const updatedItems = msg.pendingReviewItems.map(i => {
+          const cleared = clearedMap.get(i.id);
+          return cleared ? { ...i, ...cleared, isPending: false } : i;
+        });
         const updatedMsg = { ...msg, pendingReviewItems: updatedItems };
-        saveMessageToDb(updatedMsg, activeUserId);
+        trackMsgSave(updatedMsg, activeUserId);
         return updatedMsg;
-      })
-    );
+      });
+      persistLocalChatMessages(next, activeUserId);
+      return next;
+    });
+  };
+
+  // Helper to remove any previous unconfirmed pending items when new ones are submitted
+  const cleanupStalePendingItems = () => {
+    const staleIds: string[] = [];
+    setTransactions(prev => {
+      const stale = prev.filter(t => t.isPending && (accountMode === 'business' ? t.mode === 'business' : t.mode !== 'business'));
+      if (!stale.length) return prev;
+      stale.forEach(s => {
+        staleIds.push(s.id);
+        trackTxDelete(s.id, activeUserId);
+      });
+      const staleSet = new Set(staleIds);
+      const updated = prev.filter(t => !staleSet.has(t.id));
+      persistLocalTransactions(updated);
+      return updated;
+    });
+    setPendingReviewItems([]);
   };
 
   const processUserInputText = async (text: string, isVoice = false, audioBlob?: Blob) => {
     if (!text.trim() && !audioBlob) return;
-    setIsProcessingAI(true);
 
     const effectiveSender = getEffectiveUserName();
+    const nowTs = Date.now();
     const userMsg: ChatMessage = {
-      id: `msg_user_${Date.now()}`,
+      id: `msg_user_${nowTs}`,
       sender: 'user',
       text: text || '🎤 Spoken Voice Command',
-      timestamp: Date.now(),
+      timestamp: nowTs,
       isVoice,
       mode: accountMode,
       senderName: effectiveSender
     };
 
-    setChatMessages(prev => [...prev, userMsg]);
-    saveMessageToDb(userMsg, activeUserId);
+    const lower = text.toLowerCase().trim();
+    const isConversationalQuery = /^(hello|hi|namaste|hey|who are you|what|how|why|show|total|summary|balance|help|clear|delete|remove|update|change|set budget)/i.test(lower);
 
-    const applyAgentToolAction = (agentRes: any): Transaction[] => {
-      if (agentRes.action === 'CREATE_TRANSACTIONS' && agentRes.transactionsToCreate && agentRes.transactionsToCreate.length > 0) {
-        const newTxList: Transaction[] = agentRes.transactionsToCreate.map((t: any, idx: number) => ({
-          id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-          amount: Number(t.amount || 0),
-          currency: '₹',
-          type: accountMode === 'business' ? (t.type === 'income' ? 'income' : 'expense') : (t.type || 'expense'),
-          category: (t.category as Category) || 'Others',
-          title: t.title || 'Expense',
-          merchant: t.merchant,
-          paymentMethod: (t.paymentMethod as PaymentMethod) || 'UPI',
-          date: new Date().toISOString().split('T')[0],
-          relativeDateText: 'Today',
-          timestamp: Date.now() + idx,
-          confidenceScore: 95,
-          isPending: true,
-          person: t.person,
-          mode: accountMode,
-          enteredBy: effectiveSender
-        }));
-
-        addTransactionsBatch(newTxList);
-        setPendingReviewItems(prev => [...prev, ...newTxList]);
-        return newTxList;
-      } else if (agentRes.action === 'DELETE_TRANSACTION' && agentRes.transactionIdToDelete) {
-        deleteTransaction(agentRes.transactionIdToDelete);
-      } else if (agentRes.action === 'UPDATE_TRANSACTION' && agentRes.transactionToUpdate?.id) {
-        updateTransaction(agentRes.transactionToUpdate.id, agentRes.transactionToUpdate);
-      } else if (agentRes.action === 'SAVE_MEMORY' && agentRes.memoryToSave?.key) {
-        const val = agentRes.memoryToSave.value;
-        if (/birthday|anniversary|date/i.test(agentRes.memoryToSave.key)) {
-          saveUserFact(agentRes.memoryToSave.key, val);
-        } else if (/budget|target|limit/i.test(agentRes.memoryToSave.key)) {
-          const amt = parseFloat(val) || 10000;
-          saveMonthlyBudget('Overall', amt);
-        } else {
-          saveUserFact(agentRes.memoryToSave.key, val);
-        }
-        setAiMemory(getAIMemory());
-        saveMemoryToDb(getAIMemory(), activeUserId);
-      } else if (agentRes.action === 'UPDATE_BUDGET' && agentRes.budgetToUpdate?.category) {
-        saveMonthlyBudget(agentRes.budgetToUpdate.category, agentRes.budgetToUpdate.amount);
-        setAiMemory(getAIMemory());
-        saveMemoryToDb(getAIMemory(), activeUserId);
-      }
-      return [];
-    };
-
-    // 1. Try configured LLM Agent (Gemini or OpenAI)
-    try {
-      const modeFilteredTx = transactions.filter(t => !t.isPending && (accountMode === 'business' ? t.mode === 'business' : t.mode !== 'business'));
-      const activeOpenAIKey = getActiveOpenAIKey(settings.openaiApiKey);
-      const useOpenAI = settings.aiProvider === 'openai' || !settings.aiProvider || !settings.apiKey;
-      const customPrompt = settings.customAIPrompt?.trim() || undefined;
-      const recentChatMessages = chatMessages.filter(m => accountMode === 'business' ? m.mode === 'business' : m.mode !== 'business');
-
-      const agentRes = useOpenAI
-        ? await processWithOpenAIAgent(text, modeFilteredTx, aiMemory, activeOpenAIKey, audioBlob, [...recentChatMessages, userMsg])
-        : await processWithGeminiAgent(text, modeFilteredTx, aiMemory, settings.apiKey, audioBlob, [...recentChatMessages, userMsg], customPrompt);
-
-      const isConnectionError = 
-        agentRes?.responseText?.includes('Connection Error') || 
-        agentRes?.responseText?.includes('Failed to fetch') ||
-        agentRes?.responseText?.includes('Service Notice');
-
-      if (agentRes && !isConnectionError) {
-        let createdItems = applyAgentToolAction(agentRes);
-
-        // Guarantee table extraction on first submission if user text contains amounts
-        if (!createdItems.length && /\d+/.test(text)) {
-          const fallbackExtracted: Transaction[] = parseMultiInput(text, aiMemory).map(tx => ({
-            ...tx,
-            isPending: true,
-            userId: activeUserId,
-            mode: accountMode,
-            enteredBy: effectiveSender,
-            type: accountMode === 'business' ? (tx.type === 'income' ? 'income' : 'expense') : (tx.type || 'expense')
-          }));
-          if (fallbackExtracted.length) {
-            addTransactionsBatch(fallbackExtracted);
-            setPendingReviewItems(prev => [...prev, ...fallbackExtracted]);
-            createdItems = fallbackExtracted;
-          }
-        }
-
-        const aiMsg: ChatMessage = {
-          id: `msg_ai_${Date.now()}`,
-          sender: 'assistant',
-          text: agentRes.responseText,
-          timestamp: Date.now(),
-          pendingReviewItems: createdItems.length ? createdItems : undefined,
-          mode: accountMode
-        };
-        setChatMessages(prev => [...prev, aiMsg]);
-        saveMessageToDb(aiMsg, activeUserId);
-        setIsProcessingAI(false);
-
-        if (settings.autoTTS) {
-          speakText(agentRes.speechText || agentRes.responseText, settings.voiceLanguage);
-        }
-        return;
-      }
-    } catch (e) {
-      console.warn('LLM Agent fallback to local AI engine:', e);
-    }
-
-    // Fallback local engine
-    setTimeout(() => {
-      const lower = text.toLowerCase().trim();
-      const parsedItems: Transaction[] = parseMultiInput(text, aiMemory).map(tx => ({
+    // ── FAST PATH (0ms INSTANT): Local transaction parser for any entry with numbers ──
+    if (!audioBlob && !isConversationalQuery && /\d+/.test(text)) {
+      const parsedItems: Transaction[] = parseMultiInput(text, aiMemory).map((tx, idx) => ({
         ...tx,
+        id: `tx_${nowTs}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
+        timestamp: nowTs + idx,
         isPending: true,
         userId: activeUserId,
         mode: accountMode,
         enteredBy: effectiveSender,
-        type: accountMode === 'business' ? (tx.type === 'income' ? 'income' : 'expense') : (tx.type || 'expense')
+        type: tx.type || 'expense'
       }));
-      
-      if (!parsedItems.length) {
-        let responseText = `I couldn't detect an amount in your input. Try saying e.g. *"Petrol 2200"* or *"Spent 23 for Nandini"*`;
 
-        if (/hello|hi|namaste|hey|who are you/i.test(lower)) {
-          responseText = `Namaste! 🙏 I am your Funds Log Accountant. You can dictate expenses like *"Spent 500 for Grocery"* or ask me about your balances!`;
-        } else if (/total|spent|summary|balance|expenses|income/i.test(lower)) {
-          const totalSpent = transactions.filter(t => !t.isPending && (t.type === 'expense' || t.type === 'lent')).reduce((sum, t) => sum + Number(t.amount || 0), 0);
-          const totalInc = transactions.filter(t => !t.isPending && t.type === 'income').reduce((sum, t) => sum + Number(t.amount || 0), 0);
-          responseText = `📊 **Funds Log Summary**:\n• Total Income: **₹${totalInc.toLocaleString('en-IN')}**\n• Total Spent: **₹${totalSpent.toLocaleString('en-IN')}**\n• Total Recorded Entries: **${transactions.length}**`;
-        }
+      if (parsedItems.length > 0) {
+        cleanupStalePendingItems();
+        addTransactionsBatch(parsedItems);
+        setPendingReviewItems(parsedItems);
 
+        const responseText = `I extracted these entries from your input. Please verify spellings and details below before saving to your Passbook:`;
         const aiMsg: ChatMessage = {
-          id: `msg_ai_${Date.now()}`,
+          id: `msg_ai_${nowTs + 1}`,
           sender: 'assistant',
           text: responseText,
-          timestamp: Date.now(),
+          timestamp: nowTs + 1,
+          pendingReviewItems: parsedItems,
           mode: accountMode
         };
-        setChatMessages(prev => [...prev, aiMsg]);
-        saveMessageToDb(aiMsg, activeUserId);
-        setIsProcessingAI(false);
+
+        // Single atomic state update — zero layout jerk, zero delay!
+        setChatMessages(prev => {
+          const cleanedPrev = prev.map(m => {
+            if (!m.pendingReviewItems?.some(i => i.isPending)) return m;
+            const remaining = m.pendingReviewItems.filter(i => !i.isPending);
+            const cleanedMsg = { ...m, pendingReviewItems: remaining.length ? remaining : undefined };
+            trackMsgSave(cleanedMsg, activeUserId);
+            return cleanedMsg;
+          });
+          const next = [...cleanedPrev, userMsg, aiMsg];
+          persistLocalChatMessages(next, activeUserId);
+          return next;
+        });
+
+        trackMsgSave(userMsg, activeUserId);
+        trackMsgSave(aiMsg, activeUserId);
+
+        if (settings.autoTTS) speakText(responseText, settings.voiceLanguage);
         return;
       }
+    }
 
-      addTransactionsBatch(parsedItems);
-      setPendingReviewItems(prev => [...prev, ...parsedItems]);
+    // Check if user actually has a valid custom LLM API key configured
+    const activeOpenAIKey = getActiveOpenAIKey(settings.openaiApiKey);
+    const validGeminiKey = settings.apiKey && !settings.apiKey.startsWith('AQ.') ? settings.apiKey.trim() : '';
+    const hasValidLLMKey = Boolean(activeOpenAIKey || validGeminiKey);
 
-      const responseText = `I extracted these entries from your input. Please verify spellings and details below before saving to your Passbook:`;
-      const aiMsg: ChatMessage = {
-        id: `msg_ai_${Date.now()}`,
-        sender: 'assistant',
-        text: responseText,
-        timestamp: Date.now(),
-        pendingReviewItems: parsedItems,
-        mode: accountMode
+    if (hasValidLLMKey) {
+      setIsProcessingAI(true);
+      setChatMessages(prev => {
+        const next = [...prev, userMsg];
+        persistLocalChatMessages(next, activeUserId);
+        return next;
+      });
+      trackMsgSave(userMsg, activeUserId);
+
+      const applyAgentToolAction = (agentRes: any): Transaction[] => {
+        if (agentRes.action === 'CREATE_TRANSACTIONS' && agentRes.transactionsToCreate && agentRes.transactionsToCreate.length > 0) {
+          cleanupStalePendingItems();
+          const newTxList: Transaction[] = agentRes.transactionsToCreate.map((t: any, idx: number) => ({
+            id: `tx_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
+            amount: Number(t.amount || 0),
+            currency: '₹',
+            type: t.type || 'expense',
+            category: (t.category as Category) || 'Others',
+            title: t.title || 'Expense',
+            merchant: t.merchant,
+            paymentMethod: (t.paymentMethod as PaymentMethod) || 'UPI',
+            date: new Date().toISOString().split('T')[0],
+            relativeDateText: 'Today',
+            timestamp: Date.now() + idx,
+            confidenceScore: 95,
+            isPending: true,
+            person: t.person,
+            mode: accountMode,
+            enteredBy: effectiveSender
+          }));
+
+          addTransactionsBatch(newTxList);
+          setPendingReviewItems(newTxList);
+          return newTxList;
+        } else if (agentRes.action === 'DELETE_TRANSACTION' && agentRes.transactionIdToDelete) {
+          deleteTransaction(agentRes.transactionIdToDelete);
+        } else if (agentRes.action === 'UPDATE_TRANSACTION' && agentRes.transactionToUpdate?.id) {
+          updateTransaction(agentRes.transactionToUpdate.id, agentRes.transactionToUpdate);
+        } else if (agentRes.action === 'SAVE_MEMORY' && agentRes.memoryToSave?.key) {
+          const val = agentRes.memoryToSave.value;
+          if (/birthday|anniversary|date/i.test(agentRes.memoryToSave.key)) {
+            saveUserFact(agentRes.memoryToSave.key, val);
+          } else if (/budget|target|limit/i.test(agentRes.memoryToSave.key)) {
+            const amt = parseFloat(val) || 10000;
+            saveMonthlyBudget('Overall', amt);
+          } else {
+            saveUserFact(agentRes.memoryToSave.key, val);
+          }
+          setAiMemory(getAIMemory());
+          saveMemoryToDb(getAIMemory(), activeUserId);
+        } else if (agentRes.action === 'UPDATE_BUDGET' && agentRes.budgetToUpdate?.category) {
+          saveMonthlyBudget(agentRes.budgetToUpdate.category, agentRes.budgetToUpdate.amount);
+          setAiMemory(getAIMemory());
+          saveMemoryToDb(getAIMemory(), activeUserId);
+        }
+        return [];
       };
-      setChatMessages(prev => [...prev, aiMsg]);
-      saveMessageToDb(aiMsg, activeUserId);
-      setIsProcessingAI(false);
 
-      if (settings.autoTTS) speakText(responseText, settings.voiceLanguage);
-    }, 300);
+      try {
+        const modeFilteredTx = transactions.filter(t => !t.isPending && (accountMode === 'business' ? t.mode === 'business' : t.mode !== 'business'));
+        const useOpenAI = Boolean(activeOpenAIKey && (settings.aiProvider === 'openai' || !validGeminiKey));
+        const customPrompt = settings.customAIPrompt?.trim() || undefined;
+        const recentChatMessages = chatMessages.filter(m => accountMode === 'business' ? m.mode === 'business' : m.mode !== 'business');
+
+        const agentRes = useOpenAI
+          ? await processWithOpenAIAgent(text, modeFilteredTx, aiMemory, activeOpenAIKey, audioBlob, [...recentChatMessages, userMsg])
+          : await processWithGeminiAgent(text, modeFilteredTx, aiMemory, validGeminiKey, audioBlob, [...recentChatMessages, userMsg], customPrompt);
+
+        const isConnectionError = 
+          agentRes?.responseText?.includes('Connection Error') || 
+          agentRes?.responseText?.includes('Failed to fetch') ||
+          agentRes?.responseText?.includes('Service Notice');
+
+        if (agentRes && !isConnectionError) {
+          let createdItems = applyAgentToolAction(agentRes);
+
+          if (!createdItems.length && /\d+/.test(text)) {
+            const fallbackExtracted: Transaction[] = parseMultiInput(text, aiMemory).map((tx, idx) => ({
+              ...tx,
+              id: `tx_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`,
+              isPending: true,
+              userId: activeUserId,
+              mode: accountMode,
+              enteredBy: effectiveSender,
+              type: tx.type || 'expense'
+            }));
+            if (fallbackExtracted.length) {
+              cleanupStalePendingItems();
+              addTransactionsBatch(fallbackExtracted);
+              setPendingReviewItems(fallbackExtracted);
+              createdItems = fallbackExtracted;
+            }
+          }
+
+          const aiMsg: ChatMessage = {
+            id: `msg_ai_${Date.now()}`,
+            sender: 'assistant',
+            text: agentRes.responseText,
+            timestamp: Date.now(),
+            pendingReviewItems: createdItems.length ? createdItems : undefined,
+            mode: accountMode
+          };
+          setChatMessages(prev => {
+            const next = [...prev, aiMsg];
+            persistLocalChatMessages(next, activeUserId);
+            return next;
+          });
+          trackMsgSave(aiMsg, activeUserId);
+          setIsProcessingAI(false);
+
+          if (settings.autoTTS) {
+            speakText(agentRes.speechText || agentRes.responseText, settings.voiceLanguage);
+          }
+          return;
+        }
+      } catch (e) {
+        console.warn('LLM Agent fallback to local AI engine:', e);
+      }
+      setIsProcessingAI(false);
+    }
+
+    // ── Instant Local Conversational / Fallback Response (0ms) ──
+    let responseText = `I couldn't detect an amount in your input. Try saying e.g. *"Petrol 2200"* or *"Spent 23 for Nandini"*`;
+
+    if (/hello|hi|namaste|hey|who are you/i.test(lower)) {
+      responseText = `Namaste! 🙏 I am your Funds Log Accountant. You can dictate expenses like *"Spent 500 for Grocery"* or ask me about your balances!`;
+    } else if (/total|spent|summary|balance|expenses|income/i.test(lower)) {
+      const modeTx = transactions.filter(t => !t.isPending && (accountMode === 'business' ? t.mode === 'business' : t.mode !== 'business'));
+      const totalSpent = modeTx.filter(t => t.type === 'expense' || t.type === 'lent').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const totalInc = modeTx.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      responseText = `📊 **Funds Log Summary**:\n• Total Income: **₹${totalInc.toLocaleString('en-IN')}**\n• Total Spent: **₹${totalSpent.toLocaleString('en-IN')}**\n• Total Recorded Entries: **${modeTx.length}**`;
+    }
+
+    const aiMsg: ChatMessage = {
+      id: `msg_ai_${nowTs + 1}`,
+      sender: 'assistant',
+      text: responseText,
+      timestamp: nowTs + 1,
+      mode: accountMode
+    };
+
+    setChatMessages(prev => {
+      const hasUserMsg = prev.some(m => m.id === userMsg.id);
+      const next = hasUserMsg ? [...prev, aiMsg] : [...prev, userMsg, aiMsg];
+      persistLocalChatMessages(next, activeUserId);
+      return next;
+    });
+    if (!hasValidLLMKey) {
+      trackMsgSave(userMsg, activeUserId);
+    }
+    trackMsgSave(aiMsg, activeUserId);
+
+    if (settings.autoTTS) speakText(responseText, settings.voiceLanguage);
   };
 
   const processClarificationAnswer = (answerValue: string) => {
@@ -1096,10 +1337,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: `msg_ai_${Date.now()}`,
       sender: 'assistant',
       text: responseText,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      mode: accountMode
     };
-    setChatMessages(prev => [...prev, aiMsg]);
-    saveMessageToDb(aiMsg, activeUserId);
+    setChatMessages(prev => {
+      const next = [...prev, aiMsg];
+      persistLocalChatMessages(next, activeUserId);
+      return next;
+    });
+    trackMsgSave(aiMsg, activeUserId);
   };
 
   const resolvePendingWithAIInput = (voiceOrText: string) => {
@@ -1129,19 +1375,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const filteredChatMessages = React.useMemo(() => {
-    const list = chatMessages.filter(m => accountMode === 'business' ? m.mode === 'business' : m.mode !== 'business');
-    if (accountMode === 'business' && list.length === 0) {
-      return [
-        {
-          id: 'welcome_business_msg',
-          sender: 'assistant',
-          text: `Namaste! 🏢 Welcome to your **Shared Business Accountant**. Entries logged here by **Praveen** or **Sarthak** are strictly attributed to your shared 50-50 Business Ledger.`,
-          timestamp: Date.now(),
-          mode: 'business'
-        } as ChatMessage
-      ];
-    }
-    return list;
+    return chatMessages.filter(
+      m =>
+        m.id !== 'msg_welcome' &&
+        m.id !== 'welcome_business_msg' &&
+        (accountMode === 'business' ? m.mode === 'business' : m.mode !== 'business')
+    );
   }, [chatMessages, accountMode]);
 
   return (

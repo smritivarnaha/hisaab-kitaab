@@ -86,12 +86,13 @@ export function parseBankSMS(smsText: string): Transaction | null {
 }
 
 function parseAmount(text: string): { amount: number | null; matchText: string | null } {
-  const kMatch = text.match(/(\d+(?:\.\d+)?)\s*k\b/i);
+  const cleaned = text.replace(/,/g, '');
+  const kMatch = cleaned.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*k\b/i);
   if (kMatch) {
     return { amount: parseFloat(kMatch[1]) * 1000, matchText: kMatch[0] };
   }
 
-  const match = text.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d{1,2})?)\s*(?:rs\.?|rupees|rupee)?/i);
+  const match = cleaned.match(/(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d{1,2})?)\s*(?:rs\.?|rupees?|rupaye|inr|\/-)?/i);
   if (match && match[1]) {
     const val = parseFloat(match[1]);
     if (!isNaN(val) && val > 0) {
@@ -171,13 +172,34 @@ function parseCategory(text: string, memory: AIMemoryMap = DEFAULT_MEMORY): { ca
   return { category: 'Others', confidenceBoost: 0 };
 }
 
-// Autocorrects common Hinglish, Hindi, or misspelled words into neat English/proper names (Disabled: delegated to Gemini LLM)
+const HINGLISH_SPELLING_MAP: Record<string, string> = {
+  'doodh': 'Milk',
+  'dudh': 'Milk',
+  'chai': 'Tea',
+  'sabzi': 'Vegetables',
+  'sabji': 'Vegetables',
+  'kirana': 'Grocery',
+  'bijli': 'Electricity',
+  'dawa': 'Medicine',
+  'dawai': 'Medicine',
+  'petrol': 'Petrol',
+  'chooran': 'Churan',
+  'kapde': 'Clothes'
+};
+
 export function autocorrectTitleSpelling(title: string): string {
-  return title;
+  const words = title.split(/\s+/).filter(Boolean);
+  if (words.length === 1) {
+    const mapped = HINGLISH_SPELLING_MAP[words[0].toLowerCase()];
+    if (mapped) return mapped;
+  }
+  return words
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
 }
 
 export function normalizeInputText(text: string): string {
-  return text;
+  return text.replace(/\s+/g, ' ').trim();
 }
 
 function parsePaymentMethod(text: string): { method: PaymentMethod; explicit: boolean } {
@@ -213,33 +235,32 @@ function parseTransactionTypeAndEntity(text: string): {
 } {
   const lower = text.toLowerCase();
 
-  if (/returned|wapas|wapis|credited|received|aa gaye|aa gayi|got back|refund|salary/i.test(lower)) {
-    const personMatch = text.match(/([A-Z][a-z]+)\s+(?:returned|wapas|gave)/i) || text.match(/(?:from|se)\s+([A-Z][a-z]+)/i);
-    const person = personMatch ? personMatch[1] : extractName(text);
-    return { type: 'income', person, extractedReason: person ? `${person} returned money` : 'Income Received', confidenceBoost: 30 };
-  }
-
-  if (/transfer|transferred|sent|gave|diye|diya|given|bheje|bheja/i.test(lower) && /(mummy|mother|father|papa|family|brother|sister|sarthak|praveen)/i.test(lower)) {
-    const familyMatch = text.match(/(?:to|ko|for)\s+([A-Za-z0-9'\s]+?)(?:\s+rs|\s+rupees|\s+\d+|$)/i) || text.match(/([A-Za-z0-9'\s]+?)\s+(?:ko|given|received)/i);
-    const rawPerson = familyMatch ? familyMatch[1].trim() : extractName(text);
-    const person = rawPerson ? rawPerson.charAt(0).toUpperCase() + rawPerson.slice(1) : undefined;
-    return { type: 'lent', person, extractedReason: person ? `Transfer to ${person}` : 'Direct Partner Transfer', confidenceBoost: 35 };
-  }
-
-  if (/lent|diye|diya|gave to|paid to|ko diye|ko cash/i.test(lower) && !/shop|store|petrol|grocery|bill|swiggy|zomato/i.test(lower)) {
-    const personMatch = text.match(/lent\s+([A-Za-z]+)/i) || text.match(/([A-Za-z]+)\s+ko/i) || text.match(/(?:to|gave)\s+([A-Za-z]+)/i);
+  // 1. Check Borrowed first (e.g. "borrowed 500 from sarthak", "sarthak se 500 liye", "took 500 from praveen")
+  if (/\b(borrowed|borrow|udhaar liya|udhaar liye|udhar liya|udhar liye|taken from|took from|took|liye|liya|se liye|se liya)\b/i.test(lower)) {
+    const personMatch = text.match(/(?:from|se)\s+([A-Za-z]+)/i) || text.match(/([A-Za-z]+)\s+se\b/i);
     const rawName = personMatch ? personMatch[1] : extractName(text);
-    const person = rawName ? rawName.charAt(0).toUpperCase() + rawName.slice(1) : undefined;
-    return { type: 'lent', person, extractedReason: person ? `Lent to ${person}` : 'Lent Money', confidenceBoost: 25 };
+    const person = rawName ? rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase() : undefined;
+    return { type: 'borrowed', person, extractedReason: person ? `Borrowed from ${person}` : 'Borrowed Money', confidenceBoost: 30 };
   }
 
-  if (/borrowed|udhaar|taken from|liye|se liye/i.test(lower)) {
-    const personMatch = text.match(/(?:from|se)\s+([A-Z][a-z]+)/i);
-    const person = personMatch ? personMatch[1] : extractName(text);
-    return { type: 'borrowed', person, extractedReason: person ? `Borrowed from ${person}` : 'Borrowed Money', confidenceBoost: 25 };
+  // 2. Check Lent / Direct Partner Transfer Given (e.g. "lent 500 to sarthak", "gave 500 to praveen", "sarthak ko 500 diye")
+  if (/\b(lent out|lent to|lent|loaned|udhaar diya|udhaar diye|udhar diya|udhar diye|gave to|given to|ko diye|ko diya|bheje|bheja)\b/i.test(lower) ||
+      (/\b(transfer|transferred|sent|gave|diye|diya|given)\b/i.test(lower) && /\b(mummy|mother|father|papa|family|brother|sister|sarthak|praveen|nandini|rahul|rohan)\b/i.test(lower))) {
+    const personMatch = text.match(/(?:to|ko|for|lent|gave)\s+([A-Za-z]+)/i) || text.match(/([A-Za-z]+)\s+(?:ko|given)/i);
+    const rawName = (personMatch && !/^(out|to|for|rs|rupees|cash|upi)$/i.test(personMatch[1])) ? personMatch[1] : extractName(text);
+    const person = rawName ? rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase() : undefined;
+    return { type: 'lent', person, extractedReason: person ? `Lent to ${person}` : undefined, confidenceBoost: 30 };
   }
 
-  const reasonMatch = text.match(/(?:for|in|mein|par|pe|se)\s+([A-Za-z0-9\s._-]+?)(?:\s+today|\s+kal|\s+parso|\s+rs|\s+rupees|\s+\d+|$)/i);
+  // 3. Check Income
+  if (/\b(income|earned|profit|sale|returned|wapas|wapis|credited|received|aa gaye|aa gayi|aaye|mila|mile|got back|got from|refund|salary|stipend)\b/i.test(lower)) {
+    const personMatch = text.match(/([A-Za-z]+)\s+(?:returned|wapas|gave)/i) || text.match(/(?:from|se)\s+([A-Za-z]+)/i);
+    const rawName = (personMatch && !/^(rs|rupees|cash|upi|bank)$/i.test(personMatch[1])) ? personMatch[1] : extractName(text);
+    const person = rawName ? rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase() : undefined;
+    return { type: 'income', person, extractedReason: person ? `Received from ${person}` : undefined, confidenceBoost: 30 };
+  }
+
+  const reasonMatch = text.match(/(?:for|on|in|mein|par|pe)\s+([A-Za-z0-9\s._-]+?)(?:\s+today|\s+kal|\s+parso|\s+rs|\s+rupees|\s+\d+|$)/i);
   const extractedReason = reasonMatch ? reasonMatch[1].trim() : undefined;
 
   const merchantMatch = text.match(/(?:at|from|to)\s+([A-Za-z0-9\s]+)/i);
@@ -248,7 +269,7 @@ function parseTransactionTypeAndEntity(text: string): {
 }
 
 function extractName(text: string): string | undefined {
-  const names = ['Rahul', 'Rohan', 'Priya', 'Amit', 'Neha', 'Vikas', 'Mummy', 'Papa', 'Ankit', 'Suresh', 'Ramesh', 'Pooja', 'Karan'];
+  const names = ['Sarthak', 'Praveen', 'Nandini', 'Rahul', 'Rohan', 'Priya', 'Amit', 'Neha', 'Vikas', 'Mummy', 'Papa', 'Ankit', 'Suresh', 'Ramesh', 'Pooja', 'Karan'];
   for (const n of names) {
     if (new RegExp(`\\b${n}\\b`, 'i').test(text)) {
       return n;
@@ -275,61 +296,60 @@ export function parseSingleInput(input: string, memory: AIMemoryMap = DEFAULT_ME
   if (confidence > 99) confidence = 99;
 
   const fallbackAmount = amount || 0;
-
-  let rawTitleCandidate = extractedReason || merchant || person;
   let notes: string | undefined = undefined;
   let isPending = false;
 
-  // Check for explicit "in the name of <Name>" or "for <Name>" or "to <Name>"
-  const nameOfMatch = cleaned.match(/(?:in the name of|in name of|named|for|to)\s+([A-Za-z0-9]+)/i);
-  if (nameOfMatch && nameOfMatch[1] && !/^(the|a|an|me|my|rs|rupees|cash|upi|today|yesterday|aaj|kal)$/i.test(nameOfMatch[1])) {
-    const extracted = nameOfMatch[1].trim();
-    rawTitleCandidate = extracted.charAt(0).toUpperCase() + extracted.slice(1);
-  }
+  // Strip amounts, currencies, action verbs, dates, and payment methods to isolate the pure item/entity title
+  let strippedTitle = cleaned
+    .replace(/(?:₹|rs\.?|inr)\s*\d+(?:,\d+)*(?:\.\d+)?\s*(?:k|rs\.?|rupees?|rupaye|inr|\/-)?/gi, ' ')
+    .replace(/\b\d+(?:,\d+)*(?:\.\d+)?\s*(?:k|rs\.?|rupees?|rupaye|inr|\/-)?\b/gi, ' ')
+    .replace(/^(?:hi|hello|hey|so|i|we)\s+(?:how are you|hope you are well)?\s*(?:so|then)?\s*/i, ' ')
+    .replace(/\b(?:i|we|have|had|has|just|also)\b/gi, ' ')
+    .replace(/\b(?:spent on|spent for|spent|spend|paid for|paid to|paid|bought|lent out|lent to|lent|loaned|borrowed from|borrowed|borrow|taken from|took from|took|received from|received|got from|got back|got|earned|credited|in the name of|in name of|named)\b/gi, ' ')
+    .replace(/\b(?:via upi|by upi|by cash|in cash|upi|gpay|phonepe|paytm|cash|nagad|today|yesterday|day before yesterday|aaj|kal|parso|rupees|rupee|rupaye|rs|inr)\b/gi, ' ')
+    .replace(/^(?:on|for|in|to|from|at|of|with|by|mein|par|pe|ko|se|ka|ki|ke)\b\s*/gi, '')
+    .replace(/\s+\b(?:on|for|in|to|from|at|of|with|by|mein|par|pe|ko|se|ka|ki|ke|diye|diya|liye|liya|aaye|mila|mile)$/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-  const words = cleaned.split(/\s+/);
-  const nonAmountWords = words.filter(w => !/^\d+$/.test(w) && !/^(rs|inr|₹|rs\.)$/i.test(w) && !/^(today|aaj|kal|yesterday|upi|cash)$/i.test(w));
-
-  if (!rawTitleCandidate && nonAmountWords.length > 0) {
-    rawTitleCandidate = nonAmountWords.join(' ');
-  }
-
+  let rawTitleCandidate = strippedTitle || extractedReason || merchant || person;
   let title = 'Reason Missing';
 
-  if (rawTitleCandidate) {
-    // Strip conversational intro fluff (e.g. "hi how are you so I spend 23 in the name of Nandini")
-    let cleanedTitle = rawTitleCandidate
-      .replace(/^(hi|hello|hey|so|i|we)\s+(how are you|hope you are well)?\s*(so|then)?\s*(i|we)?\s*(spent|spend|paid|gave|received|got)?\s*/i, '')
-      .replace(/^(in the name of|in name of|for the purpose of|under the name of|for|to)\s+/i, '')
-      .replace(/\b(rupees|rupee|rs|inr|cash|upi|today|aaj|kal|yesterday)\b/gi, '')
-      .trim();
-
-    if (cleanedTitle.length > 0) {
-      const candidateWords = cleanedTitle.split(/\s+/).filter(Boolean);
-      if (candidateWords.length > 3) {
-        title = candidateWords.slice(0, 3).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        notes = cleaned;
-      } else {
-        title = candidateWords.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        if (words.length > 4) notes = cleaned;
-      }
+  if (rawTitleCandidate && rawTitleCandidate.length > 0) {
+    const candidateWords = rawTitleCandidate.split(/\s+/).filter(Boolean);
+    if (candidateWords.length > 4) {
+      title = candidateWords.slice(0, 4).join(' ');
+      notes = cleaned;
+    } else if (candidateWords.length > 0) {
+      title = candidateWords.join(' ');
     } else {
       isPending = true;
     }
+  } else if (type === 'income') {
+    title = person ? `Received from ${person}` : 'Income';
+  } else if (type === 'lent') {
+    title = person ? `Lent to ${person}` : 'Lent Money';
+  } else if (type === 'borrowed') {
+    title = person ? `Borrowed from ${person}` : 'Borrowed Money';
   } else {
-    isPending = true; // Only mark pending if reason/name is missing!
+    isPending = true;
   }
 
   // Filter out grammatical filler words, prepositions, or generic text from title
   const cleanTitleLower = title.toLowerCase().trim();
-  const isFiller = /^(and|but|or|for|to|the|a|an|of|in|on|at|by|with|from|spent|spent rupees|rupees|rupee|rs|inr|cash|upi|today|yesterday|aaj|kal|parso|amount|reason missing|expense|income|others|other)$/i.test(cleanTitleLower);
-  
-  if (isFiller || cleanTitleLower.length <= 1) {
-    title = 'Reason Missing';
-    isPending = true;
-  }
+  const isFiller = /^(and|but|or|for|to|the|a|an|of|in|on|at|by|with|from|spent|spent rupees|rupees|rupee|rs|inr|cash|upi|today|yesterday|aaj|kal|parso|amount|reason missing|others|other)$/i.test(cleanTitleLower);
 
-  title = autocorrectTitleSpelling(title);
+  if (isFiller || cleanTitleLower.length === 0) {
+    if (type === 'income') title = 'Income';
+    else if (type === 'lent') title = person ? `Lent to ${person}` : 'Lent Money';
+    else if (type === 'borrowed') title = person ? `Borrowed from ${person}` : 'Borrowed Money';
+    else {
+      title = 'Reason Missing';
+      isPending = true;
+    }
+  } else {
+    title = autocorrectTitleSpelling(title);
+  }
 
   return {
     id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,

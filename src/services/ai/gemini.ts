@@ -59,7 +59,10 @@ export async function processWithGeminiAgent(
   chatMessages: ChatMessage[] = [],
   customAIPrompt?: string
 ): Promise<GeminiAgentResponse | null> {
-  const activeKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || 'AQ.Ab8RN6Ie0wYTm7AqZrmWDg0LJfeu3IP-k9IKFAC8PPlgl7Yv5A-';
+  const rawKey = (apiKey && !apiKey.trim().startsWith('AQ.'))
+    ? apiKey.trim()
+    : ((import.meta as any).env?.VITE_GEMINI_API_KEY || '');
+  const activeKey = rawKey.startsWith('AQ.') ? '' : rawKey;
   if (!activeKey || !activeKey.trim()) return null;
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeKey.trim()}`;

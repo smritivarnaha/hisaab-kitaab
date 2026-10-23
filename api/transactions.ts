@@ -44,11 +44,6 @@ async function ensureTableExists(sql: ReturnType<typeof neon>) {
         "enteredBy" TEXT
       )
     `;
-    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "isPending" BOOLEAN NOT NULL DEFAULT FALSE`;
-    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "person" TEXT`;
-    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "userId" TEXT NOT NULL DEFAULT 'nandini'`;
-    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "mode" TEXT DEFAULT 'personal'`;
-    await sql`ALTER TABLE transactions ADD COLUMN IF NOT EXISTS "enteredBy" TEXT`;
     await sql`CREATE INDEX IF NOT EXISTS idx_tx_query ON transactions ("userId", "mode", "timestamp" DESC)`;
     tableInitialized = true;
   } catch (err) {
@@ -57,7 +52,6 @@ async function ensureTableExists(sql: ReturnType<typeof neon>) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -193,7 +187,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'DELETE') {
       const { id } = req.query;
       if (!id || typeof id !== 'string') return res.status(400).json({ error: 'Missing id' });
-      await sql`DELETE FROM transactions WHERE "id" = ${id} AND "userId" = ${userId}`;
+      if (isPartner) {
+        await sql`DELETE FROM transactions WHERE "id" = ${id} AND ("userId" = ${userId} OR "mode" = 'business')`;
+      } else {
+        await sql`DELETE FROM transactions WHERE "id" = ${id} AND "userId" = ${userId} AND ("mode" IS NULL OR "mode" != 'business')`;
+      }
       return res.status(200).json({ success: true });
     }
 

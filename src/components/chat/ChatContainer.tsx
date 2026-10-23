@@ -21,14 +21,22 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const liveTranscriptRef = useRef(liveTranscript);
+  const prevLastMsgIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     liveTranscriptRef.current = liveTranscript;
   }, [liveTranscript]);
 
+  const lastMsgId = chatMessages[chatMessages.length - 1]?.id || null;
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, isProcessingAI]);
+    if (lastMsgId && lastMsgId !== prevLastMsgIdRef.current) {
+      prevLastMsgIdRef.current = lastMsgId;
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else if (isProcessingAI) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [lastMsgId, isProcessingAI]);
 
   useEffect(() => {
     return () => {

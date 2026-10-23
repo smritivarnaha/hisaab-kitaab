@@ -21,29 +21,36 @@ const DEFAULT_USERS = [
   { id: 'praveen', username: 'praveen', name: 'Praveen', password: 'praveen9100' }
 ];
 
-async function ensureUsersTable(sql: ReturnType<typeof neon>) {
-  await sql`
-    CREATE TABLE IF NOT EXISTS app_users (
-      "id" TEXT PRIMARY KEY,
-      "username" TEXT UNIQUE NOT NULL,
-      "name" TEXT NOT NULL,
-      "password" TEXT NOT NULL,
-      "updatedAt" BIGINT NOT NULL
-    )
-  `;
+let tableInitialized = false;
 
-  // Seed default users if table is empty
-  for (const u of DEFAULT_USERS) {
+async function ensureUsersTable(sql: ReturnType<typeof neon>) {
+  if (tableInitialized) return;
+  try {
     await sql`
-      INSERT INTO app_users ("id", "username", "name", "password", "updatedAt")
-      VALUES (${u.id}, ${u.username}, ${u.name}, ${u.password}, ${Date.now()})
-      ON CONFLICT ("username") DO NOTHING
+      CREATE TABLE IF NOT EXISTS app_users (
+        "id" TEXT PRIMARY KEY,
+        "username" TEXT UNIQUE NOT NULL,
+        "name" TEXT NOT NULL,
+        "password" TEXT NOT NULL,
+        "updatedAt" BIGINT NOT NULL
+      )
     `;
+
+    // Seed default users if not already present
+    for (const u of DEFAULT_USERS) {
+      await sql`
+        INSERT INTO app_users ("id", "username", "name", "password", "updatedAt")
+        VALUES (${u.id}, ${u.username}, ${u.name}, ${u.password}, ${Date.now()})
+        ON CONFLICT ("username") DO NOTHING
+      `;
+    }
+    tableInitialized = true;
+  } catch (err) {
+    console.warn('Users table init warning:', err);
   }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -104,18 +111,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const userRow = rows[0];
-      const isDefaultMatch = defaultUser && cleanPassword === defaultUser.password;
-      const isPasswordMatch = (userRow.password && userRow.password.trim() === cleanPassword) || isDefaultMatch;
+      const isPasswordMatch = Boolean(userRow.password && userRow.password.trim() === cleanPassword);
 
       if (!isPasswordMatch) {
         return res.status(401).json({ error: 'Incorrect password' });
-      }
-
-      // If user logged in with default preset password, ensure database is synced
-      if (isDefaultMatch && userRow.password !== cleanPassword) {
-        await sql`
-          UPDATE app_users SET "password" = ${cleanPassword}, "updatedAt" = ${Date.now()} WHERE "id" = ${userRow.id}
-        `;
       }
 
       return res.status(200).json({
