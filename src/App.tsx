@@ -201,7 +201,7 @@ export const AppContent: React.FC = () => {
           }`}
         >
           {/* Mini Drawer Header */}
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white flex-shrink-0">
+          <div className="px-5 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5 border-b border-gray-100 flex items-center justify-between bg-white flex-shrink-0">
             <div className="flex items-center gap-2.5">
               <img src="/logo.png" alt="Logo" className="w-7 h-7 object-contain rounded-full drop-shadow-xs" />
               <div>

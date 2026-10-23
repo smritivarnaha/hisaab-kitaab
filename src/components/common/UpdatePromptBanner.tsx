@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Sparkles, X } from 'lucide-react';
+import { apiUrl, isNativeCapacitorLocalOrigin, LIVE_PROD_ORIGIN } from '../../utils/apiUrl';
+
+function extractBundleHash(html: string): string | null {
+  const match = html.match(/\/assets\/index-[A-Za-z0-9_-]+\.js/);
+  return match ? match[0] : null;
+}
+
+function getCurrentLoadedBundleHash(): string | null {
+  if (typeof document === 'undefined') return null;
+  const script = document.querySelector('script[src*="/assets/index-"]');
+  return script ? script.getAttribute('src') : null;
+}
 
 export const UpdatePromptBanner: React.FC = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -7,6 +19,14 @@ export const UpdatePromptBanner: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
+    // Record current bundle hash on startup
+    const currentBundle = getCurrentLoadedBundleHash();
+    if (currentBundle) {
+      try {
+        localStorage.setItem('funds_logger_bundle_hash', currentBundle);
+      } catch {}
+    }
+
     // 1. Service Worker update event
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(registration => {
@@ -20,50 +40,63 @@ export const UpdatePromptBanner: React.FC = () => {
             });
           }
         });
-      });
+      }).catch(() => {});
     }
 
-    // 2. Build / Deployment version polling every 60 seconds
+    // 2. Live Build / Deployment bundle hash polling every 30 seconds
     const checkVersion = async () => {
       try {
-        const res = await fetch('/manifest.json?_t=' + Date.now(), { cache: 'no-store' });
+        const res = await fetch(apiUrl('/index.html?_t=' + Date.now()), { cache: 'no-store' });
         if (res.ok) {
-          const data = await res.json();
-          const storedVersion = localStorage.getItem('funds_logger_app_version');
-          if (storedVersion && data.name && storedVersion !== data.name) {
+          const html = await res.text();
+          const remoteBundle = extractBundleHash(html);
+          const loadedBundle = getCurrentLoadedBundleHash() || localStorage.getItem('funds_logger_bundle_hash');
+          if (remoteBundle && loadedBundle && remoteBundle !== loadedBundle) {
             setUpdateAvailable(true);
-          }
-          if (data.name) {
-            localStorage.setItem('funds_logger_app_version', data.name);
+          } else if (remoteBundle && !loadedBundle) {
+            localStorage.setItem('funds_logger_bundle_hash', remoteBundle);
           }
         }
       } catch {}
     };
 
-    const interval = setInterval(checkVersion, 60000);
-    return () => clearInterval(interval);
+    const initialCheck = setTimeout(checkVersion, 5000);
+    const interval = setInterval(checkVersion, 30000);
+    return () => {
+      clearTimeout(initialCheck);
+      clearInterval(interval);
+    };
   }, []);
 
-  const handleApplyUpdate = () => {
+  const handleApplyUpdate = async () => {
     setIsUpdating(true);
-    // Clear cache & activate new worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
+    try {
+      // Clear browser / WebView caches & update service worker
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
         for (const reg of regs) {
-          reg.update();
+          await reg.update();
         }
-      });
-    }
+      }
+    } catch {}
 
     setTimeout(() => {
-      window.location.reload();
-    }, 400);
+      if (isNativeCapacitorLocalOrigin()) {
+        window.location.href = `${LIVE_PROD_ORIGIN}/?_t=${Date.now()}`;
+      } else {
+        window.location.reload();
+      }
+    }, 300);
   };
 
   if (!updateAvailable || isDismissed) return null;
 
   return (
-    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-md animate-bounce-short font-outfit">
+    <div className="fixed top-12 sm:top-3 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-md animate-bounce-short font-outfit">
       <div className="bg-[#0D2E14] text-white p-3 sm:p-3.5 rounded-2xl shadow-2xl border border-emerald-500/40 flex items-center justify-between gap-2.5 backdrop-blur-md">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center flex-shrink-0 text-emerald-300">
@@ -71,9 +104,9 @@ export const UpdatePromptBanner: React.FC = () => {
           </div>
           <div className="min-w-0">
             <h4 className="text-xs sm:text-sm font-extrabold text-white truncate flex items-center gap-1.5">
-              New Update Available!
+              New App Update Ready!
             </h4>
-            <p className="text-[10px] text-emerald-200 truncate">Tap to install latest improvements</p>
+            <p className="text-[10px] text-emerald-200 truncate">Tap Update to apply latest changes instantly</p>
           </div>
         </div>
 
@@ -84,7 +117,7 @@ export const UpdatePromptBanner: React.FC = () => {
             className="px-3 py-1.5 bg-[#93E044] hover:bg-[#82cc39] text-[#0D2E14] rounded-xl font-extrabold text-xs shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isUpdating ? 'animate-spin' : ''}`} />
-            <span>{isUpdating ? 'Updating...' : 'Update'}</span>
+            <span>{isUpdating ? 'Updating...' : 'Update Now'}</span>
           </button>
 
           <button

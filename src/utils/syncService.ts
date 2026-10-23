@@ -5,6 +5,7 @@
  */
 
 import { Transaction } from '../types/finance';
+import { apiUrl } from './apiUrl';
 
 const OFFLINE_TX_QUEUE_KEY = 'funds_logger_offline_tx_queue';
 const OFFLINE_DELETED_QUEUE_KEY = 'funds_logger_offline_deleted_queue';
@@ -72,7 +73,8 @@ export async function syncOfflineQueueWithServer(
 
   for (const tx of queue) {
     try {
-      const res = await fetch('/api/transactions', {
+      const uid = tx.userId || 'nandini';
+      const res = await fetch(apiUrl(`/api/transactions?userId=${uid}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(tx)
@@ -94,9 +96,11 @@ export async function syncOfflineQueueWithServer(
   try {
     const rawDeletes = localStorage.getItem(OFFLINE_DELETED_QUEUE_KEY);
     const deleteList: string[] = rawDeletes ? JSON.parse(rawDeletes) : [];
+    const activeUserRaw = localStorage.getItem('hk_active_user');
+    const activeUid = activeUserRaw ? JSON.parse(activeUserRaw)?.id || 'nandini' : 'nandini';
     for (const delId of deleteList) {
       try {
-        const res = await fetch(`/api/transactions?id=${delId}`, { method: 'DELETE' });
+        const res = await fetch(apiUrl(`/api/transactions?id=${delId}&userId=${activeUid}`), { method: 'DELETE' });
         if (res.ok) {
           const updatedDeletes = deleteList.filter(id => id !== delId);
           localStorage.setItem(OFFLINE_DELETED_QUEUE_KEY, JSON.stringify(updatedDeletes));

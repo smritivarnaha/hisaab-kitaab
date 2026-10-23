@@ -3,6 +3,7 @@ import { AppUser } from '../../types/finance';
 import { Lock, ArrowRight, ShieldCheck, User, Fingerprint, Eye, EyeOff, Smartphone } from 'lucide-react';
 import { checkBiometricAvailability, verifyDevicePasskey, markSessionBiometricUnlocked } from '../../utils/biometricAuth';
 import { hasInstallPrompt, subscribeInstallPrompt, triggerNativeAppInstall, isAppInstalledStandalone } from '../../utils/pwaInstall';
+import { apiUrl } from '../../utils/apiUrl';
 
 interface Props {
   onLoginSuccess: (user: AppUser) => void;
@@ -66,7 +67,7 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
     const cleanPass = passwordInput.trim();
 
     try {
-      const res = await fetch('/api/auth?action=login', {
+      const res = await fetch(apiUrl('/api/auth?action=login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

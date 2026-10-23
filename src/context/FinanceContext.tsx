@@ -75,9 +75,11 @@ interface FinanceContextType {
   toggleTheme: () => void;
   updateSettings: (newSettings: Partial<UserSettings>) => void;
   resetAllData: () => void;
+  syncNow: () => Promise<void>;
 }
 
 import { DEFAULT_OPENAI_KEY, getActiveOpenAIKey } from '../utils/aiKeys';
+import { apiUrl } from '../utils/apiUrl';
 import { 
   queueOfflineTransaction, 
   queueOfflineDelete, 
@@ -118,7 +120,7 @@ const DEFAULT_SETTINGS: UserSettings = {
 // ─── Neon DB API helpers (scoped by userId) ─────────────────────────────────
 const fetchTransactions = async (userId: string): Promise<Transaction[] | null> => {
   try {
-    const res = await fetch(`/api/transactions?userId=${userId}`);
+    const res = await fetch(apiUrl(`/api/transactions?userId=${userId}&_t=${Date.now()}`), { cache: 'no-store' });
     if (!res.ok) throw new Error(`DB fetch failed: ${res.status}`);
     return await res.json();
   } catch (err) {
@@ -129,7 +131,7 @@ const fetchTransactions = async (userId: string): Promise<Transaction[] | null> 
 
 const fetchSettingsFromDb = async (userId: string): Promise<Partial<UserSettings> | null> => {
   try {
-    const res = await fetch(`/api/settings?userId=${userId}`);
+    const res = await fetch(apiUrl(`/api/settings?userId=${userId}&_t=${Date.now()}`), { cache: 'no-store' });
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -139,7 +141,7 @@ const fetchSettingsFromDb = async (userId: string): Promise<Partial<UserSettings
 
 const saveSettingsToDb = async (s: UserSettings, userId: string) => {
   try {
-    await fetch(`/api/settings?userId=${userId}`, {
+    await fetch(apiUrl(`/api/settings?userId=${userId}`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...s, userId })
@@ -153,7 +155,7 @@ const saveTransactionToDb = async (tx: Transaction, userId: string) => {
   const enteredBy = tx.enteredBy || (userId === 'sarthak' ? 'Sarthak' : 'Praveen');
   const enriched = { ...tx, userId, enteredBy };
   try {
-    const res = await fetch(`/api/transactions?userId=${userId}`, {
+    const res = await fetch(apiUrl(`/api/transactions?userId=${userId}`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(enriched)
@@ -168,7 +170,7 @@ const saveTransactionToDb = async (tx: Transaction, userId: string) => {
 const saveTransactionsBatchToDb = async (txList: Transaction[], userId: string) => {
   const enrichedList = txList.map(t => ({ ...t, userId, enteredBy: t.enteredBy || (userId === 'sarthak' ? 'Sarthak' : 'Praveen') }));
   try {
-    const res = await fetch(`/api/transactions?userId=${userId}`, {
+    const res = await fetch(apiUrl(`/api/transactions?userId=${userId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(enrichedList)
@@ -181,7 +183,7 @@ const saveTransactionsBatchToDb = async (txList: Transaction[], userId: string) 
 
 const deleteTransactionFromDb = async (id: string, userId: string) => {
   try {
-    const res = await fetch(`/api/transactions?id=${id}&userId=${userId}`, { method: 'DELETE' });
+    const res = await fetch(apiUrl(`/api/transactions?id=${id}&userId=${userId}`), { method: 'DELETE' });
     if (!res.ok) throw new Error('Network error');
   } catch {
     queueOfflineDelete(id);
@@ -191,7 +193,7 @@ const deleteTransactionFromDb = async (id: string, userId: string) => {
 const fetchMessagesFromDb = async (userId: string): Promise<ChatMessage[] | null> => {
   try {
     const startOfToday = getStartOfTodayTimestamp();
-    const res = await fetch(`/api/messages?userId=${userId}&since=${startOfToday}`);
+    const res = await fetch(apiUrl(`/api/messages?userId=${userId}&since=${startOfToday}&_t=${Date.now()}`), { cache: 'no-store' });
     if (!res.ok) return null;
     const rows = await res.json();
     if (!Array.isArray(rows)) return null;
@@ -202,7 +204,7 @@ const fetchMessagesFromDb = async (userId: string): Promise<ChatMessage[] | null
 
 const saveMessageToDb = async (msg: ChatMessage, userId: string) => {
   try {
-    await fetch(`/api/messages?userId=${userId}`, {
+    await fetch(apiUrl(`/api/messages?userId=${userId}`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...msg, userId })
@@ -211,12 +213,12 @@ const saveMessageToDb = async (msg: ChatMessage, userId: string) => {
 };
 
 const deleteAllMessagesFromDb = async (userId: string) => {
-  try { await fetch(`/api/messages?userId=${userId}`, { method: 'DELETE' }); } catch {}
+  try { await fetch(apiUrl(`/api/messages?userId=${userId}`), { method: 'DELETE' }); } catch {}
 };
 
 const fetchMemoryFromDb = async (userId: string) => {
   try {
-    const res = await fetch(`/api/memory?userId=${userId}`);
+    const res = await fetch(apiUrl(`/api/memory?userId=${userId}&_t=${Date.now()}`), { cache: 'no-store' });
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
@@ -224,7 +226,7 @@ const fetchMemoryFromDb = async (userId: string) => {
 
 const saveMemoryToDb = async (mem: AIMemoryMap, userId: string) => {
   try {
-    await fetch(`/api/memory?userId=${userId}`, {
+    await fetch(apiUrl(`/api/memory?userId=${userId}`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...mem, userId })
@@ -516,6 +518,31 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [currentUser, loadUserBucket]);
 
+  const syncNow = useCallback(async () => {
+    if (!currentUser) return;
+    setDbStatus('loading');
+    await syncOfflineQueueWithServer((syncedTx) => {
+      setTransactions(prev => [syncedTx, ...prev.filter(t => t.id !== syncedTx.id)]);
+    });
+    await loadUserBucket(currentUser.id);
+  }, [currentUser, loadUserBucket]);
+
+  // Also auto-sync immediately whenever the phone app resumes or tab becomes visible
+  useEffect(() => {
+    if (!currentUser) return;
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        loadUserBucket(currentUser.id);
+      }
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    return () => {
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+    };
+  }, [currentUser, loadUserBucket]);
+
   const knownBusinessTxIdsRef = React.useRef<Set<string>>(new Set());
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
@@ -628,7 +655,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const logout = async () => {
     try {
-      await fetch('/api/auth?action=logout', { method: 'POST' });
+      await fetch(apiUrl('/api/auth?action=logout'), { method: 'POST' });
     } catch {}
     setCurrentUser(null);
     try {
@@ -639,7 +666,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const changePassword = async (oldPassword: string, newPassword: string) => {
     if (!currentUser) return { success: false, error: 'No active session' };
     try {
-      const res = await fetch('/api/auth?action=change-password', {
+      const res = await fetch(apiUrl('/api/auth?action=change-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1420,7 +1447,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       clearPendingReview,
       toggleTheme,
       updateSettings,
-      resetAllData
+      resetAllData,
+      syncNow
     }}>
       {children}
     </FinanceContext.Provider>

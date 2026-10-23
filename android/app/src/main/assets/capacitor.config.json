@@ -1,5 +1,9 @@
 {
 	"appId": "com.fundslogger.app",
 	"appName": "Funds Logger",
-	"webDir": "dist"
+	"webDir": "dist",
+	"server": {
+		"url": "https://hisaab-kitab-dusky.vercel.app",
+		"cleartext": false
+	}
 }

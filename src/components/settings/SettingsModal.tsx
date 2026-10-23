@@ -46,6 +46,7 @@ import {
   subscribeInstallPrompt,
   triggerNativeAppInstall
 } from '../../utils/pwaInstall';
+import { isNativeCapacitorLocalOrigin, LIVE_PROD_ORIGIN } from '../../utils/apiUrl';
 
 interface Props {
   onClose: () => void;
@@ -77,7 +78,7 @@ const ACCENT_OPTIONS = [
 ] as const;
 
 export const SettingsModal: React.FC<Props> = ({ onClose }) => {
-  const { settings, updateSettings, currentUser, resetAllData, changePassword, accountMode, setAccountMode } = useFinance();
+  const { settings, updateSettings, currentUser, resetAllData, changePassword, accountMode, setAccountMode, syncNow, dbStatus } = useFinance();
   const [draft, setDraft] = useState<UserSettings>({ ...settings });
   const [activeTab, setActiveTab] = useState<TabType>('ai');
   const [saved, setSaved] = useState(false);
@@ -1036,31 +1037,60 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                 </form>
               </section>
 
-              {/* App Version & OTA Update Checker */}
-              <section className="bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-2 shadow-2xs text-left">
+              {/* App Version, Cloud Sync & Live OTA Update Checker */}
+              <section className="bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-2.5 shadow-2xs text-left">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-emerald-700" />
                     <div>
-                      <h4 className="text-xs font-bold text-gray-900">Funds Logger App Version</h4>
-                      <p className="text-[10px] text-gray-400">v1.3.0 (Build 2026.10.23 - Stable)</p>
+                      <h4 className="text-xs font-bold text-gray-900">Cloud Sync & Live App Updates</h4>
+                      <p className="text-[10px] text-gray-400">v1.4.0 (Live OTA Enabled • User: {currentUser?.name})</p>
                     </div>
                   </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    dbStatus === 'ok'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : dbStatus === 'loading'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-red-50 text-red-700 border-red-200'
+                  }`}>
+                    {dbStatus === 'ok' ? 'Synced ✓' : dbStatus === 'loading' ? 'Syncing...' : 'Offline'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => syncNow()}
+                    className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold border border-emerald-200 flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${dbStatus === 'loading' ? 'animate-spin' : ''}`} />
+                    <span>Sync Data Now</span>
+                  </button>
 
                   <button
                     type="button"
-                    onClick={() => {
-                      if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.getRegistrations().then(regs => {
-                          for (const reg of regs) reg.update();
-                        });
+                    onClick={async () => {
+                      try {
+                        if ('caches' in window) {
+                          const keys = await caches.keys();
+                          await Promise.all(keys.map(k => caches.delete(k)));
+                        }
+                        if ('serviceWorker' in navigator) {
+                          const regs = await navigator.serviceWorker.getRegistrations();
+                          for (const reg of regs) await reg.update();
+                        }
+                      } catch {}
+                      if (isNativeCapacitorLocalOrigin()) {
+                        window.location.href = `${LIVE_PROD_ORIGIN}/?_t=${Date.now()}`;
+                      } else {
+                        window.location.reload();
                       }
-                      window.location.reload();
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 flex items-center gap-1 cursor-pointer transition-colors"
+                    className="py-2 px-3 rounded-xl bg-[#0D2E14] hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                   >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Check for Updates</span>
+                    <Sparkles className="w-3.5 h-3.5 text-[#93E044]" />
+                    <span>Update App Now</span>
                   </button>
                 </div>
               </section>
