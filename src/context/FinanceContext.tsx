@@ -468,7 +468,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       // 2. Settings
       if (dbSettings) {
-        const mergedSettings = { ...DEFAULT_SETTINGS, ...dbSettings };
+        const hasDevicePasskey = Boolean(localStorage.getItem('funds_logger_passkey_cred_id'));
+        const mergedSettings: UserSettings = {
+          ...DEFAULT_SETTINGS,
+          ...dbSettings,
+          biometricPasskeyEnabled: hasDevicePasskey || Boolean(dbSettings.biometricPasskeyEnabled)
+        };
         setSettings(prev => {
           if (JSON.stringify(prev) === JSON.stringify(mergedSettings)) return prev;
           try {
@@ -1011,6 +1016,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateSettings = (newSettings: Partial<UserSettings>) => {
     setSettings(prev => {
       const updated = { ...prev, ...newSettings };
+      try {
+        localStorage.setItem(`hk_cached_settings_${activeUserId}`, JSON.stringify(updated));
+      } catch {}
       saveSettingsToDb(updated, activeUserId);
       return updated;
     });

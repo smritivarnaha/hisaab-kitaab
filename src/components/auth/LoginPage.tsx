@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AppUser } from '../../types/finance';
-import { Lock, ArrowRight, ShieldCheck, User, Fingerprint, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
-import { checkBiometricAvailability, verifyDevicePasskey } from '../../utils/biometricAuth';
+import { Lock, ArrowRight, ShieldCheck, User, Fingerprint, Eye, EyeOff, Smartphone } from 'lucide-react';
+import { checkBiometricAvailability, verifyDevicePasskey, markSessionBiometricUnlocked } from '../../utils/biometricAuth';
+import { hasInstallPrompt, subscribeInstallPrompt, triggerNativeAppInstall, isAppInstalledStandalone } from '../../utils/pwaInstall';
 
 interface Props {
   onLoginSuccess: (user: AppUser) => void;
@@ -20,12 +21,19 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasPasskey, setHasPasskey] = useState(false);
+  const [enrolledUsername, setEnrolledUsername] = useState<string | undefined>(undefined);
   const [biometricLoading, setBiometricLoading] = useState(false);
+  const [canInstallPWA, setCanInstallPWA] = useState(hasInstallPrompt());
 
   useEffect(() => {
     checkBiometricAvailability().then(status => {
       setHasPasskey(status.hasEnrolledPasskey);
+      setEnrolledUsername(status.enrolledUsername);
     });
+    const unsub = subscribeInstallPrompt(() => {
+      setCanInstallPWA(hasInstallPrompt());
+    });
+    return unsub;
   }, []);
 
   const handleBiometricLogin = async () => {
@@ -35,6 +43,7 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
     setBiometricLoading(false);
 
     if (res.success && res.username) {
+      markSessionBiometricUnlocked();
       const found = PRESET_USERS.find(
         u => u.username.toLowerCase() === res.username!.toLowerCase()
       );
@@ -69,20 +78,13 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        const found = PRESET_USERS.find(
-          u => u.username.toLowerCase() === cleanUser
-        );
-        if (found && cleanPass.toLowerCase() === found.defaultPass.toLowerCase()) {
-          setIsLoading(false);
-          onLoginSuccess({ id: found.id, username: found.username, name: found.name });
-          return;
-        }
         setErrorMsg(data.error || 'Incorrect username or password');
         setIsLoading(false);
         return;
       }
 
       setIsLoading(false);
+      markSessionBiometricUnlocked();
       onLoginSuccess(data.user);
     } catch (err: any) {
       console.warn('Login network fallback:', err);
@@ -92,6 +94,7 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
 
       if (found && cleanPass.toLowerCase() === found.defaultPass.toLowerCase()) {
         setIsLoading(false);
+        markSessionBiometricUnlocked();
         onLoginSuccess({ id: found.id, username: found.username, name: found.name });
       } else {
         setErrorMsg('Invalid login credentials. Check password and try again.');
@@ -135,7 +138,13 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
                 className="w-full py-2.5 px-4 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 font-extrabold text-xs flex items-center justify-center gap-2 shadow-2xs active:scale-[0.99] transition-all cursor-pointer"
               >
                 <Fingerprint className="w-4 h-4 text-purple-700" />
-                <span>{biometricLoading ? 'Scanning Fingerprint...' : 'Unlock with Fingerprint / Face ID'}</span>
+                <span>
+                  {biometricLoading
+                    ? 'Scanning Fingerprint...'
+                    : enrolledUsername
+                      ? `Unlock as ${enrolledUsername.charAt(0).toUpperCase() + enrolledUsername.slice(1)} (Fingerprint / Face ID)`
+                      : 'Unlock with Fingerprint / Face ID'}
+                </span>
               </button>
 
               <div className="flex items-center gap-2 my-2">
@@ -201,6 +210,17 @@ export const LoginPage: React.FC<Props> = ({ onLoginSuccess }) => {
               )}
             </button>
           </form>
+
+          {canInstallPWA && !isAppInstalledStandalone() && (
+            <button
+              type="button"
+              onClick={() => triggerNativeAppInstall()}
+              className="w-full py-2 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Install Funds Logger Mobile App</span>
+            </button>
+          )}
         </div>
 
         {/* MNC Security Footer */}

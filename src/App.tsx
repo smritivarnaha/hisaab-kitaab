@@ -10,7 +10,12 @@ import { ExportDataModal } from './components/common/ExportDataModal';
 import { UpdatePromptBanner } from './components/common/UpdatePromptBanner';
 import { LoginPage } from './components/auth/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
-import { X, Bot, Calculator } from 'lucide-react';
+import { X, Fingerprint, Lock, ShieldCheck } from 'lucide-react';
+import {
+  isSessionBiometricUnlocked,
+  markSessionBiometricUnlocked,
+  verifyDevicePasskey
+} from './utils/biometricAuth';
 
 const ACCENT_COLORS = {
   emerald: { primary: '#0D2E14', hover: '#12441d', light: '#F0F7EE', activeBg: '#E4ECE2', lime: '#93E044' },
@@ -22,13 +27,26 @@ const ACCENT_COLORS = {
 };
 
 export const AppContent: React.FC = () => {
-  const { settings, currentUser, login, transactions } = useFinance();
+  const { settings, currentUser, login, logout, transactions } = useFinance();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOCROpen, setIsOCROpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [botAvatarError, setBotAvatarError] = useState(false);
+
+  // PhonePe-style Device Biometric Lock state on app launch
+  const [isBiometricLocked, setIsBiometricLocked] = useState<boolean>(() => {
+    try {
+      const hasDevicePasskey = Boolean(localStorage.getItem('funds_logger_passkey_cred_id'));
+      const passkeyEnabled = localStorage.getItem('funds_logger_passkey_enabled') !== 'false';
+      return hasDevicePasskey && passkeyEnabled && !isSessionBiometricUnlocked();
+    } catch {
+      return false;
+    }
+  });
+  const [biometricBusy, setBiometricBusy] = useState(false);
+  const [biometricError, setBiometricError] = useState<string | null>(null);
 
   useEffect(() => {
     const accent = settings.accentColor || 'emerald';
@@ -41,9 +59,95 @@ export const AppContent: React.FC = () => {
     root.style.setProperty('--accent-lime', colors.lime);
   }, [settings.accentColor]);
 
+  const handleUnlockWithBiometric = async () => {
+    setBiometricError(null);
+    setBiometricBusy(true);
+    const res = await verifyDevicePasskey();
+    setBiometricBusy(false);
+    if (res.success) {
+      markSessionBiometricUnlocked();
+      setIsBiometricLocked(false);
+    } else if (res.error) {
+      setBiometricError(res.error);
+    }
+  };
+
+  // Auto-trigger fingerprint prompt when locked screen mounts for a logged-in user
+  useEffect(() => {
+    if (currentUser && isBiometricLocked) {
+      const t = setTimeout(() => {
+        handleUnlockWithBiometric();
+      }, 250);
+      return () => clearTimeout(t);
+    }
+  }, [currentUser, isBiometricLocked]);
+
   // If no user is logged in, show the Login Page
   if (!currentUser) {
-    return <LoginPage onLoginSuccess={user => login(user)} />;
+    return (
+      <LoginPage
+        onLoginSuccess={user => {
+          markSessionBiometricUnlocked();
+          setIsBiometricLocked(false);
+          login(user);
+        }}
+      />
+    );
+  }
+
+  // If logged in and Biometric Lock is active for this session, show the Biometric Unlock Screen
+  if (isBiometricLocked) {
+    return (
+      <div className="min-h-screen w-full bg-[#F3F5F1] font-outfit flex items-center justify-center p-4 antialiased">
+        <div className="w-full max-w-[380px] bg-white rounded-3xl border border-[#E2E8E0] shadow-2xl p-7 text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-[#0D2E14] mx-auto flex items-center justify-center shadow-md p-2">
+            <img src="/logo.png" alt="Funds Logger" className="w-12 h-12 object-contain" />
+          </div>
+
+          <div className="space-y-1">
+            <h2 className="text-lg font-extrabold text-[#0D2E14]">Funds Logger Locked</h2>
+            <p className="text-xs text-gray-500 font-medium">
+              Welcome back, <span className="font-bold text-[#0D2E14]">{currentUser.name}</span>. Verify your fingerprint or Face ID to continue.
+            </p>
+          </div>
+
+          {biometricError && (
+            <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+              ⚠️ {biometricError}
+            </div>
+          )}
+
+          <div className="space-y-2.5 pt-1">
+            <button
+              type="button"
+              onClick={handleUnlockWithBiometric}
+              disabled={biometricBusy}
+              className="w-full py-3 px-4 rounded-2xl bg-[#0D2E14] hover:bg-black text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all cursor-pointer"
+            >
+              <Fingerprint className="w-4 h-4 text-[#93E044]" />
+              <span>{biometricBusy ? 'Verifying Fingerprint...' : 'Unlock with Fingerprint / Face ID'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsBiometricLocked(false);
+                logout();
+              }}
+              className="w-full py-2.5 px-4 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Lock className="w-3.5 h-3.5 text-gray-500" />
+              <span>Use Password Instead</span>
+            </button>
+          </div>
+
+          <div className="pt-2 border-t border-gray-100 flex items-center justify-center gap-1.5 text-[10px] text-gray-400 font-semibold">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Protected by Device Hardware Biometrics</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const botAvatar = settings.botAvatarUrl;

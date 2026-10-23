@@ -33,12 +33,19 @@ import { UserSettings, isBusinessPartner } from '../../types/finance';
 import { 
   checkBiometricAvailability, 
   registerDevicePasskey, 
-  removeDevicePasskey 
+  removeDevicePasskey,
+  verifyDevicePasskey
 } from '../../utils/biometricAuth';
 import { 
   requestNotificationPermission, 
   sendNotification 
 } from '../../utils/notificationService';
+import {
+  hasInstallPrompt,
+  isAppInstalledStandalone,
+  subscribeInstallPrompt,
+  triggerNativeAppInstall
+} from '../../utils/pwaInstall';
 
 interface Props {
   onClose: () => void;
@@ -75,6 +82,32 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>('ai');
   const [saved, setSaved] = useState(false);
 
+  // Biometric state on this physical device
+  const [deviceHasPasskey, setDeviceHasPasskey] = useState<boolean>(() =>
+    Boolean(localStorage.getItem('funds_logger_passkey_cred_id'))
+  );
+  const [biometricStatusMsg, setBiometricStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [biometricBusy, setBiometricBusy] = useState(false);
+
+  // PWA / Mobile App Install state
+  const [canInstallApp, setCanInstallApp] = useState<boolean>(hasInstallPrompt());
+  const [isInstalledStandalone, setIsInstalledStandalone] = useState<boolean>(isAppInstalledStandalone());
+  const [installMsg, setInstallMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    checkBiometricAvailability().then(status => {
+      setDeviceHasPasskey(status.hasEnrolledPasskey);
+      if (status.hasEnrolledPasskey && !draft.biometricPasskeyEnabled) {
+        setDraft(prev => ({ ...prev, biometricPasskeyEnabled: true }));
+      }
+    });
+    const unsub = subscribeInstallPrompt(() => {
+      setCanInstallApp(hasInstallPrompt());
+      setIsInstalledStandalone(isAppInstalledStandalone());
+    });
+    return unsub;
+  }, []);
+
   // Password change state
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -109,8 +142,13 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
     }
   };
 
+  // Live-sync settings changes immediately so closing modal never loses user toggles
   const updateDraft = (partial: Partial<UserSettings>) => {
-    setDraft(prev => ({ ...prev, ...partial }));
+    setDraft(prev => {
+      const next = { ...prev, ...partial };
+      updateSettings(next);
+      return next;
+    });
     setSaved(false);
   };
 
@@ -136,6 +174,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
   };
 
   const activeProvider = draft.aiProvider || 'openai';
+  const isPasskeyActive = deviceHasPasskey && draft.biometricPasskeyEnabled !== false;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn font-outfit">
@@ -161,7 +200,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
         <div className="flex border-b border-gray-100 bg-gray-50/60 px-2 py-1.5 flex-shrink-0 gap-1 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('ai')}
-            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all whitespace-nowrap ${
               activeTab === 'ai' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
@@ -169,7 +208,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
           </button>
           <button
             onClick={() => setActiveTab('avatars')}
-            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all whitespace-nowrap ${
               activeTab === 'avatars' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
@@ -177,7 +216,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
           </button>
           <button
             onClick={() => setActiveTab('appearance')}
-            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all whitespace-nowrap ${
               activeTab === 'appearance' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
@@ -185,7 +224,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
           </button>
           <button
             onClick={() => setActiveTab('notifications')}
-            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all whitespace-nowrap ${
               activeTab === 'notifications' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
@@ -193,7 +232,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
           </button>
           <button
             onClick={() => setActiveTab('account')}
-            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-1.5 px-2 text-center text-[11px] font-semibold rounded-lg transition-all whitespace-nowrap ${
               activeTab === 'account' ? 'bg-[#0D2E14] text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
@@ -282,12 +321,14 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
 
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={() => updateDraft({ aiProvider: 'openai' })}
                     className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${activeProvider === 'openai' ? 'border-blue-600 bg-blue-50 text-blue-900' : 'border-gray-200 bg-gray-50 text-gray-600'}`}
                   >
-                    🔵 OpenAI (Default)
+                    🔵 OpenAI
                   </button>
                   <button
+                    type="button"
                     onClick={() => updateDraft({ aiProvider: 'gemini' })}
                     className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all ${activeProvider === 'gemini' ? 'border-emerald-600 bg-emerald-50 text-emerald-900' : 'border-gray-200 bg-gray-50 text-gray-600'}`}
                   >
@@ -297,19 +338,35 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
 
                 <div className="h-px bg-gray-100" />
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">OpenAI API Key (Paid)</label>
-                  <input
-                    type="text"
-                    value={draft.openaiApiKey || DEFAULT_OPENAI_KEY}
-                    onChange={e => updateDraft({ openaiApiKey: e.target.value })}
-                    placeholder="sk-proj-..."
-                    className="w-full bg-slate-50 border border-gray-200 text-xs font-mono text-gray-900 rounded-lg py-2 px-3 outline-none focus:border-[#0D2E14] transition-all"
-                  />
-                  <span className="text-[9px] text-emerald-600 font-semibold flex items-center gap-1">
-                    ✓ Default Paid OpenAI Key Active for All Users
-                  </span>
-                </div>
+                {activeProvider === 'openai' ? (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">OpenAI API Key (Optional)</label>
+                    <input
+                      type="password"
+                      value={draft.openaiApiKey || DEFAULT_OPENAI_KEY}
+                      onChange={e => updateDraft({ openaiApiKey: e.target.value })}
+                      placeholder="sk-proj-..."
+                      className="w-full bg-slate-50 border border-gray-200 text-xs font-mono text-gray-900 rounded-lg py-2 px-3 outline-none focus:border-[#0D2E14] transition-all"
+                    />
+                    <span className="text-[9px] text-emerald-600 font-semibold flex items-center gap-1">
+                      ⚡ Instant 0ms Local Transaction Engine Active
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">Gemini API Key (Optional)</label>
+                    <input
+                      type="password"
+                      value={draft.apiKey?.startsWith('AQ.') ? '' : (draft.apiKey || '')}
+                      onChange={e => updateDraft({ apiKey: e.target.value })}
+                      placeholder="AIzaSy..."
+                      className="w-full bg-slate-50 border border-gray-200 text-xs font-mono text-gray-900 rounded-lg py-2 px-3 outline-none focus:border-[#0D2E14] transition-all"
+                    />
+                    <span className="text-[9px] text-emerald-600 font-semibold flex items-center gap-1">
+                      ⚡ Instant 0ms Local Transaction Engine Active
+                    </span>
+                  </div>
+                )}
               </section>
 
               {/* CUSTOM AI INSTRUCTIONS */}
@@ -373,6 +430,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <div className="flex bg-gray-100 p-0.5 rounded-lg gap-1">
                     {(['sm', 'md', 'lg'] as const).map(bSize => (
                       <button
+                        type="button"
                         key={bSize}
                         onClick={() => updateDraft({ floatingBubbleSize: bSize })}
                         className={`flex-1 py-1 text-center text-[10px] font-semibold rounded-md transition-all ${
@@ -391,6 +449,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <div className="grid grid-cols-4 gap-1.5">
                     {PRESET_BOT_AVATARS.map((preset, idx) => (
                       <button
+                        type="button"
                         key={idx}
                         onClick={() => updateDraft({ botAvatarUrl: preset.url })}
                         className={`p-1 rounded-lg border flex flex-col items-center gap-0.5 transition-all hover:scale-105 ${
@@ -443,6 +502,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <div className="grid grid-cols-4 gap-1.5">
                     {PRESET_USER_AVATARS.map((preset, idx) => (
                       <button
+                        type="button"
                         key={idx}
                         onClick={() => updateDraft({ userAvatarUrl: preset.url })}
                         className={`p-1 rounded-lg border flex flex-col items-center gap-0.5 transition-all hover:scale-105 ${
@@ -556,6 +616,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <div className="flex bg-gray-100 p-0.5 rounded-lg gap-1">
                     {(['light', 'dark', 'system'] as const).map(themeOpt => (
                       <button
+                        type="button"
                         key={themeOpt}
                         onClick={() => updateDraft({ theme: themeOpt })}
                         className={`flex-1 py-1 text-center text-xs font-semibold rounded-md flex items-center justify-center gap-1 capitalize transition-all ${
@@ -579,6 +640,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <div className="grid grid-cols-6 gap-1.5">
                     {ACCENT_OPTIONS.map(opt => (
                       <button
+                        type="button"
                         key={opt.id}
                         onClick={() => updateDraft({ accentColor: opt.id })}
                         className={`h-8 rounded-lg relative flex items-center justify-center transition-all hover:scale-105 border ${
@@ -601,6 +663,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <div className="flex bg-gray-100 p-0.5 rounded-lg gap-1">
                     {(['sm', 'base', 'lg'] as const).map(fOpt => (
                       <button
+                        type="button"
                         key={fOpt}
                         onClick={() => updateDraft({ fontSize: fOpt })}
                         className={`flex-1 py-1 text-center text-xs font-semibold rounded-md transition-all capitalize ${
@@ -621,6 +684,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   <div className="grid grid-cols-3 gap-1.5">
                     {(['flat', 'glass', 'bordered'] as const).map(styleOpt => (
                       <button
+                        type="button"
                         key={styleOpt}
                         onClick={() => updateDraft({ chatBubbleStyle: styleOpt })}
                         className={`py-1.5 text-center text-xs font-semibold rounded-lg border capitalize transition-all ${
@@ -638,6 +702,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
               {/* DANGER ZONE */}
               <section className="space-y-1.5 pt-1">
                 <button
+                  type="button"
                   onClick={() => {
                     if (window.confirm('This will permanently clear all your transactions and chat history. Are you sure?')) {
                       resetAllData();
@@ -736,17 +801,17 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
             </div>
           )}
 
-          {/* TAB 5: SECURITY, PASSKEY & APP VERSION */}
+          {/* TAB 5: SECURITY, PASSKEY & MOBILE APP */}
           {activeTab === 'account' && (
             <div className="space-y-3 font-outfit">
               {/* Biometric Passkey Device Lock (PhonePe-Style) */}
-              <section className="bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-3 shadow-2xs">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center">
+              <section className="bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2 gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-800 flex items-center justify-center flex-shrink-0">
                       <Fingerprint className="w-4 h-4" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h4 className="text-xs font-bold text-gray-900">Device Biometric Lock</h4>
                       <p className="text-[10px] text-gray-400">Unlock with phone's Fingerprint / Face ID</p>
                     </div>
@@ -754,42 +819,154 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
 
                   <button
                     type="button"
+                    disabled={biometricBusy}
                     onClick={async () => {
-                      const isCurrentlyEnabled = draft.biometricPasskeyEnabled;
-                      if (!isCurrentlyEnabled) {
+                      setBiometricStatusMsg(null);
+                      if (!isPasskeyActive) {
+                        setBiometricBusy(true);
                         const res = await registerDevicePasskey(currentUser?.username || 'praveen', currentUser?.name || 'Praveen');
+                        setBiometricBusy(false);
                         if (res.success) {
+                          setDeviceHasPasskey(true);
                           updateDraft({ 
                             biometricPasskeyEnabled: true, 
                             biometricCredentialId: res.credentialId,
                             biometricUserName: currentUser?.username 
                           });
-                          alert('✅ Device Fingerprint / Face ID Passkey registered successfully!');
+                          setBiometricStatusMsg({
+                            type: 'success',
+                            text: 'Fingerprint / Face ID Passkey registered & saved on this phone!'
+                          });
                         } else {
-                          alert(`⚠️ ${res.error}`);
+                          setBiometricStatusMsg({
+                            type: 'error',
+                            text: res.error || 'Could not register passkey.'
+                          });
                         }
                       } else {
                         removeDevicePasskey();
+                        setDeviceHasPasskey(false);
                         updateDraft({ 
                           biometricPasskeyEnabled: false, 
                           biometricCredentialId: undefined,
                           biometricUserName: undefined 
                         });
-                        alert('Device biometric passkey removed.');
+                        setBiometricStatusMsg({
+                          type: 'success',
+                          text: 'Device biometric passkey disabled.'
+                        });
                       }
                     }}
-                    className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer ${
-                      draft.biometricPasskeyEnabled 
+                    className={`px-3 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer flex-shrink-0 ${
+                      isPasskeyActive
                         ? 'bg-emerald-600 text-white shadow-2xs' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-purple-600 text-white hover:bg-purple-700 shadow-2xs'
                     }`}
                   >
-                    {draft.biometricPasskeyEnabled ? 'Active (Tap to Disable)' : 'Enable Passkey'}
+                    {biometricBusy
+                      ? 'Scanning...'
+                      : isPasskeyActive
+                        ? 'Active (Tap to Disable)'
+                        : 'Enable Passkey'}
                   </button>
                 </div>
+
+                {biometricStatusMsg && (
+                  <div className={`p-2 rounded-xl text-[11px] font-bold ${
+                    biometricStatusMsg.type === 'success'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}>
+                    {biometricStatusMsg.type === 'success' ? '✅ ' : '⚠️ '}
+                    {biometricStatusMsg.text}
+                  </div>
+                )}
+
+                {isPasskeyActive && (
+                  <button
+                    type="button"
+                    disabled={biometricBusy}
+                    onClick={async () => {
+                      setBiometricStatusMsg(null);
+                      setBiometricBusy(true);
+                      const res = await verifyDevicePasskey();
+                      setBiometricBusy(false);
+                      if (res.success) {
+                        setBiometricStatusMsg({
+                          type: 'success',
+                          text: `Verified! Fingerprint unlock works for ${res.username}.`
+                        });
+                      } else {
+                        setBiometricStatusMsg({
+                          type: 'error',
+                          text: res.error || 'Verification cancelled.'
+                        });
+                      }
+                    }}
+                    className="w-full py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Fingerprint className="w-3.5 h-3.5 text-purple-700" />
+                    <span>Test Fingerprint / Face ID Unlock Now</span>
+                  </button>
+                )}
+
                 <p className="text-[11px] text-gray-500 leading-relaxed">
-                  Uses your phone's built-in secure biometric hardware (Fingerprint, Face Unlock, or Screen Lock PIN) matching banking standards.
+                  Uses your phone's built-in secure biometric hardware (Fingerprint, Face Unlock, or Screen Lock PIN). When enabled, opening the app prompts for your fingerprint.
                 </p>
+              </section>
+
+              {/* Install as Mobile App (WebAPK + Direct Android APK) */}
+              <section className="bg-white border border-gray-200/80 rounded-2xl p-3.5 space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-900">Install Mobile App (Android / iOS)</h4>
+                      <p className="text-[10px] text-gray-400">Install Funds Logger on your phone home screen</p>
+                    </div>
+                  </div>
+                  {isInstalledStandalone && (
+                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Installed ✓
+                    </span>
+                  )}
+                </div>
+
+                {installMsg && (
+                  <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-900">
+                    {installMsg}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const res = await triggerNativeAppInstall();
+                      if (res === 'accepted') {
+                        setInstallMsg('✅ App installation started! Check your phone home screen.');
+                      } else if (res === 'unavailable') {
+                        setInstallMsg('📲 In Chrome on Android: tap the ⋮ menu (top right) → "Install app" or "Add to Home screen". On iPhone Safari: tap Share → "Add to Home Screen".');
+                      }
+                    }}
+                    className="py-2 px-3 rounded-xl bg-[#0D2E14] hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all"
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    <span>{canInstallApp ? '1-Tap Install App' : 'Install on Phone'}</span>
+                  </button>
+
+                  <a
+                    href="https://github.com/smritivarnaha/hisaab-kitaab/releases/latest/download/FundsLogger.apk"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Download Android APK</span>
+                  </a>
+                </div>
               </section>
 
               {/* Password Change Card */}
@@ -866,7 +1043,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     <Sparkles className="w-4 h-4 text-emerald-700" />
                     <div>
                       <h4 className="text-xs font-bold text-gray-900">Funds Logger App Version</h4>
-                      <p className="text-[10px] text-gray-400">v1.2.0 (Build 2026.08.18 - Stable)</p>
+                      <p className="text-[10px] text-gray-400">v1.3.0 (Build 2026.10.23 - Stable)</p>
                     </div>
                   </div>
 
@@ -895,12 +1072,14 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
         {/* Footer — Save Button */}
         <div className="px-4 py-3 border-t border-gray-100 bg-white flex-shrink-0 flex items-center gap-2">
           <button
+            type="button"
             onClick={onClose}
             className="flex-1 py-2 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            Close
           </button>
           <button
+            type="button"
             onClick={handleSave}
             className={`flex-1 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-2xs ${saved ? 'bg-emerald-600 text-white' : 'bg-[#0D2E14] hover:bg-black text-white'}`}
           >
