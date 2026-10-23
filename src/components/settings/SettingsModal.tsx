@@ -974,7 +974,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>{isRunningInNativeAndroidApk() ? 'Download Latest Native APK (v1.5)' : 'Download Android APK'}</span>
+                    <span>{isRunningInNativeAndroidApk() ? 'Download Latest Native APK (v1.6)' : 'Download Android APK'}</span>
                   </a>
                 </div>
               </section>
@@ -1053,7 +1053,9 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     <Sparkles className="w-4 h-4 text-emerald-700" />
                     <div>
                       <h4 className="text-xs font-bold text-gray-900">Cloud Sync & Live App Updates</h4>
-                      <p className="text-[10px] text-gray-400">v1.5.0 (Live OTA Enabled • User: {currentUser?.name})</p>
+                      <p className="text-[10px] text-gray-400">
+                        v1.6.0 ({typeof window !== 'undefined' && Boolean(window.AndroidBiometric) ? 'Native Hardware Biometric Ready ✓' : 'Live OTA Enabled'} • User: {currentUser?.name})
+                      </p>
                     </div>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
