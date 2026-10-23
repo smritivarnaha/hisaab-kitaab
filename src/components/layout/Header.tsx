@@ -16,32 +16,32 @@ export const Header: React.FC<Props> = ({
   const isPartner = isBusinessPartner(currentUser);
 
   return (
-    <header className="px-3 sm:px-5 pt-[max(0.625rem,env(safe-area-inset-top))] pb-2.5 bg-[#F3F5F1] border-b border-[#E2E8E0] flex items-center justify-between sticky top-0 z-30 font-outfit shadow-2xs select-none">
+    <header className="px-3 sm:px-5 pt-[max(0.625rem,env(safe-area-inset-top))] pb-2.5 bg-[#F3F5F1] border-b border-[#E2E8E0] flex items-center justify-between gap-2 sticky top-0 z-30 font-outfit shadow-2xs select-none">
       {/* Brand Title & Instant Cloud Sync Trigger */}
       <button
         type="button"
         onClick={() => syncNow()}
         title="Tap to sync all data with cloud"
-        className="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
+        className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform flex-shrink-0"
       >
         <img src="/logo.png" alt="Funds Logger" className="w-6 h-6 object-contain rounded-full drop-shadow-2xs flex-shrink-0" />
-        <h1 className="font-bold text-[#0D2E14] text-base sm:text-lg tracking-tight flex items-center gap-1.5 font-outfit">
+        <h1 className="font-bold text-[#0D2E14] text-sm sm:text-lg tracking-tight flex items-center gap-1 font-outfit whitespace-nowrap">
           <span>Funds Log</span>
-          {dbStatus === 'loading' && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />}
-          {dbStatus === 'ok' && <Wifi className="w-3.5 h-3.5 text-emerald-600" />}
-          {dbStatus === 'error' && <WifiOff className="w-3.5 h-3.5 text-red-500" />}
+          {dbStatus === 'loading' && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500 flex-shrink-0" />}
+          {dbStatus === 'ok' && <Wifi className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />}
+          {dbStatus === 'error' && <WifiOff className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
         </h1>
       </button>
 
-      {/* Centered Faded Account Name */}
-      <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none px-2 max-w-[140px] sm:max-w-[240px]">
-        <span className="text-[11px] sm:text-xs font-bold text-gray-400 font-outfit uppercase tracking-wider block truncate">
+      {/* Centered Faded Account Name — flex-1 prevents collision with brand or buttons on mobile */}
+      <div className="flex-1 min-w-0 text-center pointer-events-none px-1">
+        <span className="text-[10px] sm:text-xs font-bold text-gray-400 font-outfit uppercase tracking-wider block truncate">
           {currentUser?.name || 'Personal'} {isPartner ? (accountMode === 'business' ? '(Business)' : '(Personal)') : ''}
         </span>
       </div>
 
       {/* Top Action Controls */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         {/* Export Data Symbol Button */}
         {onOpenExport && (
           <button

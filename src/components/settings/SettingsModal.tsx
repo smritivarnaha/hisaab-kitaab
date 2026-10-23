@@ -43,6 +43,7 @@ import {
 import {
   hasInstallPrompt,
   isAppInstalledStandalone,
+  isRunningInNativeAndroidApk,
   subscribeInstallPrompt,
   triggerNativeAppInstall
 } from '../../utils/pwaInstall';
@@ -924,13 +925,19 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                       <Smartphone className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-xs font-bold text-gray-900">Install Mobile App (Android / iOS)</h4>
-                      <p className="text-[10px] text-gray-400">Install Funds Logger on your phone home screen</p>
+                      <h4 className="text-xs font-bold text-gray-900">
+                        {isRunningInNativeAndroidApk() ? 'Funds Logger Native Android App' : 'Install Mobile App (Android / iOS)'}
+                      </h4>
+                      <p className="text-[10px] text-gray-400">
+                        {isRunningInNativeAndroidApk()
+                          ? 'Running inside standalone Android app'
+                          : 'Install Funds Logger on your phone home screen'}
+                      </p>
                     </div>
                   </div>
                   {isInstalledStandalone && (
                     <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
-                      Installed ✓
+                      Active App ✓
                     </span>
                   )}
                 </div>
@@ -941,22 +948,24 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const res = await triggerNativeAppInstall();
-                      if (res === 'accepted') {
-                        setInstallMsg('✅ App installation started! Check your phone home screen.');
-                      } else if (res === 'unavailable') {
-                        setInstallMsg('📲 In Chrome on Android: tap the ⋮ menu (top right) → "Install app" or "Add to Home screen". On iPhone Safari: tap Share → "Add to Home Screen".');
-                      }
-                    }}
-                    className="py-2 px-3 rounded-xl bg-[#0D2E14] hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all"
-                  >
-                    <Smartphone className="w-3.5 h-3.5" />
-                    <span>{canInstallApp ? '1-Tap Install App' : 'Install on Phone'}</span>
-                  </button>
+                <div className={`grid ${isRunningInNativeAndroidApk() ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'} gap-2`}>
+                  {!isRunningInNativeAndroidApk() && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const res = await triggerNativeAppInstall();
+                        if (res === 'accepted') {
+                          setInstallMsg('✅ App installation started! Check your phone home screen.');
+                        } else if (res === 'unavailable') {
+                          setInstallMsg('📲 Tap "Download Android APK" below to install the standalone native Android app directly.');
+                        }
+                      }}
+                      className="py-2 px-3 rounded-xl bg-[#0D2E14] hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-all"
+                    >
+                      <Smartphone className="w-3.5 h-3.5" />
+                      <span>{canInstallApp ? '1-Tap Install App' : 'Install on Phone'}</span>
+                    </button>
+                  )}
 
                   <a
                     href="https://github.com/smritivarnaha/hisaab-kitaab/releases/latest/download/FundsLogger.apk"
@@ -965,7 +974,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Download Android APK</span>
+                    <span>{isRunningInNativeAndroidApk() ? 'Download Latest Native APK (v1.5)' : 'Download Android APK'}</span>
                   </a>
                 </div>
               </section>
@@ -1044,7 +1053,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     <Sparkles className="w-4 h-4 text-emerald-700" />
                     <div>
                       <h4 className="text-xs font-bold text-gray-900">Cloud Sync & Live App Updates</h4>
-                      <p className="text-[10px] text-gray-400">v1.4.0 (Live OTA Enabled • User: {currentUser?.name})</p>
+                      <p className="text-[10px] text-gray-400">v1.5.0 (Live OTA Enabled • User: {currentUser?.name})</p>
                     </div>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${

@@ -1,6 +1,6 @@
 /**
  * Captures the browser's native PWA install prompt (Android WebAPK / Desktop)
- * so the user can install Funds Logger as a native home-screen app in 1 tap.
+ * and detects whether the user is running inside the standalone Native Android APK.
  */
 
 let deferredInstallPrompt: any = null;
@@ -19,9 +19,20 @@ if (typeof window !== 'undefined') {
   });
 }
 
+export function isRunningInNativeAndroidApk(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return (
+    Boolean((window as any).AndroidBiometric) ||
+    Boolean((window as any).Capacitor?.isNativePlatform?.()) ||
+    /; wv\)|Capacitor/i.test(ua)
+  );
+}
+
 export function isAppInstalledStandalone(): boolean {
   if (typeof window === 'undefined') return false;
   return (
+    isRunningInNativeAndroidApk() ||
     window.matchMedia('(display-mode: standalone)').matches ||
     (window.navigator as any).standalone === true
   );
