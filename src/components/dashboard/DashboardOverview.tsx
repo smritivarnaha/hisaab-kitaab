@@ -190,34 +190,37 @@ export const DashboardOverview: React.FC = () => {
         <BusinessPartnerSummaryCard selectedPeriod={selectedPeriod} onPeriodChange={setSelectedPeriod} />
       ) : (
         /* 1. Personal Top Summary Card with Spreading Bottom-Left Green Gradient & Grid Overlay */
-        <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3.5 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] max-w-4xl mx-auto">
-        {/* Spreading Bottom-Left Green Gradient Layer */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#93E044]/25 via-[#14471f]/50 to-[#0D2E14] pointer-events-none" />
+        <div className="relative bg-[#0D2E14] text-white p-3.5 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] max-w-4xl mx-auto z-20">
+        {/* Clipped Decorative Background Container (keeps PeriodSelector popover unclipped) */}
+        <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
+          {/* Spreading Bottom-Left Green Gradient Layer */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#93E044]/25 via-[#14471f]/50 to-[#0D2E14]" />
 
-        {/* Faded Green Grid Lines Overlay Blending into Gradient */}
-        <div 
-          className="absolute inset-0 pointer-events-none opacity-20"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, rgba(147, 224, 68, 0.25) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(147, 224, 68, 0.25) 1px, transparent 1px)
-            `,
-            backgroundSize: '24px 24px'
-          }}
-        />
+          {/* Faded Green Grid Lines Overlay Blending into Gradient */}
+          <div 
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgba(147, 224, 68, 0.25) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(147, 224, 68, 0.25) 1px, transparent 1px)
+              `,
+              backgroundSize: '24px 24px'
+            }}
+          />
 
-        {/* Soft Spreading Ambient Glow at Bottom Left Corner */}
-        <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-[#93E044]/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#93E044]/10 rounded-full blur-2xl pointer-events-none" />
+          {/* Soft Spreading Ambient Glow at Bottom Left Corner */}
+          <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-[#93E044]/20 rounded-full blur-3xl" />
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#93E044]/10 rounded-full blur-2xl" />
+        </div>
 
         {/* Content Container */}
         <div className="relative z-10">
-          <div className="flex items-center justify-between gap-2.5 mb-2.5 sm:mb-3">
-            <div>
-              <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight font-outfit">
+          <div className="flex items-center justify-between gap-2 mb-2.5 sm:mb-3">
+            <div className="min-w-0 flex-shrink-0">
+              <h2 className="text-base sm:text-2xl font-bold text-white tracking-tight font-outfit whitespace-nowrap leading-tight">
                 Net Overview
               </h2>
-              <span className="text-[10px] sm:text-xs font-semibold text-emerald-300 block mt-0.5">
+              <span className="text-[10px] sm:text-xs font-semibold text-emerald-300 block mt-0.5 whitespace-nowrap">
                 Period: {periodRange}
               </span>
             </div>
@@ -482,8 +485,8 @@ export const DashboardOverview: React.FC = () => {
                           📅
                         </div>
                         <div>
-                          <p className="font-bold text-gray-700">No transactions recorded for {selectedPeriod === 'this_month' ? 'September 2026' : 'this period'} yet.</p>
-                          <p className="text-[11px] text-gray-400 font-normal mt-0.5">A fresh month has started. All historical records are safely stored.</p>
+                          <p className="font-bold text-gray-700">No transactions recorded for this period yet.</p>
+                          <p className="text-[11px] text-gray-400 font-normal mt-0.5">All historical records are safely stored in your passbook.</p>
                         </div>
                         {finalizedTransactions.length > 0 && selectedPeriod !== 'all' && (
                           <div className="flex items-center gap-2 pt-1">
@@ -493,7 +496,7 @@ export const DashboardOverview: React.FC = () => {
                                 onClick={() => setSelectedPeriod('last_month')}
                                 className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-bold text-xs active:scale-95 transition-all cursor-pointer shadow-2xs"
                               >
-                                ⏪ View August (Last Month)
+                                ⏪ View Last Month
                               </button>
                             )}
                             <button
@@ -534,3 +537,4 @@ export const DashboardOverview: React.FC = () => {
     </div>
   );
 };
+export default DashboardOverview;

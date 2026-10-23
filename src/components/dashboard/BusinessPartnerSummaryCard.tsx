@@ -330,33 +330,36 @@ export const BusinessPartnerSummaryCard: React.FC<Props> = ({
   return (
     <div className="space-y-2.5 sm:space-y-4 font-outfit w-full mx-auto animate-fadeIn">
       {/* 1. Top Green Business Overview Card */}
-      <div className="relative overflow-hidden bg-[#0D2E14] text-white p-3 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] space-y-2.5 sm:space-y-4 w-full z-20">
-        {/* Spreading Bottom-Left Green Gradient Layer */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#93E044]/25 via-[#14471f]/50 to-[#0D2E14] pointer-events-none rounded-3xl overflow-hidden" />
+      <div className="relative bg-[#0D2E14] text-white p-3 sm:p-5 rounded-3xl shadow-md border border-[#1b4e27] space-y-2.5 sm:space-y-4 w-full z-20">
+        {/* Clipped Decorative Background Container */}
+        <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
+          {/* Spreading Bottom-Left Green Gradient Layer */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#93E044]/25 via-[#14471f]/50 to-[#0D2E14]" />
 
-        {/* Faded Green Grid Lines Overlay */}
-        <div 
-          className="absolute inset-0 pointer-events-none opacity-20 rounded-3xl overflow-hidden"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, rgba(147, 224, 68, 0.25) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(147, 224, 68, 0.25) 1px, transparent 1px)
-            `,
-            backgroundSize: '24px 24px'
-          }}
-        />
+          {/* Faded Green Grid Lines Overlay */}
+          <div 
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgba(147, 224, 68, 0.25) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(147, 224, 68, 0.25) 1px, transparent 1px)
+              `,
+              backgroundSize: '24px 24px'
+            }}
+          />
 
-        {/* Soft Spreading Ambient Glow */}
-        <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-[#93E044]/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#93E044]/10 rounded-full blur-2xl pointer-events-none" />
+          {/* Soft Spreading Ambient Glow */}
+          <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-[#93E044]/20 rounded-full blur-3xl" />
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#93E044]/10 rounded-full blur-2xl" />
+        </div>
 
         {/* Header Row */}
-        <div className="relative z-30 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg sm:text-2xl font-extrabold tracking-tight text-white">
+        <div className="relative z-30 flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-shrink-0">
+            <h2 className="text-base sm:text-2xl font-extrabold tracking-tight text-white whitespace-nowrap leading-tight">
               Business Overview
             </h2>
-            <span className="text-[10px] sm:text-xs font-semibold text-emerald-300 block mt-0.5">
+            <span className="text-[10px] sm:text-xs font-semibold text-emerald-300 block mt-0.5 whitespace-nowrap">
               Period: {getPeriodLabel()}
             </span>
           </div>

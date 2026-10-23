@@ -147,6 +147,27 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
     return selectedPeriod;
   }, [selectedPeriod, currentYear, currentMonth]);
 
+  // Compact label for mobile screens so header titles never wrap onto two lines
+  const shortDisplayLabel = useMemo(() => {
+    if (selectedPeriod === 'today') return 'Today';
+    if (selectedPeriod === 'this_year') return `Year ${currentYear}`;
+    if (selectedPeriod === 'all') return 'All Time';
+
+    if (selectedPeriod === 'this_month') {
+      return `${MONTH_NAMES[currentMonth]} ${currentYear}`;
+    }
+    if (selectedPeriod === 'last_month') {
+      const lmYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+      const lmMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+      return `${MONTH_NAMES[lmMonth]} ${lmYear}`;
+    }
+    if (/^\d{4}-\d{2}$/.test(selectedPeriod)) {
+      const [y, m] = selectedPeriod.split('-').map(Number);
+      return `${MONTH_NAMES[m - 1]} ${y}`;
+    }
+    return selectedPeriod;
+  }, [selectedPeriod, currentYear, currentMonth]);
+
   // Check if a specific month tile is selected
   const isMonthSelected = (year: number, monthIndex: number) => {
     if (selectedPeriod === 'this_month') {
@@ -175,9 +196,9 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
     : 'p-1 hover:bg-gray-100 text-gray-500 hover:text-gray-900 rounded-full transition-colors';
 
   return (
-    <div className="relative inline-block text-left z-50">
+    <div className="relative inline-block text-left z-50 flex-shrink-0">
       {/* Trigger Group: [ ‹ ] [ 📅 Month Year ▾ ] [ › ] */}
-      <div className={`flex items-center rounded-full p-0.5 gap-0.5 transition-all ${triggerContainerClass}`}>
+      <div className={`flex items-center rounded-full p-0.5 gap-0.5 transition-all whitespace-nowrap ${triggerContainerClass}`}>
         <button
           type="button"
           onClick={handlePrevMonth}
@@ -190,11 +211,12 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
         <button
           type="button"
           onClick={() => setIsOpen(prev => !prev)}
-          className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-bold select-none cursor-pointer focus:outline-none"
+          className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 text-[11px] sm:text-xs font-bold select-none cursor-pointer focus:outline-none whitespace-nowrap"
         >
-          <Calendar className={`w-3.5 h-3.5 ${isEmerald ? 'text-[#93E044]' : 'text-emerald-700'}`} />
-          <span className="truncate max-w-[130px] sm:max-w-[170px]">{displayLabel}</span>
-          <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''} ${isEmerald ? 'text-emerald-300' : 'text-gray-500'}`} />
+          <Calendar className={`w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 ${isEmerald ? 'text-[#93E044]' : 'text-emerald-700'}`} />
+          <span className="sm:hidden whitespace-nowrap">{shortDisplayLabel}</span>
+          <span className="hidden sm:inline whitespace-nowrap">{displayLabel}</span>
+          <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''} ${isEmerald ? 'text-emerald-300' : 'text-gray-500'}`} />
         </button>
 
         <button
