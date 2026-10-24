@@ -64,7 +64,9 @@ public class MainActivity extends BridgeActivity {
             contentView.setBackgroundColor(Color.parseColor("#0D2E14"));
             ViewCompat.setOnApplyWindowInsetsListener(contentView, (v, windowInsets) -> {
                 Insets bars = windowInsets.getInsets(
-                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
+                    WindowInsetsCompat.Type.systemBars()
+                    | WindowInsetsCompat.Type.displayCutout()
+                    | WindowInsetsCompat.Type.ime()
                 );
                 v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
                 return WindowInsetsCompat.CONSUMED;

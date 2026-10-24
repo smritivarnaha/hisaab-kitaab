@@ -16,6 +16,7 @@ import {
   markSessionBiometricUnlocked,
   verifyDevicePasskey
 } from './utils/biometricAuth';
+import { initGlobalKeyboardManager } from './utils/keyboardManager';
 
 const ACCENT_COLORS = {
   emerald: { primary: '#0D2E14', hover: '#12441d', light: '#F0F7EE', activeBg: '#E4ECE2', lime: '#93E044' },
@@ -47,6 +48,10 @@ export const AppContent: React.FC = () => {
   });
   const [biometricBusy, setBiometricBusy] = useState(false);
   const [biometricError, setBiometricError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return initGlobalKeyboardManager();
+  }, []);
 
   useEffect(() => {
     const accent = settings.accentColor || 'emerald';
@@ -159,7 +164,7 @@ export const AppContent: React.FC = () => {
   return (
     <div className="min-h-screen w-full bg-[#F3F5F1] text-[#0D2E14] font-outfit antialiased flex flex-col justify-between">
       {/* Centered Application Shell */}
-      <div className="w-full max-w-6xl mx-auto flex flex-col h-screen overflow-hidden shadow-2xl sm:border-x border-[#E2E8E0] bg-[#F3F5F1] relative">
+      <div className="hk-app-shell w-full max-w-6xl mx-auto flex flex-col h-[100dvh] overflow-hidden shadow-2xl sm:border-x border-[#E2E8E0] bg-[#F3F5F1] relative">
         {/* Floating Live OTA Update Banner */}
         <UpdatePromptBanner />
 
@@ -196,12 +201,12 @@ export const AppContent: React.FC = () => {
 
         {/* Sliding Chat Accountant Drawer Panel (Right Side) */}
         <div
-          className={`fixed inset-y-0 right-0 z-[60] w-full sm:w-[450px] max-w-full bg-white border-l border-gray-200/80 shadow-2xl flex flex-col transform transition-all duration-300 ease-out overflow-hidden ${
+          className={`hk-chat-drawer fixed inset-y-0 right-0 z-[60] w-full sm:w-[450px] max-w-full bg-white border-l border-gray-200/80 shadow-2xl flex flex-col transform transition-transform duration-300 ease-out overflow-hidden ${
             isChatOpen ? 'translate-x-0 opacity-100 pointer-events-auto' : 'translate-x-full opacity-0 pointer-events-none'
           }`}
         >
           {/* Mini Drawer Header */}
-          <div className="px-5 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5 border-b border-gray-100 flex items-center justify-between bg-white flex-shrink-0">
+          <div className="px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 border-b border-gray-100 flex items-center justify-between bg-white flex-shrink-0">
             <div className="flex items-center gap-2.5">
               <img src="/logo.png" alt="Logo" className="w-7 h-7 object-contain rounded-full drop-shadow-xs" />
               <div>
@@ -220,7 +225,7 @@ export const AppContent: React.FC = () => {
           </div>
 
           {/* Drawer Body — Chat Accountant */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             {isChatOpen && (
               <ChatContainer
                 onOpenOCR={() => setIsOCROpen(true)}

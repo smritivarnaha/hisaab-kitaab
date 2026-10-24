@@ -16,7 +16,7 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
-  const [audioLevel, setAudioLevel] = useState(0);
+  const [, setAudioLevel] = useState(0);
   const [micPermissionError, setMicPermissionError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -32,9 +32,9 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
   useEffect(() => {
     if (lastMsgId && lastMsgId !== prevLastMsgIdRef.current) {
       prevLastMsgIdRef.current = lastMsgId;
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     } else if (isProcessingAI) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, [lastMsgId, isProcessingAI]);
 
@@ -49,6 +49,15 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
     if (!inputText.trim()) return;
     processUserInputText(inputText.trim());
     setInputText('');
+  };
+
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 150);
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 320);
   };
 
   const handleToggleVoice = async () => {
@@ -140,10 +149,10 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F1] relative overflow-hidden font-outfit">
+    <div className="flex flex-col h-full min-h-0 bg-[#F3F5F1] relative overflow-hidden font-outfit">
       
       {/* Messages Feed Container */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 md:pb-28 no-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3.5 sm:px-4 pt-3 pb-4 no-scrollbar">
         <div className="max-w-3xl mx-auto w-full">
           {chatMessages.map(msg => (
             <ChatMessageItem key={msg.id} message={msg} />
@@ -168,10 +177,9 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
         </div>
       </div>
 
-      {/* Floating Centered ChatGPT/Claude Style Input Control Bar */}
-      <div className="absolute bottom-4 inset-x-0 z-30 px-4">
-        <div className="max-w-3xl mx-auto bg-white border border-[#E2E8E0] rounded-3xl p-2.5 shadow-xl backdrop-blur-xl space-y-1.5">
-          
+      {/* Bottom Docked Input Control Bar — stays directly above mobile keyboard */}
+      <div className="flex-shrink-0 px-3 sm:px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-[#F3F5F1] border-t border-[#E2E8E0]/80 z-30">
+        <div className="max-w-3xl mx-auto bg-white border border-[#E2E8E0] rounded-3xl p-2 shadow-lg space-y-1.5">
           <form onSubmit={handleSubmit} className="flex items-center gap-2">
             {/* Attachment/OCR Actions on Left */}
             <button
@@ -187,13 +195,15 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
             <div className="flex-1 flex items-center bg-[#F3F5F1] border border-[#E2E8E0] rounded-full focus-within:border-[#0D2E14] focus-within:bg-white transition-all px-3 py-1.5 gap-2">
               <input
                 type="text"
+                data-chat-main-input="true"
                 value={inputText}
+                onFocus={handleInputFocus}
                 onChange={e => setInputText(e.target.value)}
                 placeholder={
                   isTranscribing ? '⏳ Transcribing voice with Whisper...' :
                   isListening ? '🎙️ Listening... speak now' : 'Type or ask anything...'
                 }
-                className="flex-1 bg-transparent text-xs sm:text-sm text-[#0D2E14] placeholder-gray-400 font-semibold outline-none font-outfit"
+                className="flex-1 bg-transparent text-xs sm:text-sm text-[#0D2E14] placeholder-gray-400 font-semibold outline-none font-outfit min-w-0"
               />
 
               {/* Controls inside the input bar on the right side */}

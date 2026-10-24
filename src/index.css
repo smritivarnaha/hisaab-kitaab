@@ -16,6 +16,10 @@
     --accent-light: #F0F7EE;
     --accent-active-bg: #E4ECE2;
     --accent-lime: #93E044;
+
+    /* Mobile visual viewport & keyboard clearance variables */
+    --vv-height: 100dvh;
+    --kb-offset: 0px;
   }
 
   html, body, #root {
@@ -145,5 +149,26 @@
   }
   100% {
     box-shadow: 0 0 0 0 rgba(0, 0, 0, 0), 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+/* Mobile Keyboard Visibility Guarantees */
+@media (max-width: 768px) {
+  .hk-chat-drawer {
+    top: 0 !important;
+    height: var(--vv-height, 100dvh) !important;
+    max-height: var(--vv-height, 100dvh) !important;
+    bottom: auto !important;
+  }
+
+  html.hk-kb-active .hk-app-shell {
+    height: var(--vv-height, 100dvh) !important;
+    max-height: var(--vv-height, 100dvh) !important;
+  }
+
+  html.hk-kb-active .fixed.inset-0 {
+    padding-bottom: var(--kb-offset, 0px) !important;
+    align-items: flex-start !important;
+    padding-top: 0.5rem !important;
   }
 }
