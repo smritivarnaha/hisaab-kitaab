@@ -24,7 +24,8 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
   const currentUserName = currentUser?.name || 'Praveen';
   const partnerName = currentUserName.toLowerCase().includes('sarthak') ? 'Praveen' : 'Sarthak';
 
-  const isCreator = !transaction.enteredBy ||
+  const isCreator =
+    !transaction.enteredBy ||
     creatorName.toLowerCase().includes(currentUserName.toLowerCase()) ||
     currentUserName.toLowerCase().includes(creatorName.toLowerCase());
 
@@ -42,6 +43,7 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isCreator) return;
     const numAmt = parseFloat(amount) || 0;
 
     updateTransaction(transaction.id, {
@@ -116,6 +118,7 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
             </div>
           )}
 
+          <fieldset disabled={!isCreator} className="space-y-3.5 disabled:opacity-75 border-0 p-0 m-0 min-w-0">
           {/* Type Selector (Expense, Income, Lent, Borrowed) */}
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Transaction Type</label>
@@ -295,6 +298,7 @@ export const TransactionEditModal: React.FC<Props> = ({ transaction, onClose }) 
               className="w-full bg-white border border-gray-200 text-xs font-medium text-gray-800 rounded-xl p-2 outline-none focus:border-[#0D2E14] shadow-2xs"
             />
           </div>
+          </fieldset>
 
           {/* Action Buttons */}
           <div className="pt-2 flex flex-col gap-2">

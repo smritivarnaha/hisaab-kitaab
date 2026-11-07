@@ -108,6 +108,7 @@ export interface ChatMessage {
   pendingReviewItems?: Transaction[];
   clarification?: AIClarificationQuestion;
   actionSummary?: string;
+  userId?: string;
   mode?: 'personal' | 'business';
   senderName?: string; // 'Praveen' | 'Sarthak'
 }

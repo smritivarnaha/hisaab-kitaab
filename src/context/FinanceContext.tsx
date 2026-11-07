@@ -151,9 +151,18 @@ const saveSettingsToDb = async (s: UserSettings, userId: string) => {
   }
 };
 
+const canonicalNameForUserId = (uid?: string | null, fallbackName?: string | null): string => {
+  const clean = (uid || '').toLowerCase().trim();
+  if (clean === 'praveen') return 'Praveen';
+  if (clean === 'sarthak') return 'Sarthak';
+  if (clean === 'nandini') return 'Nandini';
+  return (fallbackName || '').trim() || 'Praveen';
+};
+
 const saveTransactionToDb = async (tx: Transaction, userId: string) => {
-  const enteredBy = tx.enteredBy || (userId === 'sarthak' ? 'Sarthak' : 'Praveen');
-  const enriched = { ...tx, userId, enteredBy };
+  const txUid = (tx.userId || userId).toLowerCase().trim();
+  const enteredBy = canonicalNameForUserId(txUid, tx.enteredBy);
+  const enriched = { ...tx, userId: txUid, enteredBy };
   try {
     const res = await fetch(apiUrl(`/api/transactions?userId=${userId}`), {
       method: 'POST',
@@ -168,7 +177,10 @@ const saveTransactionToDb = async (tx: Transaction, userId: string) => {
 };
 
 const saveTransactionsBatchToDb = async (txList: Transaction[], userId: string) => {
-  const enrichedList = txList.map(t => ({ ...t, userId, enteredBy: t.enteredBy || (userId === 'sarthak' ? 'Sarthak' : 'Praveen') }));
+  const enrichedList = txList.map(t => {
+    const txUid = (t.userId || userId).toLowerCase().trim();
+    return { ...t, userId: txUid, enteredBy: canonicalNameForUserId(txUid, t.enteredBy) };
+  });
   try {
     const res = await fetch(apiUrl(`/api/transactions?userId=${userId}`), {
       method: 'PUT',
@@ -332,7 +344,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     prev.forEach(t => {
-      if (!dbIds.has(t.id) && !deletedTxIdsRef.current.has(t.id) && t.isPending) {
+      if (!dbIds.has(t.id) && !deletedTxIdsRef.current.has(t.id) && t.isPending && (!t.userId || t.userId === uid)) {
         missingLocal.push(t);
         dbIds.add(t.id);
       }
@@ -340,7 +352,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const merged = [...missingLocal, ...processedDb];
 
-    // Deep check if anything actually changed to prevent unnecessary re-renders / scroll jumps
+    // Deep check if anything actually changed (including enteredBy / userId ownership) to prevent stale cache labels
     const isSame =
       prev.length === merged.length &&
       prev.every((p, i) => {
@@ -351,7 +363,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           p.title === m?.title &&
           Boolean(p.isPending) === Boolean(m?.isPending) &&
           p.type === m?.type &&
-          p.category === m?.category
+          p.category === m?.category &&
+          p.enteredBy === m?.enteredBy &&
+          p.userId === m?.userId &&
+          p.date === m?.date &&
+          p.notes === m?.notes
         );
       });
 
@@ -373,7 +389,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     const todayDbMsgs = dbMsgs.filter(
-      m => Number(m.timestamp) >= startOfToday && m.id !== 'msg_welcome' && m.id !== 'welcome_business_msg'
+      m =>
+        Number(m.timestamp) >= startOfToday &&
+        m.id !== 'msg_welcome' &&
+        m.id !== 'welcome_business_msg' &&
+        (!(m as any).userId || (m as any).userId === uid)
     );
 
     const prevMap = new Map(prev.map(m => [m.id, m]));
@@ -391,14 +411,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const dbMsgIds = new Set(merged.map(m => m.id));
 
-    // Preserve local messages created or updated recently that haven't appeared in DB poll yet
+    // Preserve local messages created or updated recently by THIS user that haven't appeared in DB poll yet
     const localUnsynced: ChatMessage[] = [];
     prev.forEach(m => {
       if (
         !dbMsgIds.has(m.id) &&
         m.id !== 'msg_welcome' &&
         m.id !== 'welcome_business_msg' &&
-        Number(m.timestamp) >= startOfToday
+        Number(m.timestamp) >= startOfToday &&
+        (!(m as any).userId || (m as any).userId === uid)
       ) {
         localUnsynced.push(m);
         dbMsgIds.add(m.id);
@@ -645,18 +666,61 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [settings.theme]);
 
-  // Auth Functions
+  // Auth Functions — completely reset transient state & load user-specific cache so accounts never cross-contaminate
   const login = (user: AppUser) => {
-    setCurrentUser(user);
+    localTxOverridesRef.current.clear();
+    deletedTxIdsRef.current.clear();
+    localMsgOverridesRef.current.clear();
+    setPendingReviewItems([]);
+    setActiveClarification(null);
+
+    const uid = user.id;
     try {
       localStorage.setItem('hk_active_user', JSON.stringify(user));
-    } catch {}
+      const cachedTx = localStorage.getItem(`hk_cached_tx_${uid}`);
+      setTransactions(cachedTx ? JSON.parse(cachedTx) : []);
+
+      const cachedMsgs = localStorage.getItem(`hk_cached_msgs_${uid}`);
+      if (cachedMsgs) {
+        const parsed: ChatMessage[] = JSON.parse(cachedMsgs);
+        const startOfToday = getStartOfTodayTimestamp();
+        setChatMessages(
+          parsed.filter(
+            m =>
+              Number(m.timestamp) >= startOfToday &&
+              m.id !== 'msg_welcome' &&
+              m.id !== 'welcome_business_msg' &&
+              (!m.userId || m.userId === uid)
+          )
+        );
+      } else {
+        setChatMessages([]);
+      }
+
+      const cachedSettings = localStorage.getItem(`hk_cached_settings_${uid}`);
+      setSettings(cachedSettings ? { ...DEFAULT_SETTINGS, ...JSON.parse(cachedSettings) } : DEFAULT_SETTINGS);
+
+      const cachedMemory = localStorage.getItem(`hk_cached_memory_${uid}`);
+      setAiMemory(cachedMemory ? { ...getAIMemory(), ...JSON.parse(cachedMemory) } : getAIMemory());
+    } catch {
+      setTransactions([]);
+      setChatMessages([]);
+    }
+
+    setCurrentUser(user);
   };
 
   const logout = async () => {
     try {
       await fetch(apiUrl('/api/auth?action=logout'), { method: 'POST' });
     } catch {}
+    localTxOverridesRef.current.clear();
+    deletedTxIdsRef.current.clear();
+    localMsgOverridesRef.current.clear();
+    setPendingReviewItems([]);
+    setActiveClarification(null);
+    setTransactions([]);
+    setChatMessages([]);
     setCurrentUser(null);
     try {
       localStorage.removeItem('hk_active_user');
@@ -902,11 +966,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const addTransaction = (tx: Transaction) => {
+    const myCanonicalName = canonicalNameForUserId(activeUserId, currentUser?.name);
     const enriched: Transaction = {
       ...tx,
       userId: activeUserId,
       mode: tx.mode || accountMode,
-      enteredBy: tx.enteredBy || currentUser?.name || 'Praveen'
+      enteredBy: myCanonicalName
     };
     setTransactions(prev => {
       const updated = [enriched, ...prev.filter(t => t.id !== enriched.id)];
@@ -923,11 +988,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const addTransactionsBatch = (txList: Transaction[]) => {
     if (!txList.length) return;
+    const myCanonicalName = canonicalNameForUserId(activeUserId, currentUser?.name);
     const enrichedList: Transaction[] = txList.map(tx => ({
       ...tx,
       userId: activeUserId,
       mode: tx.mode || accountMode,
-      enteredBy: tx.enteredBy || currentUser?.name || 'Praveen'
+      enteredBy: myCanonicalName
     }));
     const newIds = new Set(enrichedList.map(t => t.id));
     setTransactions(prev => {
@@ -945,28 +1011,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     saveMemoryToDb(getAIMemory(), activeUserId);
   };
 
-  const getEffectiveUserName = (txEnteredBy?: string) => {
-    if (txEnteredBy && txEnteredBy.trim()) return txEnteredBy.trim();
-    if (currentUser?.name && currentUser.name.trim()) return currentUser.name.trim();
-    if (currentUser?.id === 'sarthak' || activeUserId === 'sarthak') return 'Sarthak';
-    return 'Praveen';
+  const getEffectiveUserName = () => {
+    return canonicalNameForUserId(activeUserId, currentUser?.name);
   };
 
   const updateTransaction = (id: string, updated: Partial<Transaction>) => {
+    const myCanonicalName = getEffectiveUserName();
     setTransactions(prev => {
       let updatedList: Transaction[];
       const exists = prev.some(t => t.id === id);
       if (exists) {
         updatedList = prev.map(t => {
           if (t.id === id) {
-            const originalEnteredBy = t.enteredBy || updated.enteredBy || getEffectiveUserName();
+            // When confirming an unconfirmed pending draft, ALWAYS stamp the confirming user's userId & canonical enteredBy!
+            // When editing an already-confirmed entry, preserve its existing owner userId & enteredBy.
+            const wasPending = Boolean(t.isPending);
+            const ownerUserId = wasPending ? activeUserId : (t.userId || activeUserId);
+            const ownerEnteredBy = wasPending
+              ? myCanonicalName
+              : (t.enteredBy || canonicalNameForUserId(ownerUserId, currentUser?.name));
+            const nextTitle = updated.title ?? t.title;
             const full: Transaction = { 
               ...t, 
               ...updated, 
+              title: nextTitle,
+              shortDisplayTitle: updated.shortDisplayTitle || (updated.title ? updated.title : t.shortDisplayTitle),
               isPending: false,
-              userId: activeUserId,
+              userId: ownerUserId,
               mode: updated.mode || t.mode || accountMode,
-              enteredBy: originalEnteredBy
+              enteredBy: ownerEnteredBy
             };
             trackTxSave(full, activeUserId);
             return full;
@@ -974,7 +1047,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return t;
         });
       } else {
-        const creatorName = updated.enteredBy || getEffectiveUserName();
         const full: Transaction = {
           id: id || `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           amount: Number(updated.amount || 0),
@@ -982,14 +1054,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           type: updated.type || 'expense',
           category: updated.category || 'Others',
           title: updated.title || 'Expense',
+          shortDisplayTitle: updated.shortDisplayTitle || updated.title || 'Expense',
           date: updated.date || new Date().toISOString().split('T')[0],
           relativeDateText: 'Today',
           timestamp: updated.timestamp || Date.now(),
           confidenceScore: 100,
           paymentMethod: updated.paymentMethod || 'UPI',
           mode: updated.mode || accountMode,
-          enteredBy: creatorName,
           ...updated,
+          userId: activeUserId,
+          enteredBy: myCanonicalName,
           isPending: false
         };
         trackTxSave(full, activeUserId);
@@ -1003,7 +1077,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setChatMessages(prev => {
       const next = prev.map(msg => {
         if (!msg.pendingReviewItems || !msg.pendingReviewItems.some(i => i.id === id)) return msg;
-        const updatedItems = msg.pendingReviewItems.map(i => i.id === id ? { ...i, ...updated, isPending: false } : i);
+        const updatedItems = msg.pendingReviewItems.map(i =>
+          i.id === id ? { ...i, ...updated, userId: activeUserId, enteredBy: myCanonicalName, isPending: false } : i
+        );
         const updatedMsg = { ...msg, pendingReviewItems: updatedItems };
         trackMsgSave(updatedMsg, activeUserId);
         return updatedMsg;
@@ -1062,6 +1138,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const confirmPendingItemsBatch = (clearedList: Transaction[]) => {
     if (!clearedList.length) return;
+    const myCanonicalName = getEffectiveUserName();
     const clearedIds = new Set(clearedList.map(c => c.id));
     const clearedMap = new Map(clearedList.map(c => [c.id, c]));
 
@@ -1072,10 +1149,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const full: Transaction = {
           ...t,
           ...cleared,
+          shortDisplayTitle: cleared.title || t.shortDisplayTitle,
           isPending: false,
           userId: activeUserId,
           mode: cleared.mode || t.mode || accountMode,
-          enteredBy: cleared.enteredBy || t.enteredBy || getEffectiveUserName()
+          enteredBy: myCanonicalName
         };
         return full;
       });
@@ -1093,7 +1171,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (!msg.pendingReviewItems || !msg.pendingReviewItems.some(i => clearedIds.has(i.id))) return msg;
         const updatedItems = msg.pendingReviewItems.map(i => {
           const cleared = clearedMap.get(i.id);
-          return cleared ? { ...i, ...cleared, isPending: false } : i;
+          return cleared ? { ...i, ...cleared, userId: activeUserId, enteredBy: myCanonicalName, isPending: false } : i;
         });
         const updatedMsg = { ...msg, pendingReviewItems: updatedItems };
         trackMsgSave(updatedMsg, activeUserId);
@@ -1104,11 +1182,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  // Helper to remove any previous unconfirmed pending items when new ones are submitted
+  // Helper to remove any previous unconfirmed pending items of THIS user when new ones are submitted
   const cleanupStalePendingItems = () => {
     const staleIds: string[] = [];
     setTransactions(prev => {
-      const stale = prev.filter(t => t.isPending && (accountMode === 'business' ? t.mode === 'business' : t.mode !== 'business'));
+      const stale = prev.filter(
+        t =>
+          t.isPending &&
+          (!t.userId || t.userId === activeUserId) &&
+          (accountMode === 'business' ? t.mode === 'business' : t.mode !== 'business')
+      );
       if (!stale.length) return prev;
       stale.forEach(s => {
         staleIds.push(s.id);
@@ -1133,6 +1216,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       text: text || '🎤 Spoken Voice Command',
       timestamp: nowTs,
       isVoice,
+      userId: activeUserId,
       mode: accountMode,
       senderName: effectiveSender
     };
@@ -1165,6 +1249,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
           text: responseText,
           timestamp: nowTs + 1,
           pendingReviewItems: parsedItems,
+          userId: activeUserId,
           mode: accountMode
         };
 
@@ -1295,6 +1380,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             text: agentRes.responseText,
             timestamp: Date.now(),
             pendingReviewItems: createdItems.length ? createdItems : undefined,
+            userId: activeUserId,
             mode: accountMode
           };
           setChatMessages(prev => {
@@ -1333,6 +1419,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       sender: 'assistant',
       text: responseText,
       timestamp: nowTs + 1,
+      userId: activeUserId,
       mode: accountMode
     };
 
@@ -1414,9 +1501,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       m =>
         m.id !== 'msg_welcome' &&
         m.id !== 'welcome_business_msg' &&
+        (!m.userId || m.userId === activeUserId) &&
         (accountMode === 'business' ? m.mode === 'business' : m.mode !== 'business')
     );
-  }, [chatMessages, accountMode]);
+  }, [chatMessages, accountMode, activeUserId]);
 
   return (
     <FinanceContext.Provider value={{

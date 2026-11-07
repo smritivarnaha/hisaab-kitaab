@@ -67,10 +67,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       startOfToday.setHours(0, 0, 0, 0);
       const minTimestamp = !isNaN(sinceParam) && sinceParam > 0 ? sinceParam : startOfToday.getTime();
 
+      // Each user has their own isolated AI Accountant chat & pending verification cards (prevents partner draft cross-contamination)
       const rows: any = isPartner
         ? await sql`
             SELECT * FROM chat_messages 
-            WHERE ("userId" = ${userId} OR "mode" = 'business')
+            WHERE "userId" = ${userId}
               AND "timestamp" >= ${minTimestamp}
             ORDER BY timestamp ASC LIMIT 200
           `
@@ -97,13 +98,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const msgs = Array.isArray(body) ? body : [body];
       await Promise.all(msgs.map((m: any) => {
         if (!m?.id) return Promise.resolve();
-        const msgUserId = m.userId || userId;
+        const msgUserId = ((m.userId || userId) as string).toLowerCase().trim();
         const msgMode = isPartner ? (m.mode || 'personal') : 'personal';
         const pendingJson = m.pendingReviewItems ? JSON.stringify(m.pendingReviewItems) : null;
         return sql`
           INSERT INTO chat_messages ("id","sender","text","timestamp","isVoice","audioLevel","userId","mode","senderName","pendingReviewItems")
           VALUES (${m.id}, ${m.sender}, ${m.text}, ${m.timestamp}, ${m.isVoice || false}, ${m.audioLevel || null}, ${msgUserId}, ${msgMode}, ${m.senderName || null}, ${pendingJson}::jsonb)
-          ON CONFLICT ("id") DO UPDATE SET "text" = EXCLUDED."text", "mode" = EXCLUDED."mode", "senderName" = EXCLUDED."senderName", "pendingReviewItems" = EXCLUDED."pendingReviewItems"
+          ON CONFLICT ("id") DO UPDATE SET
+            "text" = EXCLUDED."text",
+            "mode" = EXCLUDED."mode",
+            "senderName" = EXCLUDED."senderName",
+            "pendingReviewItems" = EXCLUDED."pendingReviewItems"
+          WHERE chat_messages."userId" = ${msgUserId}
         `;
       }));
       return res.status(200).json({ success: true });

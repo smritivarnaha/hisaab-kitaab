@@ -15,6 +15,14 @@ function getDb() {
   return neon(connectionString);
 }
 
+function canonicalEnteredBy(userId: string, providedEnteredBy?: string | null): string {
+  const cleanUid = (userId || '').toLowerCase().trim();
+  if (cleanUid === 'praveen') return 'Praveen';
+  if (cleanUid === 'sarthak') return 'Sarthak';
+  if (cleanUid === 'nandini') return 'Nandini';
+  return (providedEnteredBy || '').trim() || 'Praveen';
+}
+
 let tableInitialized = false;
 
 async function ensureTableExists(sql: ReturnType<typeof neon>) {
@@ -71,13 +79,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const rawUserId = (req.query.userId || req.headers['x-user-id'] || 'nandini') as string;
-    const userId = rawUserId.toLowerCase();
+    const userId = rawUserId.toLowerCase().trim();
     const isPartner = userId === 'praveen' || userId === 'sarthak';
 
-    // ── GET — fetch all transactions for specific user & shared business mode (partners only) ──────
+    // ── GET — fetch user's own transactions + CONFIRMED shared business ledger (never leak another partner's unconfirmed pending drafts) ──
     if (req.method === 'GET') {
       const rows: any = isPartner
-        ? await sql`SELECT * FROM transactions WHERE "userId" = ${userId} OR "mode" = 'business' ORDER BY timestamp DESC`
+        ? await sql`SELECT * FROM transactions WHERE "userId" = ${userId} OR ("mode" = 'business' AND "isPending" = FALSE) ORDER BY timestamp DESC`
         : await sql`SELECT * FROM transactions WHERE "userId" = ${userId} AND ("mode" IS NULL OR "mode" != 'business') ORDER BY timestamp DESC`;
       const parsed = rows.map((row: any) => ({
         ...row,
@@ -86,7 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         timestamp: Number(row.timestamp),
         isPending: Boolean(row.isPending),
         mode: row.mode || 'personal',
-        enteredBy: row.enteredBy || null
+        enteredBy: row.enteredBy || canonicalEnteredBy(row.userId)
       }));
       return res.status(200).json(parsed);
     }
@@ -96,8 +104,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const body = req.body;
       if (!body?.id) return res.status(400).json({ error: 'Missing transaction id' });
 
-      const txUserId = body.userId || userId;
+      const txUserId = ((body.userId || userId) as string).toLowerCase().trim();
       const safeMode = isPartner ? (body.mode || 'personal') : 'personal';
+      // Canonicalize enteredBy from txUserId so a 'praveen' entry can NEVER be saved as 'Sarthak' (and vice versa)
+      const safeEnteredBy = canonicalEnteredBy(txUserId, body.enteredBy);
 
       await sql`
         INSERT INTO transactions (
@@ -110,7 +120,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ${body.paymentMethod || 'UPI'}, ${body.date}, ${body.relativeDateText || null},
           ${body.timestamp}, ${body.confidenceScore || null}, ${body.rawInput || null},
           ${body.shortDisplayTitle || null}, ${body.notes || null},
-          ${body.isPending || false}, ${body.person || null}, ${txUserId}, ${safeMode}, ${body.enteredBy || null}
+          ${body.isPending || false}, ${body.person || null}, ${txUserId}, ${safeMode}, ${safeEnteredBy}
         )
         ON CONFLICT ("id") DO UPDATE SET
           "amount" = EXCLUDED."amount",
@@ -129,9 +139,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           "notes" = EXCLUDED."notes",
           "isPending" = EXCLUDED."isPending",
           "person" = EXCLUDED."person",
-          "userId" = EXCLUDED."userId",
+          "userId" = CASE WHEN transactions."isPending" = TRUE THEN EXCLUDED."userId" ELSE transactions."userId" END,
           "mode" = EXCLUDED."mode",
-          "enteredBy" = COALESCE(EXCLUDED."enteredBy", transactions."enteredBy")
+          "enteredBy" = EXCLUDED."enteredBy"
+        WHERE transactions."isPending" = TRUE OR transactions."userId" = ${userId}
       `;
       return res.status(200).json({ success: true, id: body.id });
     }
@@ -143,8 +154,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       await Promise.all(list.map((body: any) => {
         if (!body?.id) return Promise.resolve();
-        const txUserId = body.userId || userId;
+        const txUserId = ((body.userId || userId) as string).toLowerCase().trim();
         const safeMode = isPartner ? (body.mode || 'personal') : 'personal';
+        const safeEnteredBy = canonicalEnteredBy(txUserId, body.enteredBy);
         return sql`
           INSERT INTO transactions (
             "id","amount","currency","type","category","title","merchant",
@@ -156,7 +168,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ${body.paymentMethod || 'UPI'}, ${body.date}, ${body.relativeDateText || null},
             ${body.timestamp}, ${body.confidenceScore || null}, ${body.rawInput || null},
             ${body.shortDisplayTitle || null}, ${body.notes || null},
-            ${body.isPending || false}, ${body.person || null}, ${txUserId}, ${safeMode}, ${body.enteredBy || null}
+            ${body.isPending || false}, ${body.person || null}, ${txUserId}, ${safeMode}, ${safeEnteredBy}
           )
           ON CONFLICT ("id") DO UPDATE SET
             "amount" = EXCLUDED."amount",
@@ -175,20 +187,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             "notes" = EXCLUDED."notes",
             "isPending" = EXCLUDED."isPending",
             "person" = EXCLUDED."person",
-            "userId" = EXCLUDED."userId",
+            "userId" = CASE WHEN transactions."isPending" = TRUE THEN EXCLUDED."userId" ELSE transactions."userId" END,
             "mode" = EXCLUDED."mode",
-            "enteredBy" = COALESCE(EXCLUDED."enteredBy", transactions."enteredBy")
+            "enteredBy" = EXCLUDED."enteredBy"
+          WHERE transactions."isPending" = TRUE OR transactions."userId" = ${userId}
         `;
       }));
       return res.status(200).json({ success: true, count: list.length });
     }
 
-    // ── DELETE — remove a single transaction ─────────────────────────────────
+    // ── DELETE — remove a single transaction (only owner/creator can delete) ─
     if (req.method === 'DELETE') {
       const { id } = req.query;
       if (!id || typeof id !== 'string') return res.status(400).json({ error: 'Missing id' });
+      const myCanonicalName = canonicalEnteredBy(userId);
       if (isPartner) {
-        await sql`DELETE FROM transactions WHERE "id" = ${id} AND ("userId" = ${userId} OR "mode" = 'business')`;
+        await sql`DELETE FROM transactions WHERE "id" = ${id} AND ("userId" = ${userId} OR LOWER(COALESCE("enteredBy", '')) = LOWER(${myCanonicalName}))`;
       } else {
         await sql`DELETE FROM transactions WHERE "id" = ${id} AND "userId" = ${userId} AND ("mode" IS NULL OR "mode" != 'business')`;
       }

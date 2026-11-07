@@ -23,8 +23,10 @@ const InlineTransactionEditor: React.FC<{ item: Transaction; onConfirmed?: () =>
 
   const handleConfirm = () => {
     setIsConfirmed(true);
+    const cleanTitle = title.trim() || (type === 'income' ? 'Income' : type === 'lent' ? 'Lent Money' : type === 'borrowed' ? 'Borrowed Money' : 'Expense');
     updateTransaction(item.id, {
-      title: title.trim() || (type === 'income' ? 'Income' : type === 'lent' ? 'Lent Money' : type === 'borrowed' ? 'Borrowed Money' : 'Expense'),
+      title: cleanTitle,
+      shortDisplayTitle: cleanTitle,
       amount: Number(amount) || 0,
       type,
       notes: notes.trim() || undefined,
@@ -147,13 +149,17 @@ const MultiInlineTransactionEditor: React.FC<{ items: Transaction[]; onConfirmed
 
   const handleConfirmAll = () => {
     setIsConfirmed(true);
-    const ready = drafts.map(item => ({
-      ...item,
-      title: item.title.trim() || 'Expense',
-      amount: Number(item.amount) || 0,
-      notes: item.notes?.trim() || undefined,
-      isPending: false
-    }));
+    const ready = drafts.map(item => {
+      const cleanTitle = item.title.trim() || 'Expense';
+      return {
+        ...item,
+        title: cleanTitle,
+        shortDisplayTitle: cleanTitle,
+        amount: Number(item.amount) || 0,
+        notes: item.notes?.trim() || undefined,
+        isPending: false
+      };
+    });
     confirmPendingItemsBatch(ready);
     onConfirmed?.();
   };
@@ -277,9 +283,11 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
   const [isLocallyConfirmed, setIsLocallyConfirmed] = useState(false);
   const isUser = message.sender === 'user';
 
-  // Only render pending items attached specifically to THIS message that are still pending in transactions state
-  const messagePending = message.pendingReviewItems || [];
+  // Only render pending items attached specifically to THIS user's message that are still pending in transactions state
+  const isOwnMessage = !message.userId || !currentUser?.id || message.userId === currentUser.id;
+  const messagePending = isOwnMessage ? (message.pendingReviewItems || []) : [];
   const pendingItems = isLocallyConfirmed ? [] : messagePending.filter(item => {
+    if (item.userId && currentUser?.id && item.userId !== currentUser.id) return false;
     const liveTx = transactions.find(t => t.id === item.id);
     if (liveTx) return liveTx.isPending === true;
     return item.isPending === true;
@@ -395,7 +403,7 @@ export const ChatMessageItem: React.FC<Props> = ({ message }) => {
                   ✅ Saved to Passbook!
                 </span>
                 <span className="text-[10px] text-emerald-700 font-medium block">
-                  {message.pendingReviewItems.length} {message.pendingReviewItems.length === 1 ? 'entry' : 'entries'} confirmed by {message.senderName || currentUser?.name || 'Praveen'} ({accountMode === 'business' ? 'Business Account' : 'Personal Account'})
+                  {message.pendingReviewItems.length} {message.pendingReviewItems.length === 1 ? 'entry' : 'entries'} confirmed by {message.pendingReviewItems[0]?.enteredBy || message.senderName || currentUser?.name || 'Praveen'} ({accountMode === 'business' ? 'Business Account' : 'Personal Account'})
                 </span>
               </div>
             </div>
