@@ -12,6 +12,7 @@ import {
 import { parseMultiInput } from './parser';
 import { apiUrl } from '../../utils/apiUrl';
 import { PcmMicrophoneStreamer, Pcm24kAudioPlayer } from '../voice/pcmAudioEngine';
+import { VoiceRecognitionService, normalizeSpokenWordsAndNumbers } from '../voice/speechRecognition';
 
 export type LiveSessionEngine = 'gemini-3.8-live' | 'handsfree-local';
 export type LiveVoiceStatus = 'connecting' | 'listening' | 'thinking' | 'speaking' | 'muted' | 'error' | 'closed';
@@ -64,53 +65,11 @@ export interface LiveAgentCallbacks {
 }
 
 /**
- * Normalizes spoken Indian English / Hinglish number phrases into digits
- * e.g. "panch sau" -> "500", "do hazaar" -> "2000", "13 thousand" -> "13000", "1.5 lakh" -> "150000"
+ * Normalizes spoken Indian English / Hinglish / Hindi number phrases into digits
+ * e.g. "panch sau" -> "500", "do hazaar do sau" -> "2200", "terah hazaar" -> "13000", "dedh lakh" -> "150000"
  */
 export function normalizeSpokenHinglishNumbers(raw: string): string {
-  let s = raw;
-
-  const wordMap: Record<string, number> = {
-    ek: 1, one: 1,
-    do: 2, two: 2,
-    teen: 3, three: 3,
-    chaar: 4, char: 4, four: 4,
-    paanch: 5, panch: 5, five: 5,
-    chhah: 6, cheh: 6, che: 6, six: 6,
-    saat: 7, seven: 7,
-    aath: 8, eight: 8,
-    nau: 9, nine: 9,
-    das: 10, ten: 10,
-    gyarah: 11, barah: 12, terah: 13, chaudah: 14, pandrah: 15,
-    bees: 20, pachees: 25, pachis: 25, tees: 30, chalees: 40, chalis: 40, pachaas: 50, pachas: 50,
-    saath: 60, sattar: 70, assi: 80, nabbe: 90
-  };
-
-  // Replace "<word> lakh/lac/hazaar/hazar/thousand/sau/hundred"
-  const wordPattern = new RegExp(
-    `\\b(${Object.keys(wordMap).join('|')})\\s+(lakh|lac|lakhs|hazaar|hazar|thousand|sau|hundred)\\b`,
-    'gi'
-  );
-  s = s.replace(wordPattern, (_, w: string, mult: string) => {
-    const base = wordMap[w.toLowerCase()] || 1;
-    const m = mult.toLowerCase();
-    if (m.startsWith('lak') || m === 'lac') return String(base * 100000);
-    if (m.startsWith('haz') || m === 'thousand') return String(base * 1000);
-    return String(base * 100);
-  });
-
-  // Replace "dedh hazaar" (1500), "dhai hazaar" (2500), "dedh lakh" (150000), "dhai lakh" (250000)
-  s = s.replace(/\bdedh\s+(hazaar|hazar|thousand)\b/gi, '1500');
-  s = s.replace(/\bdhai\s+(hazaar|hazar|thousand)\b/gi, '2500');
-  s = s.replace(/\bdedh\s+(lakh|lac|lakhs)\b/gi, '150000');
-  s = s.replace(/\bdhai\s+(lakh|lac|lakhs)\b/gi, '250000');
-
-  // Replace "<number> lakh/hazaar/thousand/hundred/sau"
-  s = s.replace(/(\d+(?:\.\d+)?)\s*(lakh|lac|lakhs)\b/gi, (_, n) => String(Math.round(parseFloat(n) * 100000)));
-  s = s.replace(/(\d+(?:\.\d+)?)\s*(hazaar|hazar|thousand)\b/gi, (_, n) => String(Math.round(parseFloat(n) * 1000)));
-  s = s.replace(/(\d+(?:\.\d+)?)\s*(sau|hundred)\b/gi, (_, n) => String(Math.round(parseFloat(n) * 100)));
-
-  return s;
+  return normalizeSpokenWordsAndNumbers(raw);
 }
 
 function canonicalUserName(uid?: string | null, fallback?: string | null): string {
@@ -224,11 +183,11 @@ export class LiveVoiceAgentSession {
   private micStreamer: PcmMicrophoneStreamer | null = null;
   private pcmPlayer: Pcm24kAudioPlayer | null = null;
 
-  // Continuous Hands-Free Local Fallback state
-  private recognition: any = null;
-  private localMicStream: MediaStream | null = null;
-  private localAudioCtx: AudioContext | null = null;
-  private localAnimFrame: number | null = null;
+  // Continuous Hands-Free Local Fallback state (uses Native AndroidSpeech OR deduplicated Web Speech — zero competing getUserMedia lock!)
+  private voiceRecognizer = new VoiceRecognitionService();
+  private activeTurnId = '';
+  private pendingUtteranceText = '';
+  private utteranceCommitTimer: any = null;
   private isSpeakingLocalTTS = false;
   private restartTimer: any = null;
 
@@ -600,7 +559,7 @@ Driving Mode Rules:
                 this.callbacks.onTranscriptUpdate({
                   id: currentUserTranscriptId,
                   role: 'user',
-                  text: currentUserTranscriptAcc.trim(),
+                  text: normalizeSpokenWordsAndNumbers(currentUserTranscriptAcc.trim()),
                   timestamp: Date.now(),
                   isFinal: false
                 });
@@ -697,128 +656,143 @@ Driving Mode Rules:
 
   // ─── Engine 2: Zero-Key Continuous Hands-Free Hinglish Loop ────────────────
   private async startContinuousHandsFreeLoop(): Promise<void> {
-    const SpeechRecognition =
-      typeof window !== 'undefined'
-        ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-        : null;
-
-    if (!SpeechRecognition) {
+    if (!this.voiceRecognizer.hasNativeAndroidSpeech() && !this.voiceRecognizer.hasWebSpeech()) {
       this.callbacks.onStatusChange('error');
-      this.callbacks.onError('Hands-free speech recognition requires Chrome/Android or a Gemini API key in Settings.');
+      this.callbacks.onError(
+        'Live voice transcription requires Chrome or the updated Android APK (v2.0 in Settings → Security).'
+      );
       return;
-    }
-
-    // Start ambient mic level meter so the Driving Orb pulses smoothly to user's voice
-    try {
-      this.localMicStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-      });
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      this.localAudioCtx = new AudioCtx();
-      const source = this.localAudioCtx.createMediaStreamSource(this.localMicStream);
-      const analyser = this.localAudioCtx.createAnalyser();
-      analyser.fftSize = 256;
-      source.connect(analyser);
-      const freq = new Uint8Array(analyser.frequencyBinCount);
-
-      const pumpLevel = () => {
-        if (this.isClosed) return;
-        if (!this.isMuted && !this.isSpeakingLocalTTS) {
-          analyser.getByteFrequencyData(freq);
-          const avg = freq.reduce((a, b) => a + b, 0) / freq.length;
-          this.callbacks.onAudioLevel(Math.min(100, Math.round((avg / 110) * 100)), 'mic');
-        }
-        this.localAnimFrame = requestAnimationFrame(pumpLevel);
-      };
-      this.localAnimFrame = requestAnimationFrame(pumpLevel);
-    } catch {
-      // Optional visual meter; SpeechRecognition still runs cleanly if AudioContext was skipped
     }
 
     const bridge = this.getBridge();
     const userName = canonicalUserName(bridge.currentUser?.id, bridge.currentUser?.name);
     const modeLabel = bridge.accountMode === 'business' ? 'Business' : 'Personal';
 
-    await this.speakAndResume(
-      `Live Driving Mode ready for ${userName} in ${modeLabel} ledger. Speak expenses, ask settlement, or say undo anytime.`
-    );
+    this.callbacks.onTranscriptUpdate({
+      id: `a_welcome_${Date.now()}`,
+      role: 'assistant',
+      text: `Live Mode ready for ${userName} (${modeLabel}). Speak naturally — your words transcribe live below!`,
+      timestamp: Date.now(),
+      isFinal: true
+    });
+
+    // Start listening IMMEDIATELY with zero competing getUserMedia mic lock!
+    this.launchSingleRecognitionCycle();
+  }
+
+  private clearUtteranceCommitTimer() {
+    if (this.utteranceCommitTimer) {
+      clearTimeout(this.utteranceCommitTimer);
+      this.utteranceCommitTimer = null;
+    }
+  }
+
+  public commitCurrentSpeechNow(overrideText?: string) {
+    this.clearUtteranceCommitTimer();
+
+    if (this.engine === 'gemini-3.8-live') {
+      try {
+        this.geminiSession?.sendRealtimeInput({ audioStreamEnd: true });
+      } catch {}
+      return;
+    }
+
+    const spoken = (
+      overrideText ||
+      this.pendingUtteranceText ||
+      this.voiceRecognizer.getCurrentAccumulatedText()
+    ).trim();
+
+    this.pendingUtteranceText = '';
+    this.voiceRecognizer.stop();
+    this.callbacks.onAudioLevel(0, 'mic');
+
+    if (!spoken) {
+      if (!this.isClosed && !this.isMuted && !this.isSpeakingLocalTTS) {
+        this.scheduleNextCycle(200);
+      }
+      return;
+    }
+
+    const finalTurnId = this.activeTurnId || `u_local_${Date.now()}`;
+    this.activeTurnId = '';
+
+    this.callbacks.onTranscriptUpdate({
+      id: finalTurnId,
+      role: 'user',
+      text: spoken,
+      timestamp: Date.now(),
+      isFinal: true
+    });
+
+    void this.handleLocalSpokenTurn(spoken);
   }
 
   private launchSingleRecognitionCycle() {
     if (this.isClosed || this.isMuted || this.isSpeakingLocalTTS) return;
-    const SpeechRecognition =
-      typeof window !== 'undefined'
-        ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-        : null;
-    if (!SpeechRecognition) return;
+    if (!this.voiceRecognizer.hasNativeAndroidSpeech() && !this.voiceRecognizer.hasWebSpeech()) return;
 
-    try {
-      if (this.recognition) {
-        try {
-          this.recognition.onend = null;
-          this.recognition.stop();
-        } catch {}
-      }
+    this.clearUtteranceCommitTimer();
+    this.activeTurnId = `u_local_${Date.now()}`;
+    this.pendingUtteranceText = '';
 
-      const bridge = this.getBridge();
-      const rec = new SpeechRecognition();
-      this.recognition = rec;
-      rec.lang = bridge.voiceLanguage === 'hi-IN' ? 'hi-IN' : 'en-IN';
-      rec.continuous = false; // Single-utterance cycles prevent Android Chrome duplicate-loop bugs!
-      rec.interimResults = true;
+    const bridge = this.getBridge();
+    const lang = bridge.voiceLanguage === 'hi-IN' ? 'hi-IN' : 'en-IN';
 
-      const turnId = `u_local_${Date.now()}`;
-      let latestTranscript = '';
+    this.callbacks.onStatusChange('listening');
 
-      this.callbacks.onStatusChange('listening');
+    void this.voiceRecognizer.start(
+      {
+        language: lang,
+        keepAliveAcrossPauses: true,
+        onResult: (transcript) => {
+          if (this.isClosed || this.isMuted || this.isSpeakingLocalTTS) return;
+          const clean = transcript.trim();
+          if (!clean) return;
 
-      rec.onresult = (event: any) => {
-        if (this.isClosed || this.isMuted || this.isSpeakingLocalTTS) return;
-        let combined = '';
-        for (let i = 0; i < event.results.length; i++) {
-          combined += (combined ? ' ' : '') + event.results[i][0].transcript.trim();
-        }
-        latestTranscript = combined.trim();
-        if (latestTranscript) {
+          this.pendingUtteranceText = clean;
+          if (!this.activeTurnId) {
+            this.activeTurnId = `u_local_${Date.now()}`;
+          }
+
+          // Stream every word live onto the screen immediately
           this.callbacks.onTranscriptUpdate({
-            id: turnId,
+            id: this.activeTurnId,
             role: 'user',
-            text: latestTranscript,
+            text: clean,
             timestamp: Date.now(),
             isFinal: false
           });
-        }
-      };
 
-      rec.onerror = (event: any) => {
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          this.callbacks.onStatusChange('error');
-          this.callbacks.onError('Microphone permission blocked. Please allow microphone access.');
+          // Buffer 1.65s of silence so multi-part sentences ("Dr Prince ... 13000") aren't cut off mid-thought
+          this.clearUtteranceCommitTimer();
+          this.utteranceCommitTimer = setTimeout(() => {
+            this.commitCurrentSpeechNow();
+          }, 1650);
+        },
+        onError: (err) => {
+          this.clearUtteranceCommitTimer();
+          if (!this.isClosed) {
+            this.callbacks.onStatusChange('error');
+            this.callbacks.onError(err);
+          }
+        },
+        onEnd: (finalCapturedText) => {
+          if (this.isClosed || this.isMuted || this.isSpeakingLocalTTS) return;
+          const captured = (this.pendingUtteranceText || finalCapturedText).trim();
+          if (captured) {
+            this.commitCurrentSpeechNow(captured);
+          } else {
+            this.scheduleNextCycle(220);
+          }
         }
-      };
-
-      rec.onend = () => {
-        if (this.isClosed || this.isMuted || this.isSpeakingLocalTTS) return;
-        const spoken = latestTranscript.trim();
-        if (spoken) {
-          this.callbacks.onTranscriptUpdate({
-            id: turnId,
-            role: 'user',
-            text: spoken,
-            timestamp: Date.now(),
-            isFinal: true
-          });
-          this.handleLocalSpokenTurn(spoken);
-        } else {
-          // Silence timeout — seamlessly restart listening cycle for continuous hands-free driving!
-          this.scheduleNextCycle(220);
+      },
+      (level) => {
+        if (!this.isClosed && !this.isMuted && !this.isSpeakingLocalTTS) {
+          this.callbacks.onAudioLevel(level, 'mic');
         }
-      };
-
-      rec.start();
-    } catch {
-      this.scheduleNextCycle(500);
-    }
+      }
+    );
   }
 
   private scheduleNextCycle(delayMs = 250) {
@@ -946,12 +920,8 @@ Driving Mode Rules:
 
       // Pause recognition while speaking so mic never picks up speaker TTS echo
       this.isSpeakingLocalTTS = true;
-      if (this.recognition) {
-        try {
-          this.recognition.onend = null;
-          this.recognition.stop();
-        } catch {}
-      }
+      this.clearUtteranceCommitTimer();
+      this.voiceRecognizer.stop();
 
       try {
         window.speechSynthesis.cancel();
@@ -1033,12 +1003,9 @@ Driving Mode Rules:
     } else {
       if (this.isMuted) {
         if (this.restartTimer) clearTimeout(this.restartTimer);
-        if (this.recognition) {
-          try {
-            this.recognition.onend = null;
-            this.recognition.stop();
-          } catch {}
-        }
+        this.clearUtteranceCommitTimer();
+        this.pendingUtteranceText = '';
+        this.voiceRecognizer.stop();
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
           try {
             window.speechSynthesis.cancel();
@@ -1091,33 +1058,11 @@ Driving Mode Rules:
       clearTimeout(this.restartTimer);
       this.restartTimer = null;
     }
+    this.clearUtteranceCommitTimer();
+    this.pendingUtteranceText = '';
     this.cleanupGemini();
+    this.voiceRecognizer.stop();
 
-    if (this.recognition) {
-      try {
-        this.recognition.onend = null;
-        this.recognition.stop();
-      } catch {}
-      this.recognition = null;
-    }
-    if (this.localAnimFrame) {
-      cancelAnimationFrame(this.localAnimFrame);
-      this.localAnimFrame = null;
-    }
-    if (this.localAudioCtx) {
-      try {
-        this.localAudioCtx.close();
-      } catch {}
-      this.localAudioCtx = null;
-    }
-    if (this.localMicStream) {
-      this.localMicStream.getTracks().forEach(t => {
-        try {
-          t.stop();
-        } catch {}
-      });
-      this.localMicStream = null;
-    }
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();

@@ -974,7 +974,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>{isRunningInNativeAndroidApk() ? 'Download Latest Native APK (v1.9)' : 'Download Android APK'}</span>
+                    <span>{isRunningInNativeAndroidApk() ? 'Download Latest Native APK (v2.0)' : 'Download Android APK (v2.0)'}</span>
                   </a>
                 </div>
               </section>
@@ -1054,7 +1054,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     <div>
                       <h4 className="text-xs font-bold text-gray-900">Cloud Sync & Live App Updates</h4>
                       <p className="text-[10px] text-gray-400">
-                        v1.9.0 ({typeof window !== 'undefined' && Boolean(window.AndroidBiometric) ? 'Native Hardware Biometric Ready ✓' : 'Live OTA Enabled'} • User: {currentUser?.name})
+                        v2.0.0 ({typeof window !== 'undefined' && Boolean((window as any).AndroidSpeech) ? 'Native Voice & Biometric Ready ✓' : typeof window !== 'undefined' && Boolean(window.AndroidBiometric) ? 'Native Biometric Ready ✓' : 'Live OTA Enabled'} • User: {currentUser?.name})
                       </p>
                     </div>
                   </div>

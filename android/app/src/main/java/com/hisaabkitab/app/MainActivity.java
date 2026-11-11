@@ -1,13 +1,19 @@
 package com.hisaabkitab.app;
 
+import android.Manifest;
 import android.app.KeyguardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -22,6 +28,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -29,6 +36,7 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
+import java.util.ArrayList;
 import java.util.concurrent.Executor;
 import org.json.JSONObject;
 
@@ -37,11 +45,17 @@ public class MainActivity extends BridgeActivity {
     private static final String PREFS_NAME = "FundsLoggerSecurityPrefs";
     private static final String KEY_BIO_ENABLED = "biometric_lock_enabled";
     private static final long BACKGROUND_RELOCK_MS = 3000; // Re-lock after 3s in background like WhatsApp
+    private static final int REQ_RECORD_AUDIO_SPEECH = 7701;
 
     private FrameLayout nativeLockOverlay;
     private boolean isSessionUnlocked = false;
     private boolean isPromptShowing = false;
     private long lastBackgroundTimestamp = 0;
+
+    // Native OS SpeechRecognizer state
+    private SpeechRecognizer nativeSpeechRecognizer = null;
+    private String pendingSpeechLang = "en-IN";
+    private boolean waitingForMicPermission = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -79,6 +93,7 @@ public class MainActivity extends BridgeActivity {
         if (getBridge() != null && getBridge().getWebView() != null) {
             WebView webView = getBridge().getWebView();
             webView.addJavascriptInterface(new AndroidBiometricBridge(), "AndroidBiometric");
+            webView.addJavascriptInterface(new AndroidSpeechBridge(), "AndroidSpeech");
         }
 
         if (isNativeLockEnabled()) {
@@ -385,6 +400,196 @@ public class MainActivity extends BridgeActivity {
                 }
                 sendBiometricResultToWeb(success, error);
             });
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        destroyNativeSpeechRecognizer();
+        super.onDestroy();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_RECORD_AUDIO_SPEECH && waitingForMicPermission) {
+            waitingForMicPermission = false;
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startNativeSpeechInternal(pendingSpeechLang);
+            } else {
+                emitSpeechEventToWeb("error", "Microphone permission denied. Please allow mic permission in App Settings.", 0);
+            }
+        }
+    }
+
+    private void destroyNativeSpeechRecognizer() {
+        runOnUiThread(() -> {
+            if (nativeSpeechRecognizer != null) {
+                try {
+                    nativeSpeechRecognizer.cancel();
+                    nativeSpeechRecognizer.destroy();
+                } catch (Exception ignored) {}
+                nativeSpeechRecognizer = null;
+            }
+        });
+    }
+
+    private void emitSpeechEventToWeb(String type, String text, int rmsLevel) {
+        runOnUiThread(() -> {
+            try {
+                if (getBridge() == null || getBridge().getWebView() == null) return;
+                JSONObject payload = new JSONObject();
+                payload.put("type", type);
+                payload.put("text", text != null ? text : "");
+                payload.put("level", rmsLevel);
+                String js = "window.dispatchEvent(new CustomEvent('nativeSpeechEvent', { detail: " + payload.toString() + " }));";
+                getBridge().getWebView().evaluateJavascript(js, null);
+            } catch (Exception ignored) {}
+        });
+    }
+
+    private void startNativeSpeechInternal(final String lang) {
+        runOnUiThread(() -> {
+            try {
+                if (!SpeechRecognizer.isRecognitionAvailable(MainActivity.this)) {
+                    emitSpeechEventToWeb("error", "Speech recognition service unavailable on this device.", 0);
+                    return;
+                }
+
+                if (nativeSpeechRecognizer != null) {
+                    try {
+                        nativeSpeechRecognizer.cancel();
+                        nativeSpeechRecognizer.destroy();
+                    } catch (Exception ignored) {}
+                    nativeSpeechRecognizer = null;
+                }
+
+                nativeSpeechRecognizer = SpeechRecognizer.createSpeechRecognizer(MainActivity.this);
+                nativeSpeechRecognizer.setRecognitionListener(new RecognitionListener() {
+                    @Override
+                    public void onReadyForSpeech(Bundle params) {
+                        emitSpeechEventToWeb("ready", "", 15);
+                    }
+
+                    @Override
+                    public void onBeginningOfSpeech() {
+                        emitSpeechEventToWeb("speechstart", "", 35);
+                    }
+
+                    @Override
+                    public void onRmsChanged(float rmsdB) {
+                        int normalized = Math.max(5, Math.min(100, (int) ((rmsdB + 2.0f) * 8.5f)));
+                        emitSpeechEventToWeb("rms", "", normalized);
+                    }
+
+                    @Override
+                    public void onBufferReceived(byte[] buffer) {}
+
+                    @Override
+                    public void onEndOfSpeech() {
+                        emitSpeechEventToWeb("speechend", "", 0);
+                    }
+
+                    @Override
+                    public void onError(int error) {
+                        // Error 6 = SPEECH_TIMEOUT, Error 7 = NO_MATCH, Error 8 = RECOGNIZER_BUSY -> quiet cycle end
+                        if (error == SpeechRecognizer.ERROR_NO_MATCH
+                            || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                            || error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
+                            emitSpeechEventToWeb("end", "", 0);
+                            return;
+                        }
+                        if (error == SpeechRecognizer.ERROR_CLIENT) {
+                            return;
+                        }
+                        String msg = (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS)
+                            ? "Microphone permission required."
+                            : "Speech error (" + error + ")";
+                        emitSpeechEventToWeb("error", msg, 0);
+                    }
+
+                    @Override
+                    public void onResults(Bundle results) {
+                        ArrayList<String> matches = results != null
+                            ? results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            : null;
+                        String best = (matches != null && !matches.isEmpty()) ? matches.get(0) : "";
+                        emitSpeechEventToWeb("final", best, 0);
+                    }
+
+                    @Override
+                    public void onPartialResults(Bundle partialResults) {
+                        ArrayList<String> matches = partialResults != null
+                            ? partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                            : null;
+                        String partial = (matches != null && !matches.isEmpty()) ? matches.get(0) : "";
+                        if (!partial.isEmpty()) {
+                            emitSpeechEventToWeb("partial", partial, 50);
+                        }
+                    }
+
+                    @Override
+                    public void onEvent(int eventType, Bundle params) {}
+                });
+
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                String effectiveLang = (lang != null && !lang.isEmpty()) ? lang : "en-IN";
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, effectiveLang);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, effectiveLang);
+                intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+                intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+                intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1800L);
+                intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L);
+
+                nativeSpeechRecognizer.startListening(intent);
+            } catch (Exception e) {
+                emitSpeechEventToWeb("error", e.getMessage() != null ? e.getMessage() : "Could not start microphone", 0);
+            }
+        });
+    }
+
+    public class AndroidSpeechBridge {
+
+        @JavascriptInterface
+        public boolean isAvailable() {
+            try {
+                return SpeechRecognizer.isRecognitionAvailable(MainActivity.this);
+            } catch (Exception e) {
+                return true;
+            }
+        }
+
+        @JavascriptInterface
+        public void startListening(final String lang) {
+            pendingSpeechLang = (lang != null && !lang.isEmpty()) ? lang : "en-IN";
+            if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+                waitingForMicPermission = true;
+                ActivityCompat.requestPermissions(
+                    MainActivity.this,
+                    new String[]{Manifest.permission.RECORD_AUDIO},
+                    REQ_RECORD_AUDIO_SPEECH
+                );
+                return;
+            }
+            startNativeSpeechInternal(pendingSpeechLang);
+        }
+
+        @JavascriptInterface
+        public void stopListening() {
+            runOnUiThread(() -> {
+                if (nativeSpeechRecognizer != null) {
+                    try {
+                        nativeSpeechRecognizer.stopListening();
+                    } catch (Exception ignored) {}
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void cancel() {
+            destroyNativeSpeechRecognizer();
         }
     }
 }

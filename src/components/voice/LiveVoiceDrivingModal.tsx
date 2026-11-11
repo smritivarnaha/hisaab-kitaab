@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   KeyRound,
   Volume2,
-  Radio
+  Radio,
+  Send
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { Transaction, isBusinessPartner } from '../../types/finance';
@@ -186,6 +187,8 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const isPartner = isBusinessPartner(currentUser);
   const orbScale = 1 + Math.min(0.28, (audioLevel / 100) * 0.28);
   const ringScaleOuter = 1 + Math.min(0.55, (audioLevel / 100) * 0.55);
+  const activeLiveUserTurn = [...turns].reverse().find(t => t.role === 'user' && !t.isFinal);
+  const finalizedTurns = turns.filter(t => t.id !== activeLiveUserTurn?.id);
 
   const handleOrbTap = () => {
     if (!sessionRef.current) return;
@@ -413,9 +416,40 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
           </p>
         </div>
 
+        {/* Live Word-by-Word Speech Transcription Box */}
+        <div className="w-full max-w-lg px-1">
+          {activeLiveUserTurn?.text ? (
+            <div className="rounded-2xl px-4 py-3 bg-emerald-950/90 border-2 border-[#93E044]/75 shadow-lg flex items-center justify-between gap-3 animate-fadeIn">
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#93E044] flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#93E044] animate-ping inline-block" />
+                  Hearing Your Words Live
+                </span>
+                <p className="text-sm sm:text-base font-extrabold text-white mt-0.5 break-words leading-snug">
+                  "{activeLiveUserTurn.text}"
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => sessionRef.current?.commitCurrentSpeechNow()}
+                className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#93E044] hover:bg-[#a6ec5c] text-[#041308] text-xs font-black flex items-center gap-1 shadow-md cursor-pointer active:scale-95 transition-all"
+              >
+                <span>Send</span>
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : status === 'listening' ? (
+            <div className="rounded-2xl px-4 py-2.5 bg-white/5 border border-white/15 text-center">
+              <p className="text-xs text-emerald-200/85 font-semibold">
+                🎙️ Mic active — speak naturally and watch every word appear here live...
+              </p>
+            </div>
+          ) : null}
+        </div>
+
         {/* Streaming Live Captions Feed */}
-        <div className="w-full max-w-lg max-h-40 sm:max-h-48 overflow-y-auto no-scrollbar space-y-2 px-1">
-          {turns.slice(-4).map(t => (
+        <div className="w-full max-w-lg max-h-36 sm:max-h-44 overflow-y-auto no-scrollbar space-y-2 px-1">
+          {finalizedTurns.slice(-4).map(t => (
             <div
               key={t.id}
               className={`rounded-2xl px-3.5 py-2 text-xs sm:text-sm font-semibold leading-snug animate-fadeIn ${
