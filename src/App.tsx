@@ -8,9 +8,10 @@ import { StatementImporterModal } from './components/import/StatementImporterMod
 import { SettingsModal } from './components/settings/SettingsModal';
 import { ExportDataModal } from './components/common/ExportDataModal';
 import { UpdatePromptBanner } from './components/common/UpdatePromptBanner';
+import { LiveVoiceDrivingModal } from './components/voice/LiveVoiceDrivingModal';
 import { LoginPage } from './components/auth/LoginPage';
 import ErrorBoundary from './components/ErrorBoundary';
-import { X, Fingerprint, Lock, ShieldCheck } from 'lucide-react';
+import { X, Fingerprint, Lock, ShieldCheck, Radio } from 'lucide-react';
 import {
   isSessionBiometricUnlocked,
   markSessionBiometricUnlocked,
@@ -30,6 +31,7 @@ const ACCENT_COLORS = {
 export const AppContent: React.FC = () => {
   const { settings, currentUser, login, logout, transactions } = useFinance();
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
   const [isOCROpen, setIsOCROpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -179,24 +181,37 @@ export const AppContent: React.FC = () => {
           <DashboardOverview />
         </main>
 
-        {/* Floating Chat Bubble Widget (Bottom-Right) — hidden when chat is open */}
-        {!isChatOpen && (
-          <button
-            onClick={() => setIsChatOpen(true)}
-            className={`fixed bottom-6 right-6 z-50 ${bubbleSizeClass} rounded-full bg-white flex items-center justify-center shadow-2xl active:scale-95 transition-all hover:scale-110 overflow-hidden ring-2 ring-white/90 p-0 cursor-pointer`}
-            title={settings.aiAccountantName || 'My Accountant'}
-          >
-            {botAvatar && !botAvatarError ? (
-              <img
-                src={botAvatar}
-                alt="Bot"
-                className="w-full h-full object-cover rounded-full"
-                onError={() => setBotAvatarError(true)}
-              />
-            ) : (
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover rounded-full" />
-            )}
-          </button>
+        {/* Floating Live Voice + Chat Bubble Widgets (Bottom-Right) — hidden when chat is open */}
+        {!isChatOpen && !isLiveVoiceOpen && (
+          <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-3">
+            {/* 1-Tap Hands-Free Live Driving Voice Launcher */}
+            <button
+              type="button"
+              onClick={() => setIsLiveVoiceOpen(true)}
+              className="group relative w-12 h-12 rounded-full bg-[#0D2E14] hover:bg-black text-[#93E044] flex flex-col items-center justify-center shadow-2xl ring-2 ring-[#93E044]/70 active:scale-95 transition-all hover:scale-110 cursor-pointer"
+              title="Live Hands-Free Voice Mode (Talk While Driving)"
+            >
+              <Radio className="w-5 h-5 animate-pulse" />
+              <span className="text-[8px] font-black tracking-wider leading-none mt-0.5 text-white">LIVE</span>
+            </button>
+
+            <button
+              onClick={() => setIsChatOpen(true)}
+              className={`${bubbleSizeClass} rounded-full bg-white flex items-center justify-center shadow-2xl active:scale-95 transition-all hover:scale-110 overflow-hidden ring-2 ring-white/90 p-0 cursor-pointer`}
+              title={settings.aiAccountantName || 'My Accountant'}
+            >
+              {botAvatar && !botAvatarError ? (
+                <img
+                  src={botAvatar}
+                  alt="Bot"
+                  className="w-full h-full object-cover rounded-full"
+                  onError={() => setBotAvatarError(true)}
+                />
+              ) : (
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-cover rounded-full" />
+              )}
+            </button>
+          </div>
         )}
 
         {/* Sliding Chat Accountant Drawer Panel (Right Side) */}
@@ -216,12 +231,23 @@ export const AppContent: React.FC = () => {
                 <p className="text-[10px] text-gray-400 mt-0.5">Enter transaction or ask summary</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsChatOpen(false)}
-              className="p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsLiveVoiceOpen(true)}
+                className="px-2.5 py-1 rounded-full bg-[#0D2E14] hover:bg-black text-[#93E044] text-[11px] font-extrabold flex items-center gap-1 shadow-xs active:scale-95 transition-all cursor-pointer"
+                title="Open Hands-Free Live Voice Mode"
+              >
+                <Radio className="w-3.5 h-3.5 animate-pulse" />
+                <span className="text-white">Live</span>
+              </button>
+              <button
+                onClick={() => setIsChatOpen(false)}
+                className="p-1 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Drawer Body — Chat Accountant */}
@@ -230,6 +256,7 @@ export const AppContent: React.FC = () => {
               <ChatContainer
                 onOpenOCR={() => setIsOCROpen(true)}
                 onOpenImport={() => setIsImportOpen(true)}
+                onOpenLiveVoice={() => setIsLiveVoiceOpen(true)}
               />
             )}
           </div>
@@ -255,6 +282,12 @@ export const AppContent: React.FC = () => {
           isOpen={isExportOpen}
           onClose={() => setIsExportOpen(false)}
           transactions={transactions}
+        />
+
+        {/* Real-Time Hands-Free Live Driving Voice Cockpit */}
+        <LiveVoiceDrivingModal
+          isOpen={isLiveVoiceOpen}
+          onClose={() => setIsLiveVoiceOpen(false)}
         />
       </div>
     </div>

@@ -3,14 +3,15 @@ import { useFinance } from '../../context/FinanceContext';
 import { ChatMessageItem } from './ChatMessageItem';
 import { transcribeWithWhisper } from '../../services/ai/openai';
 import { speechService } from '../../services/voice/speechRecognition';
-import { Mic, Send, Camera, Sparkles, Loader2 } from 'lucide-react';
+import { Mic, Send, Camera, Sparkles, Loader2, Radio } from 'lucide-react';
 
 interface Props {
   onOpenOCR: () => void;
   onOpenImport: () => void;
+  onOpenLiveVoice?: () => void;
 }
 
-export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
+export const ChatContainer: React.FC<Props> = ({ onOpenOCR, onOpenLiveVoice }) => {
   const { chatMessages, settings, isProcessingAI, processUserInputText } = useFinance();
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -208,6 +209,19 @@ export const ChatContainer: React.FC<Props> = ({ onOpenOCR }) => {
 
               {/* Controls inside the input bar on the right side */}
               <div className="flex items-center gap-1.5 flex-shrink-0">
+                {/* Hands-Free Live Voice Mode Quick Pill */}
+                {onOpenLiveVoice && !inputText.trim() && (
+                  <button
+                    type="button"
+                    onClick={onOpenLiveVoice}
+                    title="Hands-Free Live Voice Mode"
+                    className="h-7 px-2.5 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-[#0D2E14] text-[10px] font-extrabold flex items-center gap-1 transition-all cursor-pointer"
+                  >
+                    <Radio className="w-3 h-3 text-emerald-700 animate-pulse" />
+                    <span>Live</span>
+                  </button>
+                )}
+
                 {/* Clean Mic Icon Only */}
                 <button
                   type="button"
