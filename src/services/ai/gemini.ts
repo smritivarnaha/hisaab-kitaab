@@ -1,4 +1,6 @@
 import { Transaction, AIMemoryMap, ChatMessage } from '../../types/finance';
+import { isValidGeminiKey } from '../../utils/aiKeys';
+import { apiUrl } from '../../utils/apiUrl';
 
 export interface GeminiAgentResponse {
   action: 'CREATE_TRANSACTIONS' | 'DELETE_TRANSACTION' | 'UPDATE_TRANSACTION' | 'SETTLE_DEBT' | 'UPDATE_BUDGET' | 'SAVE_MEMORY' | 'GENERAL_RESPONSE';
@@ -57,15 +59,15 @@ export async function processWithGeminiAgent(
   apiKey?: string,
   audioBlob?: Blob,
   chatMessages: ChatMessage[] = [],
-  customAIPrompt?: string
+  customAIPrompt?: string,
+  userId?: string
 ): Promise<GeminiAgentResponse | null> {
-  const rawKey = (apiKey && !apiKey.trim().startsWith('AQ.'))
-    ? apiKey.trim()
-    : ((import.meta as any).env?.VITE_GEMINI_API_KEY || '');
-  const activeKey = rawKey.startsWith('AQ.') ? '' : rawKey;
-  if (!activeKey || !activeKey.trim()) return null;
-
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeKey.trim()}`;
+  const envKey = ((import.meta as any).env?.VITE_GEMINI_API_KEY || '').trim();
+  const activeKey = isValidGeminiKey(apiKey)
+    ? apiKey!.trim()
+    : isValidGeminiKey(envKey)
+      ? envKey
+      : '';
 
   const recentTransactionsSummary = transactions.slice(0, 20).map(t => ({
     id: t.id,
@@ -176,25 +178,51 @@ CRITICAL RULES:
     }
     parts.push({ text: systemPrompt });
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: "application/json"
-        }
-      })
-    });
-
-    if (!res.ok) {
-      console.warn('Gemini API request status error:', res.status, res.statusText);
-      return null;
+    let data: any = null;
+    if (activeKey) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${activeKey}`;
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingLevel: 'LOW' }
+          }
+        })
+      });
+      if (res.ok) {
+        data = await res.json();
+      }
     }
 
-    const data = await res.json();
-    const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Automatic backend fallback (uses default project key configured on server)
+    if (!data) {
+      const proxyRes = await fetch(apiUrl('/api/gemini-agent'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userId || 'praveen',
+          apiKey: activeKey || undefined,
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingLevel: 'LOW' }
+          }
+        })
+      });
+      if (!proxyRes.ok) return null;
+      const proxyJson = await proxyRes.json();
+      if (!proxyJson?.ok || !proxyJson?.data) return null;
+      data = proxyJson.data;
+    }
+
+    const candidateParts = data?.candidates?.[0]?.content?.parts || [];
+    const textPart = candidateParts.find((p: any) => typeof p?.text === 'string' && !p?.thought) || candidateParts[0];
+    const candidateText = textPart?.text;
     if (!candidateText) return null;
 
     const cleanedText = candidateText.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();

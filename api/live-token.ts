@@ -14,8 +14,8 @@ function getDb() {
 function isValidGeminiApiKey(key?: string | null): key is string {
   if (!key) return false;
   const trimmed = key.trim();
-  // Google AI Studio / Gemini Developer API keys start with AIza
-  return trimmed.startsWith('AIza') && trimmed.length >= 30;
+  // Supports both classic AIza... and 2026 Google AQ.... API keys
+  return (trimmed.startsWith('AIza') || trimmed.startsWith('AQ.')) && trimmed.length >= 25;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

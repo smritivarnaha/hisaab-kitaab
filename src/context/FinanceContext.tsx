@@ -78,7 +78,7 @@ interface FinanceContextType {
   syncNow: () => Promise<void>;
 }
 
-import { DEFAULT_OPENAI_KEY, getActiveOpenAIKey } from '../utils/aiKeys';
+import { DEFAULT_OPENAI_KEY, getActiveOpenAIKey, isValidGeminiKey } from '../utils/aiKeys';
 import { apiUrl } from '../utils/apiUrl';
 import { 
   queueOfflineTransaction, 
@@ -100,7 +100,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   autoTTS: false,
   apiKey: '',
   openaiApiKey: DEFAULT_OPENAI_KEY,
-  aiProvider: 'openai',
+  aiProvider: 'gemini',
   customAIPrompt: '',
   botAvatarUrl: '/logo.png',
   userAvatarUrl: '',
@@ -1275,10 +1275,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     }
 
-    // Check if user actually has a valid custom LLM API key configured
+    // Gemini 3.8 Flash is active by default via project server key + user settings
     const activeOpenAIKey = getActiveOpenAIKey(settings.openaiApiKey);
-    const validGeminiKey = settings.apiKey && !settings.apiKey.startsWith('AQ.') ? settings.apiKey.trim() : '';
-    const hasValidLLMKey = Boolean(activeOpenAIKey || validGeminiKey);
+    const validGeminiKey = isValidGeminiKey(settings.apiKey) ? settings.apiKey!.trim() : '';
+    const hasValidLLMKey = true;
 
     if (hasValidLLMKey) {
       setIsProcessingAI(true);
@@ -1340,13 +1340,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       try {
         const modeFilteredTx = transactions.filter(t => !t.isPending && (accountMode === 'business' ? t.mode === 'business' : t.mode !== 'business'));
-        const useOpenAI = Boolean(activeOpenAIKey && (settings.aiProvider === 'openai' || !validGeminiKey));
+        const useOpenAI = Boolean(activeOpenAIKey && settings.aiProvider === 'openai' && !validGeminiKey);
         const customPrompt = settings.customAIPrompt?.trim() || undefined;
         const recentChatMessages = chatMessages.filter(m => accountMode === 'business' ? m.mode === 'business' : m.mode !== 'business');
 
         const agentRes = useOpenAI
           ? await processWithOpenAIAgent(text, modeFilteredTx, aiMemory, activeOpenAIKey, audioBlob, [...recentChatMessages, userMsg])
-          : await processWithGeminiAgent(text, modeFilteredTx, aiMemory, validGeminiKey, audioBlob, [...recentChatMessages, userMsg], customPrompt);
+          : await processWithGeminiAgent(text, modeFilteredTx, aiMemory, validGeminiKey, audioBlob, [...recentChatMessages, userMsg], customPrompt, activeUserId);
 
         const isConnectionError = 
           agentRes?.responseText?.includes('Connection Error') || 

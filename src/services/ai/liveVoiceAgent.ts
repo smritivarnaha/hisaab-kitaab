@@ -11,6 +11,7 @@ import {
 } from '../../types/finance';
 import { parseMultiInput } from './parser';
 import { apiUrl } from '../../utils/apiUrl';
+import { isValidGeminiKey } from '../../utils/aiKeys';
 import { PcmMicrophoneStreamer, Pcm24kAudioPlayer } from '../voice/pcmAudioEngine';
 import { VoiceRecognitionService, normalizeSpokenWordsAndNumbers } from '../voice/speechRecognition';
 
@@ -217,7 +218,7 @@ export class LiveVoiceAgentSession {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: uid,
-          apiKey: inlineGeminiKey.startsWith('AIza') ? inlineGeminiKey : undefined
+          apiKey: isValidGeminiKey(inlineGeminiKey) ? inlineGeminiKey : undefined
         })
       });
 
@@ -236,12 +237,9 @@ export class LiveVoiceAgentSession {
       console.warn('Gemini Live token check fell back to hands-free local loop:', err);
     }
 
-    // 2. Fallback seamlessly to Zero-Key Continuous Hands-Free Driving Loop (works 100% immediately!)
+    // 2. Fallback seamlessly to On-Device Continuous Hands-Free Loop
     this.engine = 'handsfree-local';
-    this.callbacks.onEngineResolved(
-      'handsfree-local',
-      'Continuous Hands-Free Mode active (add a Gemini AIza... key anytime for Neural Audio)'
-    );
+    this.callbacks.onEngineResolved('handsfree-local');
     await this.startContinuousHandsFreeLoop();
   }
 
@@ -511,6 +509,34 @@ Driving Mode Rules:
       let currentAiTranscriptId = '';
       let currentAiTranscriptAcc = '';
 
+      const finalizeUserTurnIfNeeded = () => {
+        if (currentUserTranscriptId && currentUserTranscriptAcc.trim()) {
+          this.callbacks.onTranscriptUpdate({
+            id: currentUserTranscriptId,
+            role: 'user',
+            text: normalizeSpokenWordsAndNumbers(currentUserTranscriptAcc.trim()),
+            timestamp: Date.now(),
+            isFinal: true
+          });
+        }
+        currentUserTranscriptId = '';
+        currentUserTranscriptAcc = '';
+      };
+
+      const finalizeAiTurnIfNeeded = () => {
+        if (currentAiTranscriptId && currentAiTranscriptAcc.trim()) {
+          this.callbacks.onTranscriptUpdate({
+            id: currentAiTranscriptId,
+            role: 'assistant',
+            text: currentAiTranscriptAcc.trim(),
+            timestamp: Date.now(),
+            isFinal: true
+          });
+        }
+        currentAiTranscriptId = '';
+        currentAiTranscriptAcc = '';
+      };
+
       this.geminiSession = await ai.live.connect({
         model: 'gemini-3.8-live',
         config: {
@@ -536,12 +562,12 @@ Driving Mode Rules:
               // 1. Handle instant barge-in interruption
               if (content.interrupted === true) {
                 this.pcmPlayer?.interrupt();
-                currentAiTranscriptId = '';
-                currentAiTranscriptAcc = '';
+                finalizeAiTurnIfNeeded();
               }
 
               // 2. Process ALL parts in modelTurn
               if (content.modelTurn?.parts) {
+                finalizeUserTurnIfNeeded();
                 for (const part of content.modelTurn.parts) {
                   if (part.inlineData?.data) {
                     this.pcmPlayer?.enqueuePcm24kBase64(part.inlineData.data);
@@ -567,6 +593,7 @@ Driving Mode Rules:
 
               // 4. Stream live assistant output transcription
               if (content.outputTranscription?.text) {
+                finalizeUserTurnIfNeeded();
                 if (!currentAiTranscriptId) {
                   currentAiTranscriptId = `a_${Date.now()}`;
                   currentAiTranscriptAcc = '';
@@ -582,22 +609,27 @@ Driving Mode Rules:
               }
 
               if (content.turnComplete) {
-                currentUserTranscriptId = '';
-                currentUserTranscriptAcc = '';
-                currentAiTranscriptId = '';
-                currentAiTranscriptAcc = '';
+                finalizeUserTurnIfNeeded();
+                finalizeAiTurnIfNeeded();
               }
             }
 
             // 5. Execute NON_BLOCKING tool calls asynchronously while audio continues
             if (message.toolCall?.functionCalls?.length) {
+              finalizeUserTurnIfNeeded();
               this.callbacks.onStatusChange('thinking');
+              const latestBridge = this.getBridge();
               const responses = message.toolCall.functionCalls.map((call: any) => {
                 const { result, spokenSummary } = this.executeTool(call.name, call.args || {});
                 return {
                   id: call.id,
                   name: call.name,
-                  response: { ...result, summary: spokenSummary }
+                  response: {
+                    ...result,
+                    activeLedgerMode: latestBridge.accountMode,
+                    autoSavedToPassbook: latestBridge.autoSaveInDrivingMode,
+                    summary: spokenSummary
+                  }
                 };
               });
               try {
@@ -617,6 +649,14 @@ Driving Mode Rules:
           }
         }
       });
+
+      // Ensure native Android APK mic permission is requested if running in APK
+      try {
+        const nativeSpeech = (window as any).AndroidSpeech;
+        if (nativeSpeech && typeof nativeSpeech.ensureMicPermission === 'function') {
+          nativeSpeech.ensureMicPermission();
+        }
+      } catch {}
 
       // Start streaming 16kHz PCM microphone audio
       this.micStreamer = new PcmMicrophoneStreamer();
@@ -639,12 +679,14 @@ Driving Mode Rules:
         }
       );
 
-      // Prompt initial crisp voice greeting
-      try {
-        this.geminiSession.sendRealtimeInput({
-          text: `Greet ${userName} in 1 short energetic sentence confirming ${bridge.accountMode} Live Driving Mode is ready.`
-        });
-      } catch {}
+      // Emit quiet visual welcome card so microphone listens immediately with zero unsolicited chatter
+      this.callbacks.onTranscriptUpdate({
+        id: `a_welcome_${Date.now()}`,
+        role: 'assistant',
+        text: `Gemini 3.8 Live ready for ${userName}. Speak naturally anytime!`,
+        timestamp: Date.now(),
+        isFinal: true
+      });
 
       return true;
     } catch (err: any) {

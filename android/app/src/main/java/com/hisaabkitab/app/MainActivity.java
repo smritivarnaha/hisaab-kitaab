@@ -561,6 +561,20 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public boolean ensureMicPermission() {
+            if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED) {
+                return true;
+            }
+            ActivityCompat.requestPermissions(
+                MainActivity.this,
+                new String[]{Manifest.permission.RECORD_AUDIO},
+                REQ_RECORD_AUDIO_SPEECH
+            );
+            return false;
+        }
+
+        @JavascriptInterface
         public void startListening(final String lang) {
             pendingSpeechLang = (lang != null && !lang.isEmpty()) ? lang : "en-IN";
             if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO)

@@ -2,14 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Mic,
   MicOff,
-  PhoneOff,
+  X,
   RotateCcw,
   Zap,
+  FileCheck2,
   Sparkles,
   Building2,
   User,
   CheckCircle2,
-  KeyRound,
   Volume2,
   Radio,
   Send
@@ -40,12 +40,11 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
     businessSettlement,
     addTransactionsBatch,
     confirmPendingItemsBatch,
-    deleteTransaction,
-    updateSettings
+    deleteTransaction
   } = useFinance();
 
   const [status, setStatus] = useState<LiveVoiceStatus>('connecting');
-  const [engine, setEngine] = useState<LiveSessionEngine>('handsfree-local');
+  const [engine, setEngine] = useState<LiveSessionEngine>('gemini-3.8-live');
   const [audioLevel, setAudioLevel] = useState(0);
   const [audioSource, setAudioSource] = useState<'mic' | 'speaker'>('mic');
   const [turns, setTurns] = useState<LiveTranscriptTurn[]>([]);
@@ -53,15 +52,10 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [autoSaveDriving, setAutoSaveDriving] = useState<boolean>(true);
   const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
-  // Inline Gemini 3.8 Neural Key quick-upgrade drawer
-  const [showKeyBox, setShowKeyBox] = useState(false);
-  const [keyInput, setKeyInput] = useState('');
-  const [reconnectNonce, setReconnectNonce] = useState(0);
-
   const sessionRef = useRef<LiveVoiceAgentSession | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-  // Always keep a fresh ref of live finance state so tool calls mid-conversation read latest values
+  // Keep fresh ref of live finance state so option switches (Personal/Business, Auto-Save/Draft) apply instantaneously with zero reconnect or chatter
   const bridgeRef = useRef<LiveFinanceBridge>({
     currentUser,
     accountMode,
@@ -77,37 +71,22 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
     setAccountMode
   });
 
-  useEffect(() => {
-    bridgeRef.current = {
-      currentUser,
-      accountMode,
-      transactions,
-      aiMemory,
-      autoSaveInDrivingMode: autoSaveDriving,
-      voiceLanguage: settings.voiceLanguage || 'en-IN',
-      geminiApiKey: settings.apiKey,
-      businessSettlement,
-      addTransactionsBatch,
-      confirmPendingItemsBatch,
-      deleteTransaction,
-      setAccountMode
-    };
-  }, [
+  bridgeRef.current = {
     currentUser,
     accountMode,
     transactions,
     aiMemory,
-    autoSaveDriving,
-    settings.voiceLanguage,
-    settings.apiKey,
+    autoSaveInDrivingMode: autoSaveDriving,
+    voiceLanguage: settings.voiceLanguage || 'en-IN',
+    geminiApiKey: settings.apiKey,
     businessSettlement,
     addTransactionsBatch,
     confirmPendingItemsBatch,
     deleteTransaction,
     setAccountMode
-  ]);
+  };
 
-  // Keep phone screen awake while Driving Mode is open
+  // Keep phone screen awake while Live Voice Mode is open
   useEffect(() => {
     if (!isOpen) return;
     let wakeLock: any = null;
@@ -136,11 +115,14 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
     };
   }, [isOpen]);
 
-  // Start / Tear down Live Voice Session
+  // Start / Tear down Live Voice Session cleanly once per open
   useEffect(() => {
     if (!isOpen) return;
 
     setErrorBanner(null);
+    setTurns([]);
+    setSessionEntries([]);
+
     const agent = new LiveVoiceAgentSession(() => bridgeRef.current, {
       onStatusChange: nextStatus => setStatus(nextStatus),
       onEngineResolved: resolvedEngine => setEngine(resolvedEngine),
@@ -154,9 +136,9 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
           if (idx >= 0) {
             const copy = [...prev];
             copy[idx] = turn;
-            return copy.slice(-14);
+            return copy.slice(-16);
           }
-          return [...prev, turn].slice(-14);
+          return [...prev, turn].slice(-16);
         });
       },
       onTransactionsLogged: items => {
@@ -176,7 +158,7 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
       agent.stop();
       sessionRef.current = null;
     };
-  }, [isOpen, reconnectNonce]);
+  }, [isOpen]);
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -185,8 +167,9 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const isPartner = isBusinessPartner(currentUser);
-  const orbScale = 1 + Math.min(0.28, (audioLevel / 100) * 0.28);
-  const ringScaleOuter = 1 + Math.min(0.55, (audioLevel / 100) * 0.55);
+  const orbScale = 1 + Math.min(0.22, (audioLevel / 100) * 0.22);
+  const ringScaleOuter = 1 + Math.min(0.45, (audioLevel / 100) * 0.45);
+
   const activeLiveUserTurn = [...turns].reverse().find(t => t.role === 'user' && !t.isFinal);
   const finalizedTurns = turns.filter(t => t.id !== activeLiveUserTurn?.id);
 
@@ -199,19 +182,16 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
     sessionRef.current.toggleMute();
   };
 
-  const handleSaveGeminiKeyAndUpgrade = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleaned = keyInput.trim();
-    if (!cleaned.startsWith('AIza')) {
-      setErrorBanner('Please paste a valid Google AI Studio key starting with "AIza..."');
-      return;
-    }
-    setErrorBanner(null);
-    updateSettings({ apiKey: cleaned, aiProvider: 'gemini' });
-    bridgeRef.current.geminiApiKey = cleaned;
-    setShowKeyBox(false);
-    setKeyInput('');
-    setReconnectNonce(n => n + 1);
+  const handleSwitchLedger = (nextMode: 'personal' | 'business') => {
+    if (accountMode === nextMode) return;
+    bridgeRef.current.accountMode = nextMode;
+    setAccountMode(nextMode);
+  };
+
+  const handleSwitchSaveMode = (autoSave: boolean) => {
+    if (autoSaveDriving === autoSave) return;
+    bridgeRef.current.autoSaveInDrivingMode = autoSave;
+    setAutoSaveDriving(autoSave);
   };
 
   const statusHeadline =
@@ -222,311 +202,308 @@ export const LiveVoiceDrivingModal: React.FC<Props> = ({ isOpen, onClose }) => {
         : status === 'thinking'
           ? 'Updating Ledger...'
           : status === 'speaking'
-            ? 'Speaking — Tap Orb to Interrupt'
+            ? 'Speaking — Tap Mic to Interrupt'
             : status === 'muted'
-              ? 'Mic Paused — Tap Orb to Resume'
+              ? 'Mic Paused — Tap to Resume'
               : status === 'error'
                 ? 'Microphone Attention Needed'
                 : 'Session Ended';
 
   return (
-    <div className="fixed inset-0 z-[90] bg-gradient-to-b from-[#041308] via-[#092310] to-[#041308] text-white font-outfit flex flex-col justify-between overflow-hidden select-none">
-      {/* Top Safe-Area Cockpit Bar */}
-      <div className="px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-2 flex flex-col gap-2.5 z-20">
-        <div className="flex items-center justify-between gap-2">
-          {/* Engine Indicator Badge */}
-          <div className="flex items-center gap-2 min-w-0">
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold border ${
-                engine === 'gemini-3.8-live'
-                  ? 'bg-emerald-500/20 border-[#93E044]/60 text-[#93E044]'
-                  : 'bg-white/10 border-white/20 text-emerald-200'
-              }`}
-            >
-              <Radio className="w-3.5 h-3.5 animate-pulse text-[#93E044]" />
-              {engine === 'gemini-3.8-live' ? 'Gemini 3.8 Neural Live' : 'Hands-Free Live'}
-            </span>
-
-            {engine !== 'gemini-3.8-live' && (
-              <button
-                type="button"
-                onClick={() => setShowKeyBox(v => !v)}
-                className="px-2.5 py-1 rounded-full bg-amber-400/15 hover:bg-amber-400/25 border border-amber-300/30 text-amber-200 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
-              >
-                <KeyRound className="w-3 h-3" />
-                <span>Neural Key</span>
-              </button>
-            )}
-          </div>
-
-          {/* Active User + Auto-Save Toggle */}
-          <button
-            type="button"
-            onClick={() => setAutoSaveDriving(v => !v)}
-            className={`px-3 py-1 rounded-full text-[11px] font-extrabold border flex items-center gap-1 transition-all cursor-pointer ${
-              autoSaveDriving
-                ? 'bg-[#93E044]/20 border-[#93E044]/60 text-[#93E044]'
-                : 'bg-white/10 border-white/20 text-gray-300'
-            }`}
-            title="When ON, spoken expenses save directly to Passbook without needing manual confirmation"
-          >
-            <Zap className="w-3 h-3" />
-            <span>{autoSaveDriving ? 'Auto-Save ON' : 'Draft Mode'}</span>
-          </button>
-        </div>
-
-        {/* Optional Inline Gemini 3.8 Key Upgrade Drawer */}
-        {showKeyBox && (
-          <form
-            onSubmit={handleSaveGeminiKeyAndUpgrade}
-            className="p-3 rounded-2xl bg-black/50 border border-emerald-400/30 backdrop-blur-md space-y-2 animate-fadeIn"
-          >
-            <p className="text-[11px] text-emerald-100 font-medium leading-snug">
-              Paste a free Google AI Studio key (<code className="text-[#93E044]">AIza...</code>) to upgrade from on-device speech to <b>Gemini 3.8 Live 24kHz Neural Audio</b>:
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={keyInput}
-                onChange={e => setKeyInput(e.target.value)}
-                placeholder="AIzaSy..."
-                className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-400 outline-none focus:border-[#93E044]"
-              />
-              <button
-                type="submit"
-                className="px-3.5 py-2 rounded-xl bg-[#93E044] text-[#051609] text-xs font-black cursor-pointer"
-              >
-                Activate
-              </button>
+    <div className="fixed inset-0 z-[90] sm:bg-black/25 sm:backdrop-blur-xs flex items-center justify-center font-outfit select-none">
+      <div className="w-full h-[100dvh] sm:h-[min(90dvh,740px)] sm:max-w-[460px] bg-[#F3F5F1] text-[#0D2E14] sm:rounded-3xl sm:border sm:border-[#E2E8E0] sm:shadow-2xl flex flex-col overflow-hidden">
+        {/* Top Light Header (matches global app Header & Modals) */}
+        <div className="bg-white border-b border-[#E2E8E0] px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-3.5 pb-3 flex items-center justify-between gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[#0D2E14] flex items-center justify-center p-1.5 shadow-2xs flex-shrink-0">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain rounded-full" />
             </div>
-          </form>
-        )}
-
-        {/* Driving Ledger Mode Switcher (Personal vs Business) */}
-        <div className="flex items-center justify-center gap-2">
-          <div className="inline-flex bg-white/10 p-1 rounded-2xl border border-white/15">
-            <button
-              type="button"
-              onClick={() => setAccountMode('personal')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
-                accountMode === 'personal'
-                  ? 'bg-[#93E044] text-[#051609] shadow-md'
-                  : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>{currentUser?.name || 'Personal'}</span>
-            </button>
-
-            {isPartner && (
-              <button
-                type="button"
-                onClick={() => setAccountMode('business')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  accountMode === 'business'
-                    ? 'bg-[#93E044] text-[#051609] shadow-md'
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                <Building2 className="w-3.5 h-3.5" />
-                <span>Business 50-50</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {errorBanner && (
-          <div className="mx-auto max-w-md w-full px-3.5 py-2 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-100 text-xs font-bold text-center">
-            {errorBanner}
-          </div>
-        )}
-      </div>
-
-      {/* Center Interactive Sonic Orb + Live Captions */}
-      <div className="flex-1 flex flex-col items-center justify-center px-5 min-h-0 gap-5">
-        {/* Sonic Orb */}
-        <div className="relative flex items-center justify-center my-2">
-          {/* Outer Reactive Halo */}
-          <div
-            style={{ transform: `scale(${ringScaleOuter})` }}
-            className={`absolute w-44 h-44 sm:w-52 sm:h-52 rounded-full transition-transform duration-100 pointer-events-none blur-md ${
-              status === 'speaking'
-                ? 'bg-cyan-400/20'
-                : status === 'thinking'
-                  ? 'bg-amber-400/25 animate-pulse'
-                  : status === 'muted'
-                    ? 'bg-slate-500/10'
-                    : 'bg-[#93E044]/20'
-            }`}
-          />
-
-          {/* Middle Pulse Ring */}
-          <div
-            style={{ transform: `scale(${1 + (orbScale - 1) * 0.65})` }}
-            className={`absolute w-36 h-36 sm:w-44 sm:h-44 rounded-full border transition-transform duration-100 pointer-events-none ${
-              status === 'speaking'
-                ? 'border-cyan-300/40 bg-cyan-400/10'
-                : status === 'thinking'
-                  ? 'border-amber-300/50 bg-amber-400/10'
-                  : status === 'muted'
-                    ? 'border-white/15 bg-white/5'
-                    : 'border-[#93E044]/45 bg-[#93E044]/10'
-            }`}
-          />
-
-          {/* Core Tap-Target Orb */}
-          <button
-            type="button"
-            onClick={handleOrbTap}
-            style={{ transform: `scale(${orbScale})` }}
-            className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all duration-100 cursor-pointer border-2 ${
-              status === 'speaking'
-                ? 'bg-gradient-to-br from-cyan-400 to-emerald-500 border-cyan-200 text-[#041308]'
-                : status === 'thinking'
-                  ? 'bg-gradient-to-br from-amber-300 to-emerald-500 border-amber-100 text-[#041308]'
-                  : status === 'muted'
-                    ? 'bg-slate-800 border-slate-600 text-slate-300'
-                    : 'bg-gradient-to-br from-[#93E044] to-emerald-600 border-[#c9f59b] text-[#041308]'
-            }`}
-          >
-            {status === 'muted' ? (
-              <MicOff className="w-10 h-10" />
-            ) : status === 'speaking' && audioSource === 'speaker' ? (
-              <Volume2 className="w-10 h-10 animate-pulse" />
-            ) : status === 'thinking' ? (
-              <Sparkles className="w-10 h-10 animate-spin" />
-            ) : (
-              <Mic className="w-10 h-10" />
-            )}
-            <span className="text-[10px] font-black uppercase tracking-wider mt-1">
-              {status === 'muted' ? 'Tap Resume' : status === 'speaking' ? 'Interrupt' : 'Live'}
-            </span>
-          </button>
-        </div>
-
-        {/* Status Headline & Voice Hints */}
-        <div className="text-center space-y-1 max-w-md">
-          <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
-            {statusHeadline}
-          </h2>
-          <p className="text-xs text-emerald-200/75 font-medium">
-            Try: <span className="text-[#93E044]">"Petrol 2200 aur Chai 60"</span> •{' '}
-            <span className="text-[#93E044]">"Sarthak ka hisaab"</span> •{' '}
-            <span className="text-[#93E044]">"Undo"</span>
-          </p>
-        </div>
-
-        {/* Live Word-by-Word Speech Transcription Box */}
-        <div className="w-full max-w-lg px-1">
-          {activeLiveUserTurn?.text ? (
-            <div className="rounded-2xl px-4 py-3 bg-emerald-950/90 border-2 border-[#93E044]/75 shadow-lg flex items-center justify-between gap-3 animate-fadeIn">
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#93E044] flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#93E044] animate-ping inline-block" />
-                  Hearing Your Words Live
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="font-extrabold text-sm text-[#0D2E14] truncate">Live Voice Accountant</h3>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#F0F7EE] border border-emerald-200 text-[10px] font-extrabold text-[#0D2E14]">
+                  <Radio className="w-2.5 h-2.5 text-emerald-700 animate-pulse" />
+                  <span>{engine === 'gemini-3.8-live' ? 'Gemini 3.8' : 'Live'}</span>
                 </span>
-                <p className="text-sm sm:text-base font-extrabold text-white mt-0.5 break-words leading-snug">
-                  "{activeLiveUserTurn.text}"
-                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => sessionRef.current?.commitCurrentSpeechNow()}
-                className="flex-shrink-0 px-3 py-2 rounded-xl bg-[#93E044] hover:bg-[#a6ec5c] text-[#041308] text-xs font-black flex items-center gap-1 shadow-md cursor-pointer active:scale-95 transition-all"
-              >
-                <span>Send</span>
-                <Send className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : status === 'listening' ? (
-            <div className="rounded-2xl px-4 py-2.5 bg-white/5 border border-white/15 text-center">
-              <p className="text-xs text-emerald-200/85 font-semibold">
-                🎙️ Mic active — speak naturally and watch every word appear here live...
+              <p className="text-[10px] text-gray-500 font-medium truncate">
+                Hands-free voice logging & instant balance answers
               </p>
             </div>
-          ) : null}
-        </div>
-
-        {/* Streaming Live Captions Feed */}
-        <div className="w-full max-w-lg max-h-36 sm:max-h-44 overflow-y-auto no-scrollbar space-y-2 px-1">
-          {finalizedTurns.slice(-4).map(t => (
-            <div
-              key={t.id}
-              className={`rounded-2xl px-3.5 py-2 text-xs sm:text-sm font-semibold leading-snug animate-fadeIn ${
-                t.role === 'user'
-                  ? 'bg-white/10 text-white ml-8 text-right border border-white/15'
-                  : t.role === 'tool'
-                    ? 'bg-[#93E044]/20 text-[#93E044] text-center border border-[#93E044]/40 font-extrabold text-xs'
-                    : 'bg-emerald-950/80 text-emerald-100 mr-8 border border-emerald-500/30'
-              }`}
-            >
-              {t.role === 'user' && <span className="text-[10px] text-[#93E044] block font-black">YOU</span>}
-              {t.role === 'assistant' && (
-                <span className="text-[10px] text-cyan-300 block font-black">ACCOUNTANT</span>
-              )}
-              {t.text}
-            </div>
-          ))}
-          <div ref={transcriptEndRef} />
-        </div>
-      </div>
-
-      {/* Session Logged Entries Strip + Giant Driving Dock */}
-      <div className="px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 space-y-3 z-20 bg-gradient-to-t from-black/50 to-transparent">
-        {/* Recently Logged in This Session */}
-        {sessionEntries.length > 0 && (
-          <div className="max-w-lg mx-auto w-full flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-            {sessionEntries.slice(0, 4).map(tx => (
-              <div
-                key={tx.id}
-                className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/15 text-xs font-bold"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#93E044]" />
-                <span className="truncate max-w-[110px]">{tx.title}</span>
-                <span className={tx.type === 'income' ? 'text-[#93E044]' : 'text-rose-300'}>
-                  {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
-                </span>
-              </div>
-            ))}
           </div>
-        )}
 
-        {/* Giant Thumb-Friendly Bottom Driving Controls */}
-        <div className="max-w-md mx-auto w-full grid grid-cols-3 gap-3">
-          {/* Mute / Resume */}
-          <button
-            type="button"
-            onClick={() => sessionRef.current?.toggleMute()}
-            className={`py-3.5 px-3 rounded-2xl font-extrabold text-xs flex flex-col items-center justify-center gap-1 border transition-all active:scale-95 cursor-pointer ${
-              status === 'muted'
-                ? 'bg-amber-400 text-[#041308] border-amber-300'
-                : 'bg-white/10 hover:bg-white/15 text-white border-white/15'
-            }`}
-          >
-            {status === 'muted' ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5 text-[#93E044]" />}
-            <span>{status === 'muted' ? 'Resume Mic' : 'Pause Mic'}</span>
-          </button>
-
-          {/* 1-Tap Undo Last */}
-          <button
-            type="button"
-            onClick={() => sessionRef.current?.triggerManualUndo()}
-            disabled={sessionEntries.length === 0}
-            className="py-3.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 disabled:opacity-35 text-white border border-white/15 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
-          >
-            <RotateCcw className="w-5 h-5 text-amber-300" />
-            <span>Undo Last</span>
-          </button>
-
-          {/* End Live Driving Session */}
           <button
             type="button"
             onClick={onClose}
-            className="py-3.5 px-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white border border-rose-400/40 font-extrabold text-xs flex flex-col items-center justify-center gap-1 shadow-lg transition-all active:scale-95 cursor-pointer"
+            title="Close Live Voice"
+            className="w-8 h-8 rounded-full bg-[#F3F5F1] hover:bg-gray-200 text-gray-600 hover:text-[#0D2E14] flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer"
           >
-            <PhoneOff className="w-5 h-5" />
-            <span>End Live</span>
+            <X className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* Fixed-Grid Responsive Option Switchers (zero wrapping or layout shift on switch) */}
+        <div className="px-3.5 pt-2.5 pb-1 flex-shrink-0 space-y-2">
+          <div className="bg-white border border-[#E2E8E0] rounded-2xl p-2 shadow-2xs space-y-1.5">
+            {/* Row 1: Personal vs Business Ledger */}
+            {isPartner ? (
+              <div className="grid grid-cols-2 gap-1 bg-[#F3F5F1] p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchLedger('personal')}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer truncate ${
+                    accountMode === 'personal'
+                      ? 'bg-[#0D2E14] text-white shadow-2xs'
+                      : 'text-gray-600 hover:text-[#0D2E14]'
+                  }`}
+                >
+                  <User className={`w-3.5 h-3.5 flex-shrink-0 ${accountMode === 'personal' ? 'text-[#93E044]' : 'text-gray-500'}`} />
+                  <span className="truncate">{currentUser?.name || 'Personal'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSwitchLedger('business')}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer truncate ${
+                    accountMode === 'business'
+                      ? 'bg-[#0D2E14] text-white shadow-2xs'
+                      : 'text-gray-600 hover:text-[#0D2E14]'
+                  }`}
+                >
+                  <Building2 className={`w-3.5 h-3.5 flex-shrink-0 ${accountMode === 'business' ? 'text-[#93E044]' : 'text-gray-500'}`} />
+                  <span className="truncate">Business 50-50</span>
+                </button>
+              </div>
+            ) : (
+              <div className="bg-[#F3F5F1] px-3 py-1.5 rounded-xl flex items-center justify-center gap-1.5 text-xs font-extrabold text-[#0D2E14]">
+                <User className="w-3.5 h-3.5 text-emerald-700" />
+                <span>{currentUser?.name || 'Personal'} Ledger</span>
+              </div>
+            )}
+
+            {/* Row 2: Auto-Save Passbook vs Review Drafts */}
+            <div className="grid grid-cols-2 gap-1 bg-[#F3F5F1] p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => handleSwitchSaveMode(true)}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-extrabold flex items-center justify-center gap-1 transition-all cursor-pointer truncate ${
+                  autoSaveDriving
+                    ? 'bg-white text-[#0D2E14] border border-[#E2E8E0] shadow-2xs'
+                    : 'text-gray-500 hover:text-[#0D2E14]'
+                }`}
+              >
+                <Zap className={`w-3 h-3 flex-shrink-0 ${autoSaveDriving ? 'text-emerald-600' : 'text-gray-400'}`} />
+                <span className="truncate">Auto-Save ON</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSwitchSaveMode(false)}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-extrabold flex items-center justify-center gap-1 transition-all cursor-pointer truncate ${
+                  !autoSaveDriving
+                    ? 'bg-white text-[#0D2E14] border border-[#E2E8E0] shadow-2xs'
+                    : 'text-gray-500 hover:text-[#0D2E14]'
+                }`}
+              >
+                <FileCheck2 className={`w-3 h-3 flex-shrink-0 ${!autoSaveDriving ? 'text-amber-600' : 'text-gray-400'}`} />
+                <span className="truncate">Review Drafts</span>
+              </button>
+            </div>
+          </div>
+
+          {errorBanner && (
+            <div className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center justify-between gap-2">
+              <span>{errorBanner}</span>
+              <button onClick={() => setErrorBanner(null)} className="underline text-[11px] flex-shrink-0">
+                Dismiss
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Center Light Sonic Mic + Live Word Transcription + Scrollable Feed */}
+        <div className="flex-1 min-h-0 flex flex-col items-center px-4 py-2 gap-3 overflow-hidden">
+          {/* Sonic Mic Button (Light Palette) */}
+          <div className="relative flex items-center justify-center my-1 flex-shrink-0">
+            <div
+              style={{ transform: `scale(${ringScaleOuter})` }}
+              className={`absolute w-32 h-32 sm:w-36 sm:h-36 rounded-full transition-transform duration-100 pointer-events-none ${
+                status === 'muted'
+                  ? 'bg-gray-200/50'
+                  : status === 'thinking'
+                    ? 'bg-amber-200/50 animate-pulse'
+                    : 'bg-[#93E044]/25'
+              }`}
+            />
+
+            <div
+              style={{ transform: `scale(${1 + (orbScale - 1) * 0.65})` }}
+              className={`absolute w-28 h-28 sm:w-32 sm:h-32 rounded-full border transition-transform duration-100 pointer-events-none ${
+                status === 'muted'
+                  ? 'border-gray-300 bg-white/60'
+                  : 'border-[#0D2E14]/15 bg-[#E4ECE2]/70'
+              }`}
+            />
+
+            <button
+              type="button"
+              onClick={handleOrbTap}
+              style={{ transform: `scale(${orbScale})` }}
+              className={`relative w-[88px] h-[88px] sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center shadow-lg transition-all duration-100 cursor-pointer border-4 ${
+                status === 'muted'
+                  ? 'bg-white border-gray-300 text-gray-500'
+                  : status === 'thinking'
+                    ? 'bg-[#0D2E14] border-amber-400 text-[#93E044]'
+                    : status === 'speaking'
+                      ? 'bg-emerald-800 border-[#93E044] text-white'
+                      : 'bg-[#0D2E14] border-[#93E044] text-white'
+              }`}
+            >
+              {status === 'muted' ? (
+                <MicOff className="w-8 h-8 text-gray-500" />
+              ) : status === 'speaking' && audioSource === 'speaker' ? (
+                <Volume2 className="w-8 h-8 text-[#93E044] animate-pulse" />
+              ) : status === 'thinking' ? (
+                <Sparkles className="w-8 h-8 text-[#93E044] animate-spin" />
+              ) : (
+                <Mic className="w-8 h-8 text-[#93E044]" />
+              )}
+              <span className="text-[9px] font-black uppercase tracking-wider mt-1">
+                {status === 'muted' ? 'Resume' : status === 'speaking' ? 'Interrupt' : 'Live'}
+              </span>
+            </button>
+          </div>
+
+          {/* Headline & Hints */}
+          <div className="text-center space-y-0.5 max-w-sm flex-shrink-0">
+            <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-[#0D2E14]">
+              {statusHeadline}
+            </h2>
+            <p className="text-[11px] text-gray-500 font-medium">
+              Say <span className="font-bold text-[#0D2E14]">"Petrol 2200 aur Chai 60"</span>,{' '}
+              <span className="font-bold text-[#0D2E14]">"Partner hisaab"</span>, or{' '}
+              <span className="font-bold text-[#0D2E14]">"Undo"</span>
+            </p>
+          </div>
+
+          {/* Live Word-by-Word Transcription Box (Light Card) */}
+          <div className="w-full flex-shrink-0">
+            {activeLiveUserTurn?.text ? (
+              <div className="rounded-2xl px-3.5 py-2.5 bg-white border-2 border-[#0D2E14] shadow-sm flex items-center justify-between gap-2.5 animate-fadeIn">
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
+                    Hearing Your Words Live
+                  </span>
+                  <p className="text-xs sm:text-sm font-extrabold text-[#0D2E14] mt-0.5 break-words leading-snug">
+                    "{activeLiveUserTurn.text}"
+                  </p>
+                </div>
+                {engine === 'handsfree-local' && (
+                  <button
+                    type="button"
+                    onClick={() => sessionRef.current?.commitCurrentSpeechNow()}
+                    className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-[#0D2E14] hover:bg-black text-[#93E044] text-xs font-extrabold flex items-center gap-1 shadow-xs cursor-pointer active:scale-95 transition-all"
+                  >
+                    <span className="text-white">Send</span>
+                    <Send className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ) : status === 'listening' ? (
+              <div className="rounded-2xl px-3.5 py-2 bg-white border border-[#E2E8E0] text-center shadow-2xs">
+                <p className="text-[11px] text-gray-600 font-semibold">
+                  🎙️ Microphone active — speak naturally and watch your words transcribe here
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Scrollable Light Conversation Feed */}
+          <div className="w-full flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2 py-1">
+            {finalizedTurns.slice(-6).map(t => (
+              <div
+                key={t.id}
+                className={`rounded-2xl px-3.5 py-2 text-xs font-semibold leading-snug animate-fadeIn ${
+                  t.role === 'user'
+                    ? 'bg-[#0D2E14] text-white ml-8 text-right shadow-2xs'
+                    : t.role === 'tool'
+                      ? 'bg-[#F0F7EE] text-[#0D2E14] text-center border border-emerald-200 font-extrabold text-[11px]'
+                      : 'bg-white text-[#0D2E14] mr-8 border border-[#E2E8E0] shadow-2xs'
+                }`}
+              >
+                {t.role === 'user' && (
+                  <span className="text-[9px] text-[#93E044] block font-black uppercase tracking-wider">You</span>
+                )}
+                {t.role === 'assistant' && (
+                  <span className="text-[9px] text-emerald-700 block font-black uppercase tracking-wider">Accountant</span>
+                )}
+                {t.text}
+              </div>
+            ))}
+            <div ref={transcriptEndRef} />
+          </div>
+        </div>
+
+        {/* Bottom Light Dock: Session Entries + Action Controls */}
+        <div className="bg-white border-t border-[#E2E8E0] px-3.5 pt-2.5 pb-[max(0.85rem,env(safe-area-inset-bottom))] sm:pb-3.5 space-y-2.5 flex-shrink-0">
+          {sessionEntries.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+              {sessionEntries.slice(0, 5).map(tx => (
+                <div
+                  key={tx.id}
+                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#F3F5F1] border border-[#E2E8E0] text-[11px] font-bold text-[#0D2E14]"
+                >
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <span className="truncate max-w-[100px]">{tx.title}</span>
+                  <span className={tx.type === 'income' ? 'text-emerald-700' : 'text-rose-600'}>
+                    {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-2">
+            {/* Pause / Resume Mic */}
+            <button
+              type="button"
+              onClick={() => sessionRef.current?.toggleMute()}
+              className={`py-2.5 px-2 rounded-2xl font-extrabold text-xs flex items-center justify-center gap-1.5 border transition-all active:scale-95 cursor-pointer ${
+                status === 'muted'
+                  ? 'bg-amber-50 text-amber-900 border-amber-300'
+                  : 'bg-[#F3F5F1] hover:bg-gray-200 text-[#0D2E14] border-[#E2E8E0]'
+              }`}
+            >
+              {status === 'muted' ? (
+                <MicOff className="w-4 h-4 text-amber-700 flex-shrink-0" />
+              ) : (
+                <Mic className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+              )}
+              <span className="truncate">{status === 'muted' ? 'Resume' : 'Pause Mic'}</span>
+            </button>
+
+            {/* Undo Last */}
+            <button
+              type="button"
+              onClick={() => sessionRef.current?.triggerManualUndo()}
+              disabled={sessionEntries.length === 0}
+              className="py-2.5 px-2 rounded-2xl bg-[#F3F5F1] hover:bg-gray-200 disabled:opacity-40 text-[#0D2E14] border border-[#E2E8E0] font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+            >
+              <RotateCcw className="w-4 h-4 text-[#0D2E14] flex-shrink-0" />
+              <span className="truncate">Undo Last</span>
+            </button>
+
+            {/* End Live */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="py-2.5 px-2 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+            >
+              <X className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">End Live</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

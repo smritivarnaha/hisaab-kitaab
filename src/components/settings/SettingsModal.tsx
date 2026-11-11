@@ -355,17 +355,17 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     </span>
                   </div>
                 ) : (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">Gemini API Key (Optional)</label>
-                    <input
-                      type="password"
-                      value={draft.apiKey?.startsWith('AQ.') ? '' : (draft.apiKey || '')}
-                      onChange={e => updateDraft({ apiKey: e.target.value })}
-                      placeholder="AIzaSy..."
-                      className="w-full bg-slate-50 border border-gray-200 text-xs font-mono text-gray-900 rounded-lg py-2 px-3 outline-none focus:border-[#0D2E14] transition-all"
-                    />
-                    <span className="text-[9px] text-emerald-600 font-semibold flex items-center gap-1">
-                      ⚡ Instant 0ms Local Transaction Engine Active
+                  <div className="p-2.5 rounded-xl bg-[#F0F7EE] border border-emerald-200 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[11px] font-extrabold text-[#0D2E14] block">
+                        🟢 Gemini 3.8 Flash & Live Voice Active
+                      </span>
+                      <span className="text-[10px] text-emerald-800 font-medium">
+                        Default Project Key Connected (345 • projects/503539144250)
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-[#0D2E14] text-[#93E044] text-[9px] font-black uppercase">
+                      Active
                     </span>
                   </div>
                 )}
@@ -974,7 +974,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>{isRunningInNativeAndroidApk() ? 'Download Latest Native APK (v2.0)' : 'Download Android APK (v2.0)'}</span>
+                    <span>{isRunningInNativeAndroidApk() ? 'Download Latest Native APK (v2.1)' : 'Download Android APK (v2.1)'}</span>
                   </a>
                 </div>
               </section>
@@ -1054,7 +1054,7 @@ export const SettingsModal: React.FC<Props> = ({ onClose }) => {
                     <div>
                       <h4 className="text-xs font-bold text-gray-900">Cloud Sync & Live App Updates</h4>
                       <p className="text-[10px] text-gray-400">
-                        v2.0.0 ({typeof window !== 'undefined' && Boolean((window as any).AndroidSpeech) ? 'Native Voice & Biometric Ready ✓' : typeof window !== 'undefined' && Boolean(window.AndroidBiometric) ? 'Native Biometric Ready ✓' : 'Live OTA Enabled'} • User: {currentUser?.name})
+                        v2.1.0 ({typeof window !== 'undefined' && Boolean((window as any).AndroidSpeech) ? 'Native Voice & Biometric Ready ✓' : typeof window !== 'undefined' && Boolean(window.AndroidBiometric) ? 'Native Biometric Ready ✓' : 'Live OTA Enabled'} • User: {currentUser?.name})
                       </p>
                     </div>
                   </div>
